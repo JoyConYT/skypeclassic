@@ -1,0 +1,28 @@
+{
+  "name": "classicskype",
+  "version": "1.0.0",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [
+    "skype",
+    "classicskype",
+    "skype clone",
+    "revival",
+    "chat"
+  ],
+  "author": "JoyConYT",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "express": "^5.1.0",
+    "sqlite3": "^5.1.7",
+    "ws": "^8.18.3"
+  },
+  "description": ""
+}
