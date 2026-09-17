@@ -4,6 +4,7 @@ const WebSocket = require('ws');
 const io = require('socket.io');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 console.log('🚀 Starting Skype Classic Server...');
 
@@ -4283,6 +4284,823 @@ app.get('/mobile', (req, res) => {
     `);
 });
 
+// ===== ABOUT ME PAGE =====
+app.get('/aboutme', (req, res) => {
+    console.log('👤 Serving about me page');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Skype Classic - About Me</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Tahoma', 'Arial', sans-serif; font-size: 11px; }
+            
+            :root {
+                --bg-primary: #6C00A0;
+                --window-bg: #ECE9D8;
+                --titlebar-start: #0A246A;
+                --titlebar-end: #6B8DC3;
+                --border-light: #FFFFFF;
+                --border-dark: #808080;
+                --text-primary: #000000;
+                --text-light: #FFFFFF;
+                --button-bg: #ECE9D8;
+                --contact-hover: #6C00A0;
+                --banner-bg: linear-gradient(90deg, #FFD700, #FFA500);
+                --banner-text: #0A246A;
+                --text-secondary: #666666;
+                --accent: #6C00A0;
+            }
+            
+            .dark-theme {
+                --bg-primary: #1a1a1a;
+                --window-bg: #2d2d2d;
+                --titlebar-start: #2b2b2b;
+                --titlebar-end: #4a4a4a;
+                --border-light: #4a4a4a;
+                --border-dark: #1a1a1a;
+                --text-primary: #e0e0e0;
+                --text-light: #ffffff;
+                --button-bg: #3d3d3d;
+                --contact-hover: #4a4a4a;
+                --banner-bg: linear-gradient(90deg, #b8860b, #8b4513);
+                --banner-text: #ffd700;
+                --text-secondary: #b0b0b0;
+                --accent: #9b59b6;
+            }
+            
+            body {
+                background: var(--bg-primary);
+                background-image: url('/images/bbg.jpg');
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-attachment: fixed;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                padding: 20px;
+                margin: 0;
+                padding-top: 65px;
+                color: var(--text-primary);
+                transition: background-color 0.5s ease, color 0.3s ease;
+            }
+            
+            .dark-theme body {
+                background-image: url('/images/dbg.jpg');
+            }
+            
+            .xp-window, .xp-titlebar, .xp-content, .xp-fieldset, .xp-legend, .xp-button-large,
+            .skill-item, .project-card, .contact-card, .section-title {
+                transition: background-color 0.4s ease, color 0.3s ease, border-color 0.3s ease;
+            }
+            
+            .global-banner {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                background: var(--banner-bg);
+                border-bottom: 3px solid var(--titlebar-start);
+                overflow: hidden;
+                padding: 8px 0;
+                z-index: 9999;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            }
+            
+            .global-banner marquee {
+                background: none;
+                color: var(--banner-text);
+                text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
+                font-family: 'Tahoma', 'Arial', sans-serif;
+                font-size: 12px;
+            }
+            
+            .theme-switcher {
+                position: fixed;
+                top: 55px;
+                left: 10px;
+                z-index: 9999;
+                background: var(--window-bg);
+                border: 2px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                padding: 3px;
+                border-radius: 3px;
+            }
+            
+            .theme-btn {
+                background: var(--button-bg);
+                border: 2px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                padding: 3px 8px;
+                font-size: 10px;
+                font-weight: bold;
+                cursor: pointer;
+                color: var(--text-primary);
+                margin: 0;
+            }
+            
+            .theme-btn:hover {
+                background: var(--contact-hover);
+                color: var(--text-light);
+            }
+            
+            .xp-window {
+                width: 800px;
+                max-width: 100%;
+                background: var(--window-bg);
+                border: 2px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+                margin-top: 10px;
+            }
+            
+            .xp-titlebar {
+                background: linear-gradient(90deg, var(--titlebar-start), var(--titlebar-end));
+                color: var(--text-light);
+                padding: 4px 8px;
+                font-size: 11px;
+                font-weight: bold;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                height: 20px;
+            }
+            
+            .xp-titlebar-controls {
+                display: flex;
+                gap: 1px;
+            }
+            
+            .xp-button {
+                width: 16px;
+                height: 14px;
+                border: 1px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                background: var(--button-bg);
+                font-size: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                line-height: 1;
+                color: var(--text-primary);
+            }
+            
+            .xp-content {
+                padding: 15px;
+                background: var(--window-bg);
+                max-height: 80vh;
+                overflow-y: auto;
+            }
+            
+            .xp-fieldset {
+                border: 1px solid var(--border-dark);
+                padding: 15px;
+                margin-bottom: 15px;
+                background: var(--window-bg);
+                position: relative;
+            }
+            
+            .xp-legend {
+                background: var(--window-bg);
+                padding: 2px 8px;
+                font-size: 11px;
+                font-weight: bold;
+                position: absolute;
+                top: -8px;
+                left: 8px;
+                color: var(--text-primary);
+            }
+            
+            .xp-button-large {
+                background: var(--button-bg);
+                border: 2px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                padding: 5px 20px;
+                font-size: 11px;
+                font-weight: bold;
+                cursor: pointer;
+                margin-right: 10px;
+                color: var(--text-primary);
+            }
+            
+            .xp-button-large:hover {
+                background: var(--contact-hover);
+                color: var(--text-light);
+            }
+            
+            .xp-status-bar {
+                background: var(--window-bg);
+                border-top: 1px solid var(--border-dark);
+                padding: 4px 8px;
+                font-size: 10px;
+                color: var(--text-primary);
+                height: 20px;
+            }
+            
+            /* Profile specific styles */
+            .profile-header {
+                display: flex;
+                gap: 20px;
+                align-items: center;
+                padding: 20px;
+                background: linear-gradient(135deg, var(--titlebar-start), var(--titlebar-end));
+                color: var(--text-light);
+                border-radius: 4px;
+                margin-bottom: 15px;
+            }
+            
+            .profile-avatar {
+                width: 80px;
+                height: 80px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #6C00A0, #0A246A);
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                font-size: 32px;
+                border: 3px solid rgba(255,255,255,0.3);
+                flex-shrink: 0;
+            }
+            
+            .profile-info h1 {
+                font-size: 24px;
+                margin-bottom: 5px;
+            }
+            
+            .profile-info .subtitle {
+                font-size: 13px;
+                opacity: 0.9;
+                margin-bottom: 8px;
+            }
+            
+            .profile-links {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            
+            .profile-links a {
+                color: var(--text-light);
+                text-decoration: none;
+                font-size: 11px;
+                background: rgba(255,255,255,0.15);
+                padding: 4px 10px;
+                border-radius: 12px;
+                border: 1px solid rgba(255,255,255,0.2);
+            }
+            
+            .profile-links a:hover {
+                background: rgba(255,255,255,0.25);
+            }
+            
+            .section-title {
+                font-size: 13px;
+                font-weight: bold;
+                color: var(--titlebar-start);
+                margin-bottom: 10px;
+                padding-bottom: 5px;
+                border-bottom: 1px solid var(--border-dark);
+            }
+            
+            .dark-theme .section-title {
+                color: var(--accent);
+            }
+            
+            .skill-item {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 8px 10px;
+                margin-bottom: 5px;
+                background: var(--window-bg);
+                border: 1px solid var(--border-dark);
+                border-radius: 3px;
+            }
+            
+            .skill-item:hover {
+                background: var(--contact-hover);
+                color: var(--text-light);
+            }
+            
+            .skill-icon {
+                font-size: 16px;
+                width: 24px;
+                text-align: center;
+                flex-shrink: 0;
+            }
+            
+            .skill-text {
+                flex: 1;
+            }
+            
+            .skill-level {
+                font-size: 10px;
+                opacity: 0.8;
+                font-style: italic;
+            }
+            
+            .project-card {
+                padding: 15px;
+                margin-bottom: 10px;
+                background: var(--window-bg);
+                border: 1px solid var(--border-dark);
+                border-radius: 3px;
+                border-left: 4px solid var(--accent);
+            }
+            
+            .project-card h4 {
+                font-size: 13px;
+                margin-bottom: 5px;
+                color: var(--accent);
+            }
+            
+            .project-card p {
+                font-size: 11px;
+                color: var(--text-secondary);
+                line-height: 1.5;
+                margin-bottom: 5px;
+            }
+            
+            .project-card ul {
+                margin-left: 20px;
+                margin-top: 5px;
+            }
+            
+            .project-card li {
+                font-size: 11px;
+                color: var(--text-secondary);
+                line-height: 1.6;
+            }
+            
+            .contact-card {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 10px 15px;
+                background: var(--window-bg);
+                border: 1px solid var(--border-dark);
+                border-radius: 3px;
+                margin-bottom: 5px;
+                text-decoration: none;
+                color: var(--text-primary);
+            }
+            
+            .contact-card:hover {
+                background: var(--contact-hover);
+                color: var(--text-light);
+            }
+            
+            .contact-icon {
+                font-size: 18px;
+                width: 30px;
+                text-align: center;
+                flex-shrink: 0;
+            }
+            
+            .contact-label {
+                font-size: 10px;
+                opacity: 0.7;
+            }
+            
+            .contact-value {
+                font-size: 12px;
+                font-weight: bold;
+            }
+            
+            .lang-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--border-dark);
+            }
+            
+            .lang-item:last-child {
+                border-bottom: none;
+            }
+            
+            .lang-name {
+                font-weight: bold;
+            }
+            
+            .lang-level {
+                font-size: 10px;
+                background: var(--accent);
+                color: white;
+                padding: 2px 8px;
+                border-radius: 10px;
+            }
+            
+            .nav-links {
+                text-align: center;
+                margin-top: 15px;
+                padding-top: 15px;
+                border-top: 1px solid var(--border-dark);
+            }
+            
+            .nav-links a {
+                color: var(--titlebar-start);
+                margin: 0 10px;
+                text-decoration: none;
+                font-weight: bold;
+            }
+            
+            .dark-theme .nav-links a {
+                color: var(--accent);
+            }
+            
+            .nav-links a:hover {
+                text-decoration: underline;
+            }
+            
+            .tagline {
+                text-align: center;
+                padding: 10px;
+                font-size: 12px;
+                color: var(--text-secondary);
+                font-style: italic;
+                background: var(--window-bg);
+                border: 1px dashed var(--border-dark);
+                border-radius: 3px;
+                margin-bottom: 15px;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Theme Switcher -->
+        <div class="theme-switcher">
+            <button id="themeToggle" class="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
+        </div>
+        
+        <!-- Global Update Banner -->
+        <div class="global-banner">
+            <marquee behavior="scroll" direction="left" scrollamount="6">
+                👋 HEY THERE! WELCOME TO MY ABOUT ME PAGE! 🎓 STUDENT AT HSE LYCEUM • 💻 PYTHON & C++ DEVELOPER • 🚀 CREATOR OF SKYPECLASSIC • 🤖 AI ENTHUSIAST
+            </marquee>
+        </div>
+        
+        <div class="xp-window">
+            <div class="xp-titlebar">
+                <span>👤 About Me - Timofey Levykin</span>
+                <div class="xp-titlebar-controls">
+                    <div class="xp-button" onclick="window.location='/'">_</div>
+                    <div class="xp-button" onclick="window.location='/'">×</div>
+                </div>
+            </div>
+            <div class="xp-content">
+                <!-- Profile Header -->
+                <div class="profile-header">
+                    <div class="profile-avatar">TL</div>
+                    <div class="profile-info">
+                        <h1>Timofey Levykin</h1>
+                        <div class="subtitle">🎓 Student at HSE Lyceum • 💻 Developer • 🚀 Creator of SkypeClassic • 😛 Silly Goober</div>
+                        <div class="profile-links">
+                            <a href="https://github.com/JoyConYT" target="_blank">🐙 GitHub</a>
+                            <a href="https://t.me/JoyConYT" target="_blank">✈️ Telegram</a>
+                            <a href="https://skypeclassic.ru/aboutme" target="_blank">🌐 skypeclassic.ru</a>
+                            <a href="mailto:rbevruyb@gmail.com">📧 Email</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tagline -->
+                <div class="tagline">
+                    "I'm a student who loves programming and building digital projects. I'm self-learning Python and C++, and I'm always exploring AI tools. Also, goofing around is present in my daily schedule."
+                </div>
+                
+                <!-- About Me -->
+                <div class="xp-fieldset">
+                    <div class="xp-legend">👋 About Me</div>
+                    <p style="line-height: 1.7; font-size: 12px;">
+                        I'm a student at HSE Lyceum in Moscow. I'm passionate about programming and building 
+                        digital projects. I'm self-learning Python and C++, and I'm also developing my skills 
+                        with AI tools. I'm looking for opportunities to apply my skills in practice, grow in 
+                        interesting projects, and gain my first experience in the IT field.
+                    </p>
+                </div>
+                
+                <!-- Skills -->
+                <div class="xp-fieldset">
+                    <div class="xp-legend">🛠️ Skills</div>
+                    
+                    <div class="section-title">💻 Hard Skills</div>
+                    <div class="skill-item">
+                        <div class="skill-icon">🐍</div>
+                        <div class="skill-text">
+                            <strong>Python</strong>
+                            <div class="skill-level">Confident level</div>
+                        </div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-icon">⚡</div>
+                        <div class="skill-text">
+                            <strong>C++</strong>
+                            <div class="skill-level">Basic knowledge</div>
+                        </div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-icon">🤖</div>
+                        <div class="skill-text">
+                            <strong>Prompt Engineering</strong>
+                            <div class="skill-level">Writing effective prompts for AI tools</div>
+                        </div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-icon">🌐</div>
+                        <div class="skill-text">
+                            <strong>Digital Project Development</strong>
+                            <div class="skill-level">Building and launching my own projects</div>
+                        </div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-icon">🔍</div>
+                        <div class="skill-text">
+                            <strong>Information Analysis</strong>
+                            <div class="skill-level">Searching, filtering & analyzing information online</div>
+                        </div>
+                    </div>
+                    
+                    <div class="section-title" style="margin-top: 15px;">🧰 Programs & Digital Tools</div>
+                    <div class="skill-item">
+                        <div class="skill-icon">💻</div>
+                        <div class="skill-text">
+                            <strong>VS Code, Python IDLE</strong>
+                            <div class="skill-level">Development environments</div>
+                        </div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-icon">🤖</div>
+                        <div class="skill-text">
+                            <strong>ChatGPT, Claude & DeepSeek</strong>
+                            <div class="skill-level">AI tools</div>
+                        </div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-icon">🎨</div>
+                        <div class="skill-text">
+                            <strong>Graphic Editors</strong>
+                            <div class="skill-level">Creating & editing images (UI elements, icons)</div>
+                        </div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-icon">💬</div>
+                        <div class="skill-text">
+                            <strong>Discord, Telegram</strong>
+                            <div class="skill-level">Collaboration tools</div>
+                        </div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-icon">📊</div>
+                        <div class="skill-text">
+                            <strong>Microsoft Word, PowerPoint</strong>
+                            <div class="skill-level">Office software</div>
+                        </div>
+                    </div>
+                    
+                    <div class="section-title" style="margin-top: 15px;">🌟 Soft Skills</div>
+                    <div class="skill-item">
+                        <div class="skill-icon">📚</div>
+                        <div class="skill-text">
+                            <strong>Self-Learning</strong>
+                            <div class="skill-level">Passion for learning new things</div>
+                        </div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-icon">⏰</div>
+                        <div class="skill-text">
+                            <strong>Deadline Management</strong>
+                            <div class="skill-level">Ability to meet deadlines</div>
+                        </div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-icon">🎨</div>
+                        <div class="skill-text">
+                            <strong>Creativity & Attention to Detail</strong>
+                            <div class="skill-level">Creative and detail-oriented</div>
+                        </div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-icon">🚀</div>
+                        <div class="skill-text">
+                            <strong>Independent Work</strong>
+                            <div class="skill-level">Productive when working on my own projects</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Languages -->
+                <div class="xp-fieldset">
+                    <div class="xp-legend">🌍 Languages</div>
+                    <div class="lang-item">
+                        <span class="lang-name">🇷🇺 Russian</span>
+                        <span class="lang-level">Native</span>
+                    </div>
+                    <div class="lang-item">
+                        <span class="lang-name">🇬🇧 English</span>
+                        <span class="lang-level">C1</span>
+                    </div>
+                </div>
+                
+                <!-- Projects -->
+                <div class="xp-fieldset">
+                    <div class="xp-legend">🚀 Projects</div>
+                    
+                    <div class="project-card">
+                        <h4>📞 SkypeClassic — skypeclassic.ru</h4>
+                        <p>A web messenger inspired by the classic Skype look and feel.</p>
+                        <ul>
+                            <li>Developed the concept and functionality of the messenger</li>
+                            <li>Drew all images and graphic elements myself</li>
+                            <li>Made all UI/UX decisions: designed the look, layout, and usability</li>
+                            <li>Built the project using modern development tools</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="project-card">
+                        <h4>🎵 Music Sharing Platform</h4>
+                        <p>A music sharing platform built into SkypeClassic.</p>
+                        <ul>
+                            <li>Upload and listen to tracks</li>
+                            <li>Like system and playlists</li>
+                            <li>Follow artists and get notifications</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Achievements -->
+                <div class="xp-fieldset">
+                    <div class="xp-legend">🏆 Achievements & Extracurriculars</div>
+                    <ul style="margin-left: 20px; line-height: 1.8; font-size: 12px;">
+                        <li>✅ Developed and launched my own web project (skypeclassic messenger)</li>
+                        <li>✅ Successfully balance school with fun programming, which has developed my development and AI skills</li>
+                        <li>✅ Built a full messenger with voice calls, groups, and image sharing</li>
+                    </ul>
+                </div>
+                
+                <!-- Education -->
+                <div class="xp-fieldset">
+                    <div class="xp-legend">🎓 Education</div>
+                    <div style="padding: 10px;">
+                        <div style="font-size: 14px; font-weight: bold; color: var(--accent); margin-bottom: 5px;">
+                            HSE Lyceum
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px;">
+                            Moscow
+                        </div>
+                        <div style="font-size: 12px;">
+                            <strong>8th grade student</strong>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 5px;">
+                            Period: 20__ — present
+                        </div>
+                        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-dark);">
+                            <div style="font-size: 12px; font-weight: bold; margin-bottom: 5px;">
+                                Additional courses:
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-secondary);">
+                                Additional programming classes
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Contact -->
+                <div class="xp-fieldset">
+                    <div class="xp-legend">📬 Contact</div>
+                    <a href="mailto:rbevruyb@gmail.com" class="contact-card">
+                        <div class="contact-icon">📧</div>
+                        <div>
+                            <div class="contact-label">Email</div>
+                            <div class="contact-value">rbevruyb@gmail.com</div>
+                        </div>
+                    </a>
+                    <a href="https://t.me/JoyConYT" target="_blank" class="contact-card">
+                        <div class="contact-icon">✈️</div>
+                        <div>
+                            <div class="contact-label">Telegram</div>
+                            <div class="contact-value">@JoyConYT</div>
+                        </div>
+                    </a>
+                    <a href="https://github.com/JoyConYT" target="_blank" class="contact-card">
+                        <div class="contact-icon">🐙</div>
+                        <div>
+                            <div class="contact-label">GitHub</div>
+                            <div class="contact-value">github.com/JoyConYT</div>
+                        </div>
+                    </a>
+                    <a href="tel:+79191055212" class="contact-card">
+                        <div class="contact-icon">📱</div>
+                        <div>
+                            <div class="contact-label">Phone</div>
+                            <div class="contact-value">+7 (919) 105 52 12</div>
+                        </div>
+                    </a>
+                    <a href="https://skypeclassic.ru/aboutme" target="_blank" class="contact-card">
+                        <div class="contact-icon">🌐</div>
+                        <div>
+                            <div class="contact-label">Website</div>
+                            <div class="contact-value">skypeclassic.ru/aboutme (📍You're Here)</div>
+                        </div>
+                    </a>
+                    <div class="contact-card" style="cursor: default;">
+                        <div class="contact-icon">📍</div>
+                        <div>
+                            <div class="contact-label">City</div>
+                            <div class="contact-value">Moscow</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Navigation -->
+                <div class="nav-links">
+                    <a href="/">🏠 Home</a>
+                    <a href="/mobile">📱 Mobile</a>
+                    <a href="/analytics">📊 Analytics</a>
+                    <a href="/music">🎵 Music</a>
+                    <a href="/old">🕹️ Retro</a>
+                    <a href="/dev">💻 Dev</a>
+                </div>
+                
+                <div style="text-align: center; margin-top: 15px; color: var(--text-secondary); font-size: 10px;">
+                    Made with 💜 by Timothy (JoyCon) • skypeclassic.ru
+                </div>
+            </div>
+            <div class="xp-status-bar">
+                <span>👤 About Me • Timofey Levykin • Moscow</span>
+            </div>
+        </div>
+        
+        <script>
+            function toggleTheme() {
+                const body = document.body;
+                const button = document.getElementById('themeToggle');
+                
+                body.style.transition = 'background 0.5s ease, color 0.3s ease';
+                
+                if (body.classList.contains('dark-theme')) {
+                    body.classList.remove('dark-theme');
+                    button.innerHTML = '🌙 Dark';
+                    localStorage.setItem('skypeTheme', 'light');
+                } else {
+                    body.classList.add('dark-theme');
+                    button.innerHTML = '☀️ Light';
+                    localStorage.setItem('skypeTheme', 'dark');
+                }
+            }
+            
+            function loadTheme() {
+                const savedTheme = localStorage.getItem('skypeTheme');
+                const body = document.body;
+                const button = document.getElementById('themeToggle');
+                
+                body.style.transition = 'none';
+                
+                if (savedTheme === 'dark') {
+                    body.classList.add('dark-theme');
+                    if (button) button.innerHTML = '☀️ Light';
+                } else {
+                    body.classList.remove('dark-theme');
+                    if (button) button.innerHTML = '🌙 Dark';
+                }
+                
+                setTimeout(() => {
+                    body.style.transition = '';
+                }, 50);
+            }
+            
+            document.addEventListener('DOMContentLoaded', loadTheme);
+        </script>
+        
+        <div style="position: fixed; bottom: 5px; right: 5px; font-size: 9px; color: #666; background: rgba(255,255,255,0.7); padding: 2px 5px; border-radius: 3px;">
+            Fan project. Not affiliated with Microsoft or Skype in any way.
+        </div>
+    </body>
+    </html>
+    `);
+});
 
 // ===== ANALYTICS PAGE =====
 app.get('/analytics', (req, res) => {
@@ -8410,10 +9228,25 @@ app.get('/app', (req, res) => {
 });
 
 const PORT = 3000;
+
+// find the first non-internal IPv4 address
+const getLocalIP = () => {
+    const nets = os.networkInterfaces();
+    for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+            if (net.family === 'IPv4' && !net.internal) {
+                return net.address;
+            }
+        }
+    }
+    return 'localhost';
+};
+
 server.listen(PORT, '0.0.0.0', () => {
+    const ip = getLocalIP();
     console.log(`\n🎉 SKYPE CLASSIC SERVER RUNNING!`);
     console.log(`🟣 Local: http://localhost:${PORT}`);
-    console.log(`📱 Network: http://192.168.0.124:${PORT}`);
+    console.log(`📱 Network: http://${ip}:${PORT}`);
     console.log(`\n🔑 Test account: username: test, password: test`);
     console.log(`\n✅ FIXED: Manual microphone permission request!`);
     console.log(`\n🎤 Now shows permission prompt in call window`);
