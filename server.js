@@ -12,7 +12,6 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Socket.IO server for VoIP calls
 const ioserver = io(server, {
     cors: {
         origin: "*",
@@ -20,17 +19,17 @@ const ioserver = io(server, {
     }
 });
 
-// Fix emoji rendering
+app.use(express.json({ limit: '10mb' }));
+
 app.use((req, res, next) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     next();
 });
 
-// Create data directory for persistent contact storage
 const dataDir = path.join(__dirname, 'data');
 if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
-    console.log('📁 Created data directory for contacts');
+    console.log('📁 Created data directory');
 }
 
 let users = new Map();
@@ -39,12 +38,132 @@ let groups = new Map();
 let activeCalls = new Map();
 let userCallStatus = new Map();
 
-// Serve static files
+// ==================== ACCOUNT STORAGE ====================
+const usersFile = path.join(dataDir, 'users.json');
+let accounts = {};
+
+function loadAccounts() {
+    try {
+        if (fs.existsSync(usersFile)) {
+            accounts = JSON.parse(fs.readFileSync(usersFile, 'utf8'));
+            console.log('👤 Loaded', Object.keys(accounts).length, 'accounts from disk');
+        }
+    } catch (e) {
+        console.error('Error loading accounts:', e);
+        accounts = {};
+    }
+}
+
+function saveAccounts() {
+    try {
+        fs.writeFileSync(usersFile, JSON.stringify(accounts, null, 2));
+    } catch (e) {
+        console.error('Error saving accounts:', e);
+    }
+}
+
+function ensureTestAccount() {
+    if (!accounts['test']) {
+        accounts['test'] = {
+            password: 'test',
+            displayName: 'Test User',
+            created: new Date().toISOString()
+        };
+        saveAccounts();
+        console.log('👤 Created default test account');
+    }
+}
+
+loadAccounts();
+ensureTestAccount();
+
+// ==================== MESSAGE PERSISTENCE ====================
+const messagesFile = path.join(dataDir, 'messages.json');
+let saveMessagesTimeout = null;
+
+function loadMessages() {
+    try {
+        if (fs.existsSync(messagesFile)) {
+            const data = JSON.parse(fs.readFileSync(messagesFile, 'utf8'));
+            chatMessages = new Map(Object.entries(data));
+            let total = 0;
+            chatMessages.forEach(arr => total += arr.length);
+            console.log('📦 Loaded', chatMessages.size, 'chat histories (' + total + ' messages) from disk');
+        }
+    } catch (e) {
+        console.error('Error loading messages:', e);
+        chatMessages = new Map();
+    }
+}
+
+function saveMessagesNow() {
+    try {
+        const obj = Object.fromEntries(chatMessages);
+        fs.writeFileSync(messagesFile, JSON.stringify(obj));
+    } catch (e) {
+        console.error('Error saving messages:', e);
+    }
+}
+
+function scheduleSaveMessages() {
+    clearTimeout(saveMessagesTimeout);
+    saveMessagesTimeout = setTimeout(saveMessagesNow, 1500);
+}
+
+loadMessages();
+
+// ==================== AUTH ENDPOINTS ====================
+app.post('/api/register', (req, res) => {
+    const { username, password, displayName, email } = req.body || {};
+    
+    if (!username || !password) {
+        return res.json({ success: false, error: 'Username and password required' });
+    }
+    
+    if (!/^[a-zA-Z0-9_]{2,20}$/.test(username)) {
+        return res.json({ success: false, error: 'Username must be 2-20 letters/numbers/underscores' });
+    }
+    
+    if (accounts[username]) {
+        return res.json({ success: false, error: 'Username already exists' });
+    }
+    
+    accounts[username] = {
+        password: password,
+        displayName: displayName || username,
+        email: email || '',
+        created: new Date().toISOString()
+    };
+    saveAccounts();
+    
+    console.log('👤 Registered new account:', username);
+    res.json({ 
+        success: true, 
+        displayName: accounts[username].displayName 
+    });
+});
+
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body || {};
+    
+    if (!username || !password) {
+        return res.json({ success: false, error: 'Username and password required' });
+    }
+    
+    if (!accounts[username] || accounts[username].password !== password) {
+        return res.json({ success: false, error: 'Invalid username or password' });
+    }
+    
+    res.json({ 
+        success: true, 
+        displayName: accounts[username].displayName || username 
+    });
+});
+
 app.use("/sounds", express.static(path.join(__dirname, "sounds")));
 app.use("/images", express.static(path.join(__dirname, "public/images")));
 
 // ==================== DESKTOP MAIN PAGE ====================
-// Serve the main interface
 app.get("/", (req, res) => {
     console.log("📨 Serving main page to client");
     
@@ -269,7 +388,6 @@ app.get("/", (req, res) => {
             height: 20px;
         }
         
-        /* New Chat Layout */
         .chat-layout {
             display: flex;
             gap: 15px;
@@ -627,26 +745,22 @@ app.get("/", (req, res) => {
     </style>
 </head>
 <body style="background: var(--bg-primary) var(--bg-image); background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;">
-    <!-- Theme Switcher -->
     <div class="theme-switcher">
         <button id="themeToggle" class="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
     </div>
     
-    <!-- Global Update Banner -->
     <div class="global-banner">
         <marquee behavior="scroll" direction="left" scrollamount="6">
-            🎉 UPDATE 1.3: THE MULTIMEDIA DRIVE UPDATE HAS COME OUT! 🎉 CHECK OUT /ANALYTICS FOR MORE INFO! 📊 NEW FEATURES: MUSIC SHARING • RETRO MODE • DEV TERMINAL • MOBILE SYNC • GROUP CHATS • IMAGE SHARING • DARK THEME • AND MORE! 🚀
+            🎉 UPDATE 1.4: THE "SOUND BLASTER" UPDATE HAS COME OUT! 🎉 CHECK OUT /ANALYTICS FOR MORE INFO! 📊 NOW FEATURING: WORKING VOICE CALLS • PLUG-AND-PLAY MICROPHONES • SERVER-SIDE ACCOUNTS • PERSISTENT MESSAGES • MUSIC SHARING • MOBILE SYNC • RETRO MODE • DEV TERMINAL • AND MORE! 🚀
         </marquee>
     </div>
     
-    <!-- Sound Control -->
     <div class="sound-control">
         <label>
             <input type="checkbox" id="soundToggle" checked> Sounds
         </label>
     </div>
 
-    <!-- Audio Elements -->
     <audio id="logoutSound" preload="auto"><source src="/sounds/logoff.mp3" type="audio/mpeg"></audio>
     <audio id="messageSound" preload="auto"><source src="/sounds/messagereceived.mp3" type="audio/mpeg"></audio>
     <audio id="loginSound" preload="auto"><source src="/sounds/logon.mp3" type="audio/mpeg"></audio>
@@ -657,7 +771,6 @@ app.get("/", (req, res) => {
     <audio id="callAcceptSound" preload="auto"><source src="/sounds/call_accept.mp3" type="audio/mpeg"></audio>
     <audio id="callErrorSound" preload="auto"><source src="/sounds/call_error.mp3" type="audio/mpeg"></audio>
 
-    <!-- Login Window -->
     <div id="loginWindow" class="xp-window">
         <div class="xp-titlebar">
             <span>📞 Skype Classic</span>
@@ -702,7 +815,6 @@ app.get("/", (req, res) => {
         </div>
     </div>
 
-    <!-- Main Chat Window -->
     <div id="chatWindow" class="xp-window chat-window hidden">
         <div class="xp-titlebar">
             <span>📞 Skype Classic - <span id="currentUser">User</span></span>
@@ -714,7 +826,6 @@ app.get("/", (req, res) => {
         </div>
         <div class="xp-content">
             <div class="chat-layout">
-                <!-- Contacts Panel -->
                 <div class="contacts-panel">
                     <div class="xp-fieldset" style="margin-bottom: 10px;">
                         <legend class="xp-legend">Contacts</legend>
@@ -728,12 +839,10 @@ app.get("/", (req, res) => {
                     </div>
                 </div>
                 
-                <!-- Chat Panel -->
                 <div class="chat-panel">
                     <div class="xp-fieldset" style="height: 100%; display: flex; flex-direction: column;">
                         <legend class="xp-legend">Chat <span id="currentChatWith"></span></legend>
                         <div id="chatArea" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
-                            <!-- Dynamic chat containers will be added here -->
                         </div>
                     </div>
                 </div>
@@ -744,7 +853,6 @@ app.get("/", (req, res) => {
         </div>
     </div>
 
-    <!-- Incoming Call Window -->
     <div id="incomingCallWindow" class="xp-window hidden" style="width: 300px; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;">
         <div class="xp-titlebar">
             <span>📞 Incoming Call...</span>
@@ -764,7 +872,6 @@ app.get("/", (req, res) => {
         </div>
     </div>
 
-    <!-- Active Call Window -->
     <div id="callWindow" class="xp-window hidden" style="width: 350px; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;">
         <div class="xp-titlebar">
             <span>📞 Active Call</span>
@@ -797,7 +904,6 @@ app.get("/", (req, res) => {
         </div>
     </div>
 
-    <!-- Group Creation Window -->
     <div id="createGroupWindow" class="xp-window hidden" style="width: 350px; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;">
         <div class="xp-titlebar">
             <span>👥 Create Group Chat</span>
@@ -825,7 +931,6 @@ app.get("/", (req, res) => {
         </div>
     </div>
 
-    <!-- Analytics Popup -->
     <div id="analyticsPopup" class="xp-window hidden" style="width: 300px; position: fixed; bottom: 20px; right: 20px; z-index: 1001;">
         <div class="xp-titlebar">
             <span>📊 Analytics</span>
@@ -845,7 +950,6 @@ app.get("/", (req, res) => {
         </div>
     </div>
     
-    <!-- Image Modal -->
     <div id="imageModal" onclick="closeImageModal()">
         <span class="modal-close">&times;</span>
         <img id="modalImage">
@@ -865,7 +969,6 @@ app.get("/", (req, res) => {
         let userGroups = [];
         let chatMessages = {};
         
-        // WebRTC variables
         let localStream = null;
         let remoteStream = null;
         let peerConnection = null;
@@ -873,6 +976,7 @@ app.get("/", (req, res) => {
         let isDeafened = false;
         let microphonePermissionGranted = false;
         let connectionInProgress = false;
+        let pendingIceCandidates = [];
 
         const rtcConfiguration = {
             iceServers: [
@@ -881,7 +985,6 @@ app.get("/", (req, res) => {
             ]
         };
 
-        // ===== THEME MANAGEMENT =====
         function toggleTheme() {
             const body = document.body;
             const button = document.getElementById('themeToggle');
@@ -919,13 +1022,10 @@ app.get("/", (req, res) => {
             }, 50);
         }
 
-        // ===== MESSAGE STORAGE FUNCTIONS =====
-
         function syncMessagesToServer() {
             if (!ws || ws.readyState !== WebSocket.OPEN) return;
             if (!currentUser) return;
             
-            // Sync each chat's messages
             Object.keys(chatMessages).forEach(chatId => {
                 const messages = chatMessages[chatId];
                 if (messages && messages.length > 0) {
@@ -947,20 +1047,17 @@ app.get("/", (req, res) => {
             if (saved) {
                 chatMessages = JSON.parse(saved);
                 console.log('📦 Loaded messages from localStorage:', Object.keys(chatMessages).length, 'chats');
-                // Sync local messages to server
-                syncMessagesToServer();
             } else {
                 chatMessages = {};
-                // Request message history from server
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    // Request history for each contact
-                    userContacts.forEach(contact => {
-                        ws.send(JSON.stringify({
-                            type: 'get_message_history',
-                            chatId: contact.username
-                        }));
-                    });
-                }
+            }
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                userContacts.forEach(contact => {
+                    ws.send(JSON.stringify({
+                        type: 'get_message_history',
+                        chatId: contact.username
+                    }));
+                });
             }
         }
         
@@ -969,12 +1066,10 @@ app.get("/", (req, res) => {
                 chatMessages[contact] = [];
             }
             
-            // Check if message already exists
             const exists = chatMessages[contact].some(m => m.id === messageData.id);
             if (!exists) {
                 chatMessages[contact].push(messageData);
                 saveMessagesToLocalStorage();
-                syncMessagesToServer();
                 return true;
             }
             return false;
@@ -1030,16 +1125,13 @@ app.get("/", (req, res) => {
             modal.classList.remove('active');
         }
 
-        // ===== CONTACT MANAGEMENT =====
         function loadContacts() {
-            // First load from localStorage as backup
             const savedContacts = localStorage.getItem('userContacts_' + currentUser.username);
             if (savedContacts) {
                 userContacts = JSON.parse(savedContacts);
                 updateContactList();
             }
             
-            // Then request from server to get latest
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                     type: 'get_contacts',
@@ -1060,7 +1152,6 @@ app.get("/", (req, res) => {
                 return;
             }
             
-            // Create contact tabs
             userContacts.forEach(contact => {
                 const contactTab = document.createElement('div');
                 contactTab.className = 'contact-tab' + (currentChat === contact.username ? ' active' : '');
@@ -1077,7 +1168,6 @@ app.get("/", (req, res) => {
                 contactTab.onclick = () => switchChat(contact.username, contact.displayName);
                 contactsPanel.appendChild(contactTab);
                 
-                // Create chat container for this contact if it doesn't exist
                 if (!document.getElementById('chatContainer_' + contact.username)) {
                     const chatContainer = document.createElement('div');
                     chatContainer.id = 'chatContainer_' + contact.username;
@@ -1097,13 +1187,11 @@ app.get("/", (req, res) => {
                     \`;
                     chatArea.appendChild(chatContainer);
                     
-                    // Setup image input for this contact
                     document.getElementById('imageInput_' + contact.username).addEventListener('change', (e) => {
                         handleImageUpload(e, contact.username);
                     });
                 }
                 
-                // Load messages for this contact
                 if (chatMessages[contact.username]) {
                     renderMessagesForChat(contact.username);
                 }
@@ -1121,7 +1209,6 @@ app.get("/", (req, res) => {
                 }));
             }
             
-            // Hide all chat containers and show the selected one
             document.querySelectorAll('.chat-container').forEach(container => {
                 container.classList.remove('active');
             });
@@ -1130,7 +1217,6 @@ app.get("/", (req, res) => {
                 activeContainer.classList.add('active');
             }
             
-            // Update active contact tab styling
             document.querySelectorAll('.contact-tab').forEach(tab => {
                 tab.classList.remove('active');
                 if (tab.getAttribute('data-contact') === username) {
@@ -1138,10 +1224,8 @@ app.get("/", (req, res) => {
                 }
             });
             
-            // Render messages for this contact
             renderMessagesForChat(username);
             
-            // Focus the input
             setTimeout(() => {
                 const input = document.getElementById('messageInput_' + username);
                 if (input) input.focus();
@@ -1346,7 +1430,6 @@ app.get("/", (req, res) => {
         }
         
         function addSystemMessage(message) {
-            // This is a global system message, we can show it in a temporary toast or just log
             console.log('System:', message);
         }
         
@@ -1363,72 +1446,81 @@ app.get("/", (req, res) => {
             });
         }
 
-        // ===== LOGIN FUNCTIONS =====
-        function login() {
-            const username = document.getElementById('loginUsername').value;
+        async function login() {
+            const username = document.getElementById('loginUsername').value.trim();
             const password = document.getElementById('loginPassword').value;
             const status = document.getElementById('statusMessage');
             
-            if (username && password) {
-                const accounts = JSON.parse(localStorage.getItem('skypeAccounts') || '{}');
+            if (!username || !password) {
+                status.textContent = 'Please enter username and password';
+                return;
+            }
+            
+            status.textContent = 'Logging in...';
+            
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const result = await res.json();
                 
-                if (accounts[username] && accounts[username].password === password) {
-                    currentUser = { 
-                        username: username, 
+                if (result.success) {
+                    currentUser = {
+                        username: username,
                         id: Date.now(),
-                        displayName: accounts[username].displayName || username
+                        displayName: result.displayName || username
                     };
                     status.textContent = 'Login successful!';
                     playLoginSound();
                     showChatWindow();
                     connectWebSocket();
-                } else if (username === 'test' && password === 'test') {
-                    currentUser = { username: 'test', id: 1, displayName: 'Test User' };
-                    status.textContent = 'Login successful!';
-                    playLoginSound();
-                    showChatWindow();
-                    connectWebSocket();
                 } else {
-                    status.textContent = 'Account not found! Please register first.';
+                    status.textContent = result.error || 'Invalid username or password';
                 }
-            } else {
-                status.textContent = 'Please enter username and password';
+            } catch (e) {
+                console.error('Login error:', e);
+                status.textContent = 'Login failed. Check server connection.';
             }
         }
         
-        function register() {
-            const username = document.getElementById('regUsername').value;
+        async function register() {
+            const username = document.getElementById('regUsername').value.trim();
             const password = document.getElementById('regPassword').value;
             const email = document.getElementById('regEmail').value;
             const displayName = document.getElementById('regDisplayName').value || username;
             const status = document.getElementById('statusMessage');
             
-            if (username && password) {
-                const accounts = JSON.parse(localStorage.getItem('skypeAccounts') || '{}');
-                
-                if (accounts[username]) {
-                    status.textContent = 'Username already exists!';
-                    return;
-                }
-                
-                accounts[username] = {
-                    password: password,
-                    email: email,
-                    displayName: displayName,
-                    created: new Date().toISOString()
-                };
-                
-                localStorage.setItem('skypeAccounts', JSON.stringify(accounts));
-                
-                status.textContent = 'Account created! Please login.';
-                showTab('login');
-                
-                document.getElementById('regUsername').value = '';
-                document.getElementById('regPassword').value = '';
-                document.getElementById('regEmail').value = '';
-                document.getElementById('regDisplayName').value = '';
-            } else {
+            if (!username || !password) {
                 status.textContent = 'Please fill in username and password';
+                return;
+            }
+            
+            status.textContent = 'Creating account...';
+            
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, displayName, email })
+                });
+                const result = await res.json();
+                
+                if (result.success) {
+                    status.textContent = 'Account created! Please login.';
+                    showTab('login');
+                    
+                    document.getElementById('regUsername').value = '';
+                    document.getElementById('regPassword').value = '';
+                    document.getElementById('regEmail').value = '';
+                    document.getElementById('regDisplayName').value = '';
+                } else {
+                    status.textContent = result.error || 'Registration failed';
+                }
+            } catch (e) {
+                console.error('Register error:', e);
+                status.textContent = 'Registration failed. Check server connection.';
             }
         }
         
@@ -1478,6 +1570,7 @@ app.get("/", (req, res) => {
         }
         
         function handleWebSocketMessage(data) {
+            try {
             switch(data.type) {
                 case 'user_join':
                     updateContactListWithOnlineUsers(data.users);
@@ -1493,7 +1586,6 @@ app.get("/", (req, res) => {
                         if (!chatMessages[chatId]) {
                             chatMessages[chatId] = [];
                         }
-                        // Merge server messages with local messages
                         data.messages.forEach(msg => {
                             if (!chatMessages[chatId].find(m => m.id === msg.id)) {
                                 chatMessages[chatId].push(msg);
@@ -1559,22 +1651,31 @@ app.get("/", (req, res) => {
                     document.getElementById('callerName').textContent = data.fromDisplay || data.from;
                     document.getElementById('incomingCallWindow').classList.remove('hidden');
                     playCallSound();
-                    // Store the call ID or just use the from username as identifier
                     window.currentCallId = data.callId || 'call_' + Date.now();
                     break;
                     
                 case 'call_accepted':
-                    console.log('📞 Call accepted by:', data.from);
+                    console.log('🚨 [1/10] call_accepted RECEIVED, data =', JSON.stringify(data));
                     stopCallSounds();
+                    console.log('🚨 [2/10] stopCallSounds OK');
                     playCallAcceptSound();
+                    console.log('🚨 [3/10] playCallAcceptSound OK');
+                    if (data.callId) window.currentCallId = data.callId;
+                    console.log('🚨 [4/10] callId set OK');
                     document.getElementById('callWindow').classList.remove('hidden');
-                    document.getElementById('callTarget').textContent = data.fromDisplay || data.from;
+                    console.log('🚨 [5/10] callWindow unhidden OK');
+                    const ctEl = document.getElementById('callTarget');
+                    if (ctEl) ctEl.textContent = data.fromDisplay || data.from;
+                    console.log('🚨 [6/10] callTarget step OK (found=' + !!ctEl + ')');
                     document.getElementById('callStatus').textContent = 'In call with ' + (data.fromDisplay || data.from);
+                    console.log('🚨 [7/10] callStatus set OK');
                     startCallTimer();
+                    console.log('🚨 [8/10] callTimer started OK');
                     isInCall = true;
                     currentCallWith = data.from;
-                    // Start WebRTC as caller
+                    console.log('🚨 [9/10] state flags set OK, currentCallWith =', currentCallWith);
                     setupWebRTC(true);
+                    console.log('🚨 [10/10] setupWebRTC(true) invoked');
                     break;
                     
                 case 'call_declined':
@@ -1671,6 +1772,10 @@ app.get("/", (req, res) => {
                     handleICECandidate(data.candidate);
                     break;
             }
+            } catch (err) {
+                console.error('❌ ERROR in handleWebSocketMessage for type ' + data.type + ':', err);
+                console.error('Raw data was:', JSON.stringify(data).substring(0, 500));
+            }
         }
         
         function changeStatus(status) {
@@ -1714,7 +1819,6 @@ app.get("/", (req, res) => {
         
         setTimeout(showAnalyticsPopup, 30 * 60 * 1000);
         
-        // ===== SOUND FUNCTIONS =====
         function playMessageSound() {
             if (document.getElementById('soundToggle').checked) {
                 const sound = document.getElementById('messageSound');
@@ -1822,7 +1926,6 @@ app.get("/", (req, res) => {
                 return;
             }
             
-            // Request permission first if not granted
             if (!microphonePermissionGranted) {
                 requestMicrophonePermission().then(() => {
                     if (microphonePermissionGranted) {
@@ -1836,16 +1939,15 @@ app.get("/", (req, res) => {
                 playDialingSound();
                 currentCallWith = currentChat;
                 
-                // Create a unique call ID
                 const callId = 'call_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
                 window.currentCallId = callId;
                 
-                document.getElementById('callTarget').textContent = currentChat;
+                const ctEl = document.getElementById('callTarget');
+                if (ctEl) ctEl.textContent = currentChat;
                 document.getElementById('callWindow').classList.remove('hidden');
                 document.getElementById('callStatus').textContent = 'Calling ' + currentChat + '...';
                 document.getElementById('callTimer').textContent = 'Calling...';
                 
-                // Send call request with callId
                 ws.send(JSON.stringify({
                     type: 'call_request',
                     callId: callId,
@@ -1854,7 +1956,6 @@ app.get("/", (req, res) => {
                     to: currentChat
                 }));
                 
-                // Timeout after 30 seconds
                 setTimeout(() => {
                     if (document.getElementById('callWindow') && 
                         document.getElementById('callWindow').classList.contains('hidden') === false && 
@@ -1871,38 +1972,38 @@ app.get("/", (req, res) => {
             stopCallSounds();
             playCallAcceptSound();
             
-            // Request permission first if not granted
-            if (!microphonePermissionGranted) {
-                requestMicrophonePermission().then(() => {
-                    if (microphonePermissionGranted) {
-                        acceptIncomingCall();
-                    }
-                });
-                return;
+            const callPartner = incomingCallFrom;
+            if (callPartner) {
+                ws.send(JSON.stringify({
+                    type: 'call_accepted',
+                    callId: window.currentCallId,
+                    from: currentUser.username,
+                    fromDisplay: currentUser.displayName,
+                    to: callPartner
+                }));
+                console.log('✅ Sent call_accepted to', callPartner);
+            } else {
+                console.warn('⚠️ acceptIncomingCall: incomingCallFrom is null!');
             }
             
             document.getElementById('incomingCallWindow').classList.add('hidden');
             document.getElementById('callWindow').classList.remove('hidden');
-            document.getElementById('callTarget').textContent = incomingCallFrom;
-            document.getElementById('callStatus').textContent = 'In call with ' + incomingCallFrom;
+            const ctEl2 = document.getElementById('callTarget');
+            if (ctEl2) ctEl2.textContent = callPartner;
+            document.getElementById('callStatus').textContent = 'In call with ' + callPartner;
             
             startCallTimer();
             isInCall = true;
-            currentCallWith = incomingCallFrom;
-            
-            // Start WebRTC as callee
-            setupWebRTC(false);
-            
-            // Send acceptance with callId
-            ws.send(JSON.stringify({
-                type: 'call_accepted',
-                callId: window.currentCallId,
-                from: currentUser.username,
-                fromDisplay: currentUser.displayName,
-                to: incomingCallFrom
-            }));
-            
+            currentCallWith = callPartner;
             incomingCallFrom = null;
+            
+            if (!microphonePermissionGranted) {
+                requestMicrophonePermission().then(() => {
+                    setupWebRTC(false);
+                });
+            } else {
+                setupWebRTC(false);
+            }
         }
         
         function declineIncomingCall() {
@@ -1913,7 +2014,6 @@ app.get("/", (req, res) => {
             document.getElementById('incomingCallWindow').classList.add('hidden');
             
             if (incomingCallFrom) {
-                // Send decline signal to the caller
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({
                         type: 'call_declined',
@@ -1926,7 +2026,6 @@ app.get("/", (req, res) => {
                 incomingCallFrom = null;
             }
             
-            // Clean up any pending WebRTC setup
             cleanupWebRTC();
         }
         
@@ -1935,19 +2034,16 @@ app.get("/", (req, res) => {
             stopCallSounds();
             playCallEndSound();
             
-            // Hide call windows
             const callWindow = document.getElementById('callWindow');
             const incomingCallWindow = document.getElementById('incomingCallWindow');
             if (callWindow) callWindow.classList.add('hidden');
             if (incomingCallWindow) incomingCallWindow.classList.add('hidden');
             
-            // Stop timer
             if (callTimerInterval) {
                 clearInterval(callTimerInterval);
                 callTimerInterval = null;
             }
             
-            // Notify the other person if we're in a call
             if (currentCallWith && ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                     type: 'call_end',
@@ -1959,10 +2055,8 @@ app.get("/", (req, res) => {
                 addSystemMessage('Call ended with ' + currentCallWith);
             }
             
-            // Clean up WebRTC
             cleanupWebRTC();
             
-            // Reset call state
             isInCall = false;
             currentCallWith = null;
             callStartTime = null;
@@ -1981,12 +2075,10 @@ app.get("/", (req, res) => {
             }, 1000);
         }
         
-        // ===== WEBRTC FUNCTIONS =====
         async function requestMicrophonePermission() {
             try {
                 console.log('Requesting microphone permission...');
                 
-                // Try to get both audio and video
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     audio: true,
                     video: true
@@ -1995,7 +2087,6 @@ app.get("/", (req, res) => {
                 console.log('Microphone and camera access granted!');
                 microphonePermissionGranted = true;
                 
-                // Stop all tracks immediately - we just wanted permission
                 stream.getTracks().forEach(track => track.stop());
                 
                 hidePermissionPrompt();
@@ -2034,7 +2125,6 @@ app.get("/", (req, res) => {
                     await requestMicrophonePermission();
                 }
                 
-                // Get user media with specific constraints
                 localStream = await navigator.mediaDevices.getUserMedia({ 
                     audio: {
                         echoCancellation: true,
@@ -2043,11 +2133,10 @@ app.get("/", (req, res) => {
                         sampleRate: 48000,
                         channelCount: 1
                     },
-                    video: false  // Audio only for now
+                    video: false
                 });
                 console.log('Local stream obtained');
                 
-                // Show local audio indicator (optional)
                 const localVideo = document.getElementById('localVideo');
                 if (localVideo) {
                     localVideo.srcObject = localStream;
@@ -2055,15 +2144,10 @@ app.get("/", (req, res) => {
                     localVideo.play().catch(e => console.log('Local video play error:', e));
                 }
                 
-                // Create peer connection with more STUN servers
                 const config = {
                     iceServers: [
                         { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' },
-                        { urls: 'stun:stun2.l.google.com:19302' },
-                        { urls: 'stun:stun3.l.google.com:19302' },
-                        { urls: 'stun:stun4.l.google.com:19302' },
-                        { urls: 'stun:stun.stunprotocol.org:3478' }
+                        { urls: 'stun:stun1.l.google.com:19302' }
                     ],
                     iceCandidatePoolSize: 10
                 };
@@ -2071,13 +2155,11 @@ app.get("/", (req, res) => {
                 peerConnection = new RTCPeerConnection(config);
                 console.log('Peer connection created');
                 
-                // Add local stream tracks
                 localStream.getTracks().forEach(track => {
                     peerConnection.addTrack(track, localStream);
                     console.log('Added track:', track.kind);
                 });
                 
-                // Handle remote stream
                 peerConnection.ontrack = (event) => {
                     console.log('Received remote track:', event.track.kind);
                     const remoteAudio = document.getElementById('remoteAudio');
@@ -2088,7 +2170,6 @@ app.get("/", (req, res) => {
                     }
                 };
                 
-                // Handle ICE candidates
                 peerConnection.onicecandidate = (event) => {
                     if (event.candidate) {
                         console.log('Sending ICE candidate:', event.candidate.type);
@@ -2102,7 +2183,6 @@ app.get("/", (req, res) => {
                     }
                 };
                 
-                // Handle ICE connection state
                 peerConnection.oniceconnectionstatechange = () => {
                     console.log('ICE connection state:', peerConnection.iceConnectionState);
                     switch (peerConnection.iceConnectionState) {
@@ -2123,7 +2203,6 @@ app.get("/", (req, res) => {
                     }
                 };
                 
-                // Handle connection state
                 peerConnection.onconnectionstatechange = () => {
                     console.log('Connection state:', peerConnection.connectionState);
                     switch (peerConnection.connectionState) {
@@ -2139,12 +2218,10 @@ app.get("/", (req, res) => {
                     }
                 };
                 
-                // Show audio controls
                 const controls = document.getElementById('audioControls');
                 if (controls) controls.classList.remove('hidden');
                 
                 if (isCaller) {
-                    // Create offer
                     console.log('Creating offer...');
                     const offer = await peerConnection.createOffer({
                         offerToReceiveAudio: true,
@@ -2172,14 +2249,15 @@ app.get("/", (req, res) => {
             try {
                 console.log('Handling WebRTC offer from:', from);
                 
-                // Setup WebRTC first (this will get local stream)
-                await setupWebRTC(false);
+                if (!peerConnection) {
+                    await setupWebRTC(false);
+                } else {
+                    console.log('Reusing existing peer connection');
+                }
                 
-                // Set remote description
                 await peerConnection.setRemoteDescription(offer);
                 console.log('Remote description set (offer)');
                 
-                // Create answer
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
                 console.log('Local description set (answer)');
@@ -2189,6 +2267,8 @@ app.get("/", (req, res) => {
                     to: from,
                     answer: answer
                 }));
+                
+                await flushPendingIceCandidates();
                 
             } catch (error) {
                 console.error('Error handling WebRTC offer:', error);
@@ -2201,12 +2281,13 @@ app.get("/", (req, res) => {
         async function handleWebRTCAnswer(answer) {
             try {
                 console.log('Handling WebRTC answer');
-                if (peerConnection && peerConnection.remoteDescription) {
-                    await peerConnection.setRemoteDescription(answer);
-                    console.log('Remote description set (answer)');
-                } else {
-                    console.log('Peer connection not ready for answer');
+                if (!peerConnection) {
+                    console.log('No peer connection — cannot set answer');
+                    return;
                 }
+                await peerConnection.setRemoteDescription(answer);
+                console.log('Remote description set (answer)');
+                await flushPendingIceCandidates();
             } catch (error) {
                 console.error('Error handling WebRTC answer:', error);
                 showCallError('Call connection failed: ' + error.message);
@@ -2220,16 +2301,25 @@ app.get("/", (req, res) => {
                     await peerConnection.addIceCandidate(candidate);
                     console.log('ICE candidate added');
                 } else {
-                    console.log('Peer connection not ready for ICE candidate');
-                    // Store candidate for later
-                    setTimeout(() => {
-                        if (peerConnection && peerConnection.remoteDescription) {
-                            peerConnection.addIceCandidate(candidate).catch(e => console.log('Failed to add stored candidate:', e));
-                        }
-                    }, 1000);
+                    console.log('Queueing ICE candidate until remote description is set');
+                    pendingIceCandidates.push(candidate);
                 }
             } catch (error) {
                 console.error('Error adding ICE candidate:', error);
+            }
+        }
+
+        async function flushPendingIceCandidates() {
+            if (!peerConnection || !peerConnection.remoteDescription) return;
+            console.log('Flushing', pendingIceCandidates.length, 'queued ICE candidates');
+            const candidates = pendingIceCandidates;
+            pendingIceCandidates = [];
+            for (const candidate of candidates) {
+                try {
+                    await peerConnection.addIceCandidate(candidate);
+                } catch (e) {
+                    console.log('Failed to add queued candidate:', e);
+                }
             }
         }
         
@@ -2258,7 +2348,8 @@ app.get("/", (req, res) => {
         function cleanupWebRTC() {
             console.log('Cleaning up WebRTC');
             
-            // Stop and close local stream
+            pendingIceCandidates = [];
+            
             if (localStream) {
                 localStream.getTracks().forEach(track => {
                     track.stop();
@@ -2267,13 +2358,11 @@ app.get("/", (req, res) => {
                 localStream = null;
             }
             
-            // Close peer connection
             if (peerConnection) {
                 peerConnection.close();
                 peerConnection = null;
             }
             
-            // Clear video/audio elements
             const localVideo = document.getElementById('localVideo');
             if (localVideo) {
                 localVideo.srcObject = null;
@@ -2286,7 +2375,6 @@ app.get("/", (req, res) => {
                 remoteAudio.pause();
             }
             
-            // Reset UI states
             isMuted = false;
             isDeafened = false;
             
@@ -2296,24 +2384,33 @@ app.get("/", (req, res) => {
             const deafenBtn = document.getElementById('deafenButton');
             if (deafenBtn) deafenBtn.textContent = 'Deafen';
             
-            // Hide error and permission prompts
             hideCallError();
             hidePermissionPrompt();
             
-            // Reset call window UI
             const callStatus = document.getElementById('callStatus');
             if (callStatus) callStatus.textContent = 'Call ended';
             
             const callTimer = document.getElementById('callTimer');
             if (callTimer) callTimer.textContent = '00:00';
         }
+        
+        function showCallError(message) {
+            const err = document.getElementById('callError');
+            if (err) {
+                err.textContent = message;
+                err.classList.remove('hidden');
+            }
+        }
+        
+        function hideCallError() {
+            const err = document.getElementById('callError');
+            if (err) err.classList.add('hidden');
+        }
 
-        // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             loadTheme();
             document.getElementById('loginUsername').focus();
             
-            // Close modal on background click
             document.getElementById('imageModal').addEventListener('click', function(e) {
                 if (e.target === this) {
                     closeImageModal();
@@ -2326,6 +2423,7 @@ app.get("/", (req, res) => {
 </html>
     `);
 });
+
 // ==================== WEBSOCKET SERVER ====================
 wss.on('connection', (ws) => {
     console.log('🔗 New client connected');
@@ -2354,7 +2452,6 @@ wss.on('connection', (ws) => {
                 };
                 users.set(currentUser, user);
                 
-                // Save desktop contacts to server
                 if (data.contacts && Array.isArray(data.contacts)) {
                     try {
                         const contactsFile = path.join(__dirname, 'data', 'contacts_' + currentUser + '.json');
@@ -2375,7 +2472,6 @@ wss.on('connection', (ws) => {
                     }))
                 });
 
-                // Send chat history
                 chatMessages.forEach((messages, chatId) => {
                     let shouldSendHistory = false;
                     
@@ -2412,36 +2508,43 @@ wss.on('connection', (ws) => {
                 });
 
             } else if (data.type === 'get_message_history') {
-                // Get message history for a specific chat
                 const chatId = data.chatId;
                 const history = chatMessages.get(chatId) || [];
                 ws.send(JSON.stringify({
                     type: 'message_history',
                     chatId: chatId,
-                    messages: history.slice(-100) // Last 100 messages
+                    messages: history.slice(-100)
+                }));
+                
+            } else if (data.type === 'get_history') {
+                const chatId = data.with;
+                const history = chatMessages.get(chatId) || [];
+                ws.send(JSON.stringify({
+                    type: 'chat_history',
+                    chatId: chatId,
+                    messages: history.slice(-100)
                 }));
                 
             } else if (data.type === 'sync_messages') {
-                // Sync messages from client to server
                 const { chatId, messages } = data;
                 if (!chatMessages.has(chatId)) {
                     chatMessages.set(chatId, []);
                 }
                 const existingMessages = chatMessages.get(chatId);
                 
-                // Merge messages (avoid duplicates by id)
                 messages.forEach(msg => {
                     if (!existingMessages.find(m => m.id === msg.id)) {
                         existingMessages.push(msg);
                     }
                 });
                 
-                // Keep only last 1000 messages
                 if (existingMessages.length > 1000) {
                     chatMessages.set(chatId, existingMessages.slice(-1000));
                 } else {
                     chatMessages.set(chatId, existingMessages);
                 }
+                
+                scheduleSaveMessages();
                 
                 ws.send(JSON.stringify({
                     type: 'messages_synced',
@@ -2459,17 +2562,24 @@ wss.on('connection', (ws) => {
                     timestamp: data.data.timestamp
                 };
                 
-                const chatId = data.data.to || 'public';
-                if (!chatMessages.has(chatId)) {
-                    chatMessages.set(chatId, []);
-                }
+                const recipientId = data.data.to || 'public';
+                const senderId = data.data.from;
                 
-                const chatMsgArray = chatMessages.get(chatId);
-                chatMsgArray.push(messageObj);
+                [recipientId, senderId].forEach(chatId => {
+                    if (!chatId) return;
+                    if (!chatMessages.has(chatId)) {
+                        chatMessages.set(chatId, []);
+                    }
+                    const arr = chatMessages.get(chatId);
+                    if (!arr.find(m => m.id === messageObj.id)) {
+                        arr.push(messageObj);
+                        if (arr.length > 1000) {
+                            arr.splice(0, arr.length - 1000);
+                        }
+                    }
+                });
                 
-                if (chatMsgArray.length > 1000) {
-                    chatMsgArray.splice(0, chatMsgArray.length - 1000);
-                }
+                scheduleSaveMessages();
                 
                 if (data.data.to) {
                     if (data.data.to.startsWith('group_')) {
@@ -2524,18 +2634,49 @@ wss.on('connection', (ws) => {
                 }
                 
             } else if (data.type === 'call_request') {
+                console.log('📞 call_request: from=' + data.from + ' to=' + data.to + ' callId=' + data.callId);
+                console.log('📞 users map has:', Array.from(users.keys()).join(', '));
                 const targetUser = users.get(data.to);
                 if (targetUser && targetUser.ws.readyState === WebSocket.OPEN) {
+                    console.log('📞 Forwarding call_request to:', data.to);
                     targetUser.ws.send(JSON.stringify({
                         type: 'call_request',
                         from: data.from,
                         fromDisplay: data.fromDisplay,
-                        to: data.to
+                        to: data.to,
+                        callId: data.callId
                     }));
+                } else {
+                    console.log('❌ Cannot forward call_request - target not found or WS not open. Found:', !!targetUser);
                 }
                 
             } else if (data.type === 'image_share') {
                 console.log("🖼️ Relaying image from", data.from, "to", data.to);
+                
+                const imgMsg = {
+                    id: data.id || Date.now(),
+                    from: data.from,
+                    fromDisplay: data.fromDisplay,
+                    to: data.to,
+                    imageData: data.imageData,
+                    fileName: data.fileName,
+                    isImage: true,
+                    timestamp: data.timestamp
+                };
+                
+                const recipientId = data.to;
+                const senderId = data.from;
+                [recipientId, senderId].forEach(chatId => {
+                    if (!chatId) return;
+                    if (!chatMessages.has(chatId)) {
+                        chatMessages.set(chatId, []);
+                    }
+                    const arr = chatMessages.get(chatId);
+                    if (!arr.find(m => m.id === imgMsg.id)) {
+                        arr.push(imgMsg);
+                    }
+                });
+                scheduleSaveMessages();
                 
                 if (data.to.startsWith('group_')) {
                     const group = groups.get(data.to);
@@ -2578,13 +2719,19 @@ wss.on('connection', (ws) => {
                 }
                 
             } else if (data.type === 'call_accepted') {
+                console.log('📞 call_accepted: from=' + data.from + ' to=' + data.to + ' callId=' + data.callId);
+                console.log('📞 users map has:', Array.from(users.keys()).join(', '));
                 const caller = users.get(data.to);
                 if (caller && caller.ws.readyState === WebSocket.OPEN) {
+                    console.log('📞 Forwarding call_accepted to caller:', data.to);
                     caller.ws.send(JSON.stringify({
                         type: 'call_accepted',
                         from: data.from,
-                        fromDisplay: data.fromDisplay
+                        fromDisplay: data.fromDisplay,
+                        callId: data.callId
                     }));
+                } else {
+                    console.log('❌ Cannot forward call_accepted - caller not found or WS not open. Found:', !!caller);
                 }
                 
             } else if (data.type === 'create_group') {
@@ -2712,7 +2859,6 @@ wss.on('connection', (ws) => {
                             message: 'Contact added successfully'
                         }));
                         
-                        // Add reverse contact
                         const otherUserFile = path.join(__dirname, 'data', 'contacts_' + data.contactUsername + '.json');
                         let otherContacts = [];
                         
@@ -3020,16 +3166,6 @@ app.get('/mobile', (req, res) => {
                 overflow: hidden;
                 color: var(--text-primary);
                 transition: background 0.5s ease, color 0.3s ease;
-            }
-            
-            .auth-box, .auth-header, .auth-form, .auth-input, .auth-button, .auth-footer,
-            .mobile-header, .mobile-tabs, .mobile-tab, .tab-content, .contacts-header,
-            .search-box, .contact-list, .mobile-contact, .contact-avatar, .contact-info,
-            .contact-name, .contact-status, .chat-messages, .message, .message-bubble,
-            .message-sender, .message-time, .chat-input-container, .chat-input,
-            .send-button, .image-button, .add-contact-btn, .create-group-btn, .empty-state,
-            .logout-btn, .chat-header, .back-btn, .modal, .toast, .theme-switcher, .theme-btn {
-                transition: background-color 0.4s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
             }
             
             .auth-overlay {
@@ -3640,6 +3776,7 @@ app.get('/mobile', (req, res) => {
                     <input type="text" id="mobileUsername" class="auth-input" placeholder="Username" value="test" autocomplete="off">
                     <input type="password" id="mobilePassword" class="auth-input" placeholder="Password" value="test" autocomplete="off">
                     <button class="auth-button" id="mobileLoginBtn">Sign In</button>
+                    <button class="auth-button" id="mobileRegisterBtn" style="background: var(--button-secondary); margin-top: 8px;">Create Account</button>
                 </div>
                 <div class="auth-footer">
                     <a href="/?desktop=true">Desktop Version</a> • Demo: test/test
@@ -3710,6 +3847,7 @@ app.get('/mobile', (req, res) => {
             let reconnectAttempts = 0;
             const MAX_RECONNECT = 5;
             let connectionInProgress = false;
+            let renderedMessageIds = new Set();
 
             function toggleTheme() {
                 const body = document.body;
@@ -3749,31 +3887,6 @@ app.get('/mobile', (req, res) => {
                     body.style.transition = '';
                 }, 50);
             }
-
-            function syncMessagesToServer() {
-                if (!ws || ws.readyState !== WebSocket.OPEN) return;
-                if (!currentUser) return;
-            
-                // Sync each chat's messages
-            	Object.keys(chatMessages).forEach(chatId => {
-                    const messages = chatMessages[chatId];
-                    if (messages && messages.length > 0) {
-                        ws.send(JSON.stringify({
-                            type: 'sync_messages',
-                            chatId: chatId,
-                            messages: messages
-                        }));
-                    }
-                });
-            }
-            
-            function getAccounts() {
-                try {
-                    return JSON.parse(localStorage.getItem('skypeAccounts') || '{}');
-                } catch (e) {
-                    return {};
-                }
-            }
             
             function showToast(message, isError = false) {
                 const toast = document.getElementById('toast');
@@ -3786,7 +3899,7 @@ app.get('/mobile', (req, res) => {
                 }, 3000);
             }
             
-            function mobileLogin() {
+            async function mobileLogin() {
                 const username = document.getElementById('mobileUsername').value.trim();
                 const password = document.getElementById('mobilePassword').value.trim();
                 const errorDiv = document.getElementById('authErrorMessage');
@@ -3799,29 +3912,65 @@ app.get('/mobile', (req, res) => {
                     return;
                 }
                 
-                const accounts = getAccounts();
-                
-                if ((accounts[username] && accounts[username].password === password) || 
-                    (username === 'test' && password === 'test')) {
+                try {
+                    const res = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+                    const result = await res.json();
                     
-                    mobileUser = {
-                        username: username,
-                        displayName: accounts[username]?.displayName || 
-                                   (username === 'test' ? 'Test User' : username)
-                    };
-                    
-                    document.getElementById('authOverlay').style.display = 'none';
-                    document.getElementById('mobileApp').classList.remove('hidden');
-                    document.getElementById('currentUserDisplay').textContent = mobileUser.displayName;
-                    
-                    connectionInProgress = false;
-                    connectWebSocket();
-                    
-                    showToast('Login successful!');
-                    
-                } else {
-                    errorDiv.textContent = 'Invalid username or password';
+                    if (result.success) {
+                        mobileUser = {
+                            username: username,
+                            displayName: result.displayName || username
+                        };
+                        
+                        document.getElementById('authOverlay').style.display = 'none';
+                        document.getElementById('mobileApp').classList.remove('hidden');
+                        document.getElementById('currentUserDisplay').textContent = mobileUser.displayName;
+                        
+                        connectionInProgress = false;
+                        connectWebSocket();
+                        
+                        showToast('Login successful!');
+                    } else {
+                        errorDiv.textContent = result.error || 'Invalid username or password';
+                        errorDiv.classList.add('show');
+                    }
+                } catch (e) {
+                    console.error('Login error:', e);
+                    errorDiv.textContent = 'Login failed. Check server connection.';
                     errorDiv.classList.add('show');
+                }
+            }
+            
+            async function mobileRegister() {
+                const username = prompt('Choose a username (2-20 letters/numbers/underscores):');
+                if (!username) return;
+                const password = prompt('Choose a password:');
+                if (!password) return;
+                const displayName = prompt('Display name (optional):') || username;
+                
+                try {
+                    const res = await fetch('/api/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password, displayName })
+                    });
+                    const result = await res.json();
+                    
+                    if (result.success) {
+                        showToast('✅ Account created! Now sign in.');
+                        document.getElementById('mobileUsername').value = username;
+                        document.getElementById('mobilePassword').value = '';
+                        document.getElementById('mobilePassword').focus();
+                    } else {
+                        showToast('❌ ' + (result.error || 'Registration failed'), true);
+                    }
+                } catch (e) {
+                    console.error('Register error:', e);
+                    showToast('❌ Registration failed', true);
                 }
             }
             
@@ -3946,7 +4095,7 @@ app.get('/mobile', (req, res) => {
                         break;
                         
                     case 'chat_history':
-                        if (data.messages) {
+                        if (data.messages && data.chatId === currentChat) {
                             document.getElementById('mobileMessages').innerHTML = '';
                             data.messages.forEach(msg => {
                                 if (msg.imageData) {
@@ -4057,6 +4206,7 @@ app.get('/mobile', (req, res) => {
                 document.getElementById('chatHeaderTitle').textContent = displayName;
                 document.getElementById('chatInputContainer').classList.remove('hidden');
                 document.getElementById('mobileMessages').innerHTML = '';
+                renderedMessageIds.clear();
                 
                 switchTab('chat');
                 
@@ -4074,6 +4224,7 @@ app.get('/mobile', (req, res) => {
             
             function leaveChat() {
                 currentChat = null;
+                renderedMessageIds.clear();
                 document.getElementById('chatHeader').classList.add('hidden');
                 document.getElementById('chatInputContainer').classList.add('hidden');
                 document.getElementById('mobileMessages').innerHTML = \`
@@ -4128,6 +4279,7 @@ app.get('/mobile', (req, res) => {
                         }));
                         
                         displayImage({
+                            id: Date.now(),
                             from: mobileUser.username,
                             fromDisplay: mobileUser.displayName,
                             imageData: event.target.result,
@@ -4170,6 +4322,16 @@ app.get('/mobile', (req, res) => {
             }
             
             function displayMessage(data, isSelf = false) {
+                // Dedupe by message id - prevents double-render when the server echoes our own sent message back
+                const msgId = data.id;
+                if (msgId != null) {
+                    if (renderedMessageIds.has(msgId)) {
+                        console.log('Skipping duplicate message', msgId);
+                        return;
+                    }
+                    renderedMessageIds.add(msgId);
+                }
+                
                 const messagesDiv = document.getElementById('mobileMessages');
                 
                 const emptyState = messagesDiv.querySelector('.empty-state');
@@ -4194,6 +4356,16 @@ app.get('/mobile', (req, res) => {
             }
             
             function displayImage(data, isSelf = false) {
+                // Dedupe by message id - same protection as displayMessage
+                const msgId = data.id;
+                if (msgId != null) {
+                    if (renderedMessageIds.has(msgId)) {
+                        console.log('Skipping duplicate image', msgId);
+                        return;
+                    }
+                    renderedMessageIds.add(msgId);
+                }
+                
                 const messagesDiv = document.getElementById('mobileMessages');
                 
                 const emptyState = messagesDiv.querySelector('.empty-state');
@@ -4232,7 +4404,15 @@ app.get('/mobile', (req, res) => {
                 document.querySelectorAll('.mobile-tab').forEach(tab => {
                     tab.classList.remove('active');
                 });
-                event.target.classList.add('active');
+                if (event && event.target) {
+                    event.target.classList.add('active');
+                } else {
+                    document.querySelectorAll('.mobile-tab').forEach(tab => {
+                        if (tab.textContent.toLowerCase().includes(tabName)) {
+                            tab.classList.add('active');
+                        }
+                    });
+                }
                 
                 document.querySelectorAll('.tab-content').forEach(content => {
                     content.classList.remove('active');
@@ -4249,6 +4429,7 @@ app.get('/mobile', (req, res) => {
                 currentChat = null;
                 contacts = [];
                 connectionInProgress = false;
+                renderedMessageIds.clear();
                 
                 document.getElementById('mobileApp').classList.add('hidden');
                 document.getElementById('authOverlay').style.display = 'flex';
@@ -4266,6 +4447,11 @@ app.get('/mobile', (req, res) => {
                     loginBtn.addEventListener('click', mobileLogin);
                 }
                 
+                const registerBtn = document.getElementById('mobileRegisterBtn');
+                if (registerBtn) {
+                    registerBtn.addEventListener('click', mobileRegister);
+                }
+                
                 document.getElementById('mobilePassword').addEventListener('keypress', function(e) {
                     if (e.key === 'Enter') mobileLogin();
                 });
@@ -4279,6 +4465,580 @@ app.get('/mobile', (req, res) => {
         <div class="footer-note">
             Fan project. Not affiliated with Microsoft.
         </div>
+    </body>
+    </html>
+    `);
+});
+
+// ==================== ANALYTICS PAGE (THEMED TO MATCH DESKTOP) ====================
+app.get('/analytics', (req, res) => {
+    console.log('📊 Serving analytics page');
+    
+    const onlineUsers = Array.from(users.values()).filter(u => u.status === 'online').length;
+    const totalGroups = groups.size;
+    
+    let messagesToday = 0;
+    const now = Date.now();
+    const oneDay = 24 * 60 * 60 * 1000;
+    
+    chatMessages.forEach((messages) => {
+        messages.forEach(msg => {
+            const msgTime = new Date(msg.timestamp).getTime();
+            if (now - msgTime < oneDay) {
+                messagesToday++;
+            }
+        });
+    });
+    
+    res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Skype Classic - Analytics</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                font-family: 'Tahoma', 'Arial', sans-serif;
+                font-size: 11px;
+            }
+            
+            :root {
+                --bg-primary: #6C00A0;
+                --window-bg: #ECE9D8;
+                --titlebar-start: #0A246A;
+                --titlebar-end: #6B8DC3;
+                --border-light: #FFFFFF;
+                --border-dark: #808080;
+                --text-primary: #000000;
+                --text-light: #FFFFFF;
+                --button-bg: #ECE9D8;
+                --contact-hover: #6C00A0;
+                --banner-bg: linear-gradient(90deg, #FFD700, #FFA500);
+                --banner-text: #0A246A;
+                --bg-image: url('/images/bbg.jpg');
+                --text-secondary: #666666;
+                --accent: #6C00A0;
+            }
+            
+            .dark-theme {
+                --bg-primary: #1a1a1a;
+                --window-bg: #2d2d2d;
+                --titlebar-start: #2b2b2b;
+                --titlebar-end: #4a4a4a;
+                --border-light: #4a4a4a;
+                --border-dark: #1a1a1a;
+                --text-primary: #e0e0e0;
+                --text-light: #ffffff;
+                --button-bg: #3d3d3d;
+                --contact-hover: #4a4a4a;
+                --banner-bg: linear-gradient(90deg, #b8860b, #8b4513);
+                --banner-text: #ffd700;
+                --bg-image: url('/images/dbg.jpg');
+                --text-secondary: #b0b0b0;
+                --accent: #9b59b6;
+            }
+            
+            body {
+                background: var(--bg-primary) var(--bg-image);
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-attachment: fixed;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                padding: 20px;
+                margin: 0;
+                padding-top: 45px;
+                color: var(--text-primary);
+                transition: background-color 0.5s ease, color 0.3s ease;
+            }
+            
+            .xp-window, .xp-titlebar, .xp-content, .xp-fieldset, .xp-legend,
+            .xp-button, .stat-box, .stat-title, .stat-value, .ascii-art,
+            .theme-btn, .theme-switcher, .global-banner {
+                transition: background-color 0.4s ease, color 0.3s ease, border-color 0.3s ease;
+            }
+            
+            .global-banner {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                background: var(--banner-bg);
+                border-bottom: 3px solid var(--titlebar-start);
+                overflow: hidden;
+                padding: 8px 0;
+                z-index: 9999;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            }
+            
+            .global-banner marquee {
+                background: none;
+                color: var(--banner-text);
+                text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
+                font-family: 'Tahoma', 'Arial', sans-serif;
+                font-size: 12px;
+            }
+            
+            .theme-switcher {
+                position: fixed;
+                top: 55px;
+                left: 10px;
+                z-index: 9999;
+                background: var(--window-bg);
+                border: 2px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                padding: 3px;
+                border-radius: 3px;
+            }
+            
+            .theme-btn {
+                background: var(--button-bg);
+                border: 2px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                padding: 3px 8px;
+                font-size: 10px;
+                font-weight: bold;
+                cursor: pointer;
+                color: var(--text-primary);
+                margin: 0;
+            }
+            
+            .theme-btn:hover {
+                background: var(--contact-hover);
+                color: var(--text-light);
+            }
+            
+            .xp-window {
+                width: 620px;
+                max-width: 100%;
+                background: var(--window-bg);
+                border: 2px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+                margin-top: 10px;
+            }
+            
+            .xp-titlebar {
+                background: linear-gradient(90deg, var(--titlebar-start), var(--titlebar-end));
+                color: var(--text-light);
+                padding: 4px 8px;
+                font-size: 11px;
+                font-weight: bold;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                height: 20px;
+            }
+            
+            .xp-titlebar-controls {
+                display: flex;
+                gap: 1px;
+            }
+            
+            .xp-button {
+                width: 16px;
+                height: 14px;
+                border: 1px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                background: var(--button-bg);
+                font-size: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                line-height: 1;
+                color: var(--text-primary);
+            }
+            
+            .xp-content {
+                padding: 15px;
+                background: var(--window-bg);
+                max-height: 80vh;
+                overflow-y: auto;
+            }
+            
+            .xp-fieldset {
+                border: 1px solid var(--border-dark);
+                padding: 15px;
+                margin-bottom: 15px;
+                background: var(--window-bg);
+                position: relative;
+            }
+            
+            .xp-legend {
+                background: var(--window-bg);
+                padding: 2px 8px;
+                font-size: 11px;
+                font-weight: bold;
+                position: absolute;
+                top: -8px;
+                left: 8px;
+                color: var(--text-primary);
+            }
+            
+            .xp-status-bar {
+                background: var(--window-bg);
+                border-top: 1px solid var(--border-dark);
+                padding: 4px 8px;
+                font-size: 10px;
+                color: var(--text-primary);
+                height: 20px;
+            }
+            
+            .stat-box {
+                background: var(--window-bg);
+                border: 1px solid var(--border-dark);
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                padding: 12px 15px;
+                margin: 10px 0;
+            }
+            
+            .stat-title {
+                font-weight: bold;
+                color: var(--titlebar-start);
+                margin-bottom: 4px;
+                font-size: 12px;
+            }
+            
+            .dark-theme .stat-title {
+                color: var(--accent);
+            }
+            
+            .stat-value {
+                font-size: 28px;
+                color: var(--accent);
+                font-weight: bold;
+            }
+            
+            .ascii-art {
+                font-family: 'Courier New', monospace;
+                background: #000000;
+                color: #00ff00;
+                padding: 15px;
+                margin: 10px 0 0 0;
+                font-size: 12px;
+                line-height: 1.5;
+                border: 2px inset var(--border-dark);
+            }
+            
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                gap: 10px;
+                margin-bottom: 10px;
+            }
+            
+            .nav-links {
+                text-align: center;
+                margin-top: 15px;
+                padding-top: 15px;
+                border-top: 1px solid var(--border-dark);
+            }
+            
+            .nav-links a {
+                color: var(--titlebar-start);
+                margin: 0 8px;
+                text-decoration: none;
+                font-weight: bold;
+                font-size: 11px;
+            }
+            
+            .dark-theme .nav-links a {
+                color: var(--accent);
+            }
+            
+            .nav-links a:hover {
+                text-decoration: underline;
+            }
+            
+            .whats-new-banner {
+                margin: 15px 0 10px 0;
+                padding: 15px;
+                background: linear-gradient(135deg, var(--titlebar-start), var(--titlebar-end));
+                color: var(--text-light);
+                border: 2px solid gold;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            }
+            
+            .whats-new-header {
+                text-align: center;
+                margin-bottom: 15px;
+                font-size: 14px;
+                font-weight: bold;
+                text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+            }
+            
+            .feature-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 10px;
+            }
+            
+            .feature-card {
+                background: rgba(255,255,255,0.15);
+                padding: 10px 12px;
+                border: 1px solid rgba(255,255,255,0.25);
+                border-radius: 3px;
+            }
+            
+            .feature-card-title {
+                font-size: 12px;
+                font-weight: bold;
+                margin-bottom: 6px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            
+            .feature-card-body {
+                font-size: 11px;
+                line-height: 1.5;
+                opacity: 0.95;
+            }
+            
+            .footer-note {
+                position: fixed;
+                bottom: 5px;
+                right: 5px;
+                font-size: 9px;
+                color: var(--text-secondary);
+                background: var(--window-bg);
+                padding: 2px 5px;
+                border-radius: 3px;
+                opacity: 0.75;
+                border: 1px solid var(--border-dark);
+                z-index: 9999;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="theme-switcher">
+            <button id="themeToggle" class="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
+        </div>
+        
+        <div class="global-banner">
+            <marquee behavior="scroll" direction="left" scrollamount="6">
+                🎉 UPDATE 1.4: THE "SOUND BLASTER" UPDATE HAS COME OUT! 🎉 CHECK OUT /ANALYTICS FOR MORE INFO! 📊 NOW FEATURING: WORKING VOICE CALLS • PLUG-AND-PLAY MICROPHONES • SERVER-SIDE ACCOUNTS • PERSISTENT MESSAGES • MUSIC SHARING • MOBILE SYNC • RETRO MODE • DEV TERMINAL • AND MORE! 🚀
+            </marquee>
+        </div>
+        
+        <div class="xp-window">
+            <div class="xp-titlebar">
+                <span>📊 Skype Classic Analytics</span>
+                <div class="xp-titlebar-controls">
+                    <div class="xp-button" onclick="window.location='/'">_</div>
+                    <div class="xp-button" onclick="window.location='/'">×</div>
+                </div>
+            </div>
+            <div class="xp-content">
+                <div class="xp-fieldset">
+                    <div class="xp-legend">📈 Usage Statistics</div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-title">👥 Online Users</div>
+                            <div class="stat-value">${onlineUsers}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-title">💬 Messages Today</div>
+                            <div class="stat-value">${messagesToday}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-title">👥 Active Groups</div>
+                            <div class="stat-value">${totalGroups}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-box" style="margin-top: 5px;">
+                        <div class="stat-title">📊 Activity Graph (Last 24h)</div>
+                        <div class="ascii-art">
+${'█'.repeat(Math.min(40, messagesToday))} ${messagesToday} messages
+${'█'.repeat(Math.min(40, onlineUsers))} ${onlineUsers} users online
+${'█'.repeat(Math.min(40, totalGroups))} ${totalGroups} active groups
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="whats-new-banner">
+                    <div class="whats-new-header">✨ WHAT'S NEW IN UPDATE 1.4 — THE "SOUND BLASTER" UPDATE ✨</div>
+                    
+                    <div class="feature-grid">
+                        <div class="feature-card">
+                            <div class="feature-card-title"><span>📞</span> Working VoIP Calls</div>
+                            <div class="feature-card-body">
+                                • Voice calls across browsers<br>
+                                • Real-time WebRTC audio<br>
+                                • Mute / Deafen controls
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <div class="feature-card-title"><span>🎤</span> Plug-and-Play Mics</div>
+                            <div class="feature-card-body">
+                                • Automatic microphone detection<br>
+                                • Permission prompt in call window<br>
+                                • Echo cancellation built in
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <div class="feature-card-title"><span>👤</span> Real Accounts</div>
+                            <div class="feature-card-body">
+                                • Same login on desktop & mobile<br>
+                                • Server-side user storage<br>
+                                • Accounts survive restarts
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <div class="feature-card-title"><span>💾</span> Persistent Messages</div>
+                            <div class="feature-card-body">
+                                • Chat history saved to disk<br>
+                                • Survives server restarts<br>
+                                • Synced across all your devices
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <div class="feature-card-title"><span>🎶</span> Music Sharing</div>
+                            <div class="feature-card-body">
+                                • Access at <strong>/music</strong><br>
+                                • Upload your own tracks<br>
+                                • Like, follow, and playlists
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <div class="feature-card-title"><span>📱</span> Mobile Version</div>
+                            <div class="feature-card-body">
+                                • Access at <strong>/mobile</strong><br>
+                                • Fixed message duplication<br>
+                                • Full sync with desktop
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <div class="feature-card-title"><span>💻</span> Retro Version</div>
+                            <div class="feature-card-body">
+                                • Access at <strong>/old</strong><br>
+                                • Works on IE5, Netscape 6<br>
+                                • Showcase / nostalgia mode
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <div class="feature-card-title"><span>🐛</span> Bug Fixes</div>
+                            <div class="feature-card-body">
+                                • callTarget null bug squashed<br>
+                                • ICE candidate queueing<br>
+                                • Duplicate message renders fixed
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25);">
+                        <div style="font-size: 12px; font-weight: bold; margin-bottom: 6px;">🚀 Coming Soon</div>
+                        <div class="feature-grid">
+                            <div class="feature-card">
+                                <div class="feature-card-title"><span>📸</span> Mobile Images</div>
+                                <div class="feature-card-body">Send photos from your phone (in testing)</div>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-card-title"><span>👤</span> User Profiles</div>
+                                <div class="feature-card-body">Custom avatars and status messages</div>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-card-title"><span>🎥</span> Video Calls</div>
+                                <div class="feature-card-body">See the person you're talking to</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="nav-links">
+                    <a href="/">🏠 Home</a>
+                    <a href="/mobile">📱 Mobile</a>
+                    <a href="/music">🎵 Music</a>
+                    <a href="/old">🕹️ Retro</a>
+                    <a href="/dev">💻 Dev</a>
+                </div>
+                
+                <div style="text-align: center; margin-top: 15px; color: var(--text-secondary); font-size: 10px;">
+                    Last updated: ${new Date().toLocaleTimeString()} • Auto-refreshes every 60 seconds<br>
+                    <small>skypeclassic.ru - Your Classic Chat Experience</small>
+                </div>
+            </div>
+            <div class="xp-status-bar">
+                <span>📊 Analytics • Live Server Data</span>
+            </div>
+        </div>
+        
+        <div class="footer-note">
+            Fan project. Not affiliated with Microsoft.
+        </div>
+        
+        <script>
+            function toggleTheme() {
+                const body = document.body;
+                const button = document.getElementById('themeToggle');
+                
+                body.style.transition = 'background 0.5s ease, color 0.3s ease';
+                
+                if (body.classList.contains('dark-theme')) {
+                    body.classList.remove('dark-theme');
+                    button.innerHTML = '🌙 Dark';
+                    localStorage.setItem('skypeTheme', 'light');
+                } else {
+                    body.classList.add('dark-theme');
+                    button.innerHTML = '☀️ Light';
+                    localStorage.setItem('skypeTheme', 'dark');
+                }
+            }
+            
+            function loadTheme() {
+                const savedTheme = localStorage.getItem('skypeTheme');
+                const body = document.body;
+                const button = document.getElementById('themeToggle');
+                
+                body.style.transition = 'none';
+                
+                if (savedTheme === 'dark') {
+                    body.classList.add('dark-theme');
+                    if (button) button.innerHTML = '☀️ Light';
+                } else {
+                    body.classList.remove('dark-theme');
+                    if (button) button.innerHTML = '🌙 Dark';
+                }
+                
+                setTimeout(() => {
+                    body.style.transition = '';
+                }, 50);
+            }
+            
+            loadTheme();
+            
+            setTimeout(() => location.reload(), 60000);
+        </script>
     </body>
     </html>
     `);
@@ -4518,7 +5278,6 @@ app.get('/aboutme', (req, res) => {
                 height: 20px;
             }
             
-            /* Profile specific styles */
             .profile-header {
                 display: flex;
                 gap: 20px;
@@ -4750,12 +5509,10 @@ app.get('/aboutme', (req, res) => {
         </style>
     </head>
     <body>
-        <!-- Theme Switcher -->
         <div class="theme-switcher">
             <button id="themeToggle" class="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
         </div>
         
-        <!-- Global Update Banner -->
         <div class="global-banner">
             <marquee behavior="scroll" direction="left" scrollamount="6">
                 👋 HEY THERE! WELCOME TO MY ABOUT ME PAGE! 🎓 STUDENT AT HSE LYCEUM • 💻 PYTHON & C++ DEVELOPER • 🚀 CREATOR OF SKYPECLASSIC • 🤖 AI ENTHUSIAST
@@ -4771,7 +5528,6 @@ app.get('/aboutme', (req, res) => {
                 </div>
             </div>
             <div class="xp-content">
-                <!-- Profile Header -->
                 <div class="profile-header">
                     <div class="profile-avatar">TL</div>
                     <div class="profile-info">
@@ -4786,12 +5542,10 @@ app.get('/aboutme', (req, res) => {
                     </div>
                 </div>
                 
-                <!-- Tagline -->
                 <div class="tagline">
                     "I'm a student who loves programming and building digital projects. I'm self-learning Python and C++, and I'm always exploring AI tools. Also, goofing around is present in my daily schedule."
                 </div>
                 
-                <!-- About Me -->
                 <div class="xp-fieldset">
                     <div class="xp-legend">👋 About Me</div>
                     <p style="line-height: 1.7; font-size: 12px;">
@@ -4802,7 +5556,6 @@ app.get('/aboutme', (req, res) => {
                     </p>
                 </div>
                 
-                <!-- Skills -->
                 <div class="xp-fieldset">
                     <div class="xp-legend">🛠️ Skills</div>
                     
@@ -4911,7 +5664,6 @@ app.get('/aboutme', (req, res) => {
                     </div>
                 </div>
                 
-                <!-- Languages -->
                 <div class="xp-fieldset">
                     <div class="xp-legend">🌍 Languages</div>
                     <div class="lang-item">
@@ -4924,7 +5676,6 @@ app.get('/aboutme', (req, res) => {
                     </div>
                 </div>
                 
-                <!-- Projects -->
                 <div class="xp-fieldset">
                     <div class="xp-legend">🚀 Projects</div>
                     
@@ -4950,7 +5701,6 @@ app.get('/aboutme', (req, res) => {
                     </div>
                 </div>
                 
-                <!-- Achievements -->
                 <div class="xp-fieldset">
                     <div class="xp-legend">🏆 Achievements & Extracurriculars</div>
                     <ul style="margin-left: 20px; line-height: 1.8; font-size: 12px;">
@@ -4960,7 +5710,6 @@ app.get('/aboutme', (req, res) => {
                     </ul>
                 </div>
                 
-                <!-- Education -->
                 <div class="xp-fieldset">
                     <div class="xp-legend">🎓 Education</div>
                     <div style="padding: 10px;">
@@ -4987,7 +5736,6 @@ app.get('/aboutme', (req, res) => {
                     </div>
                 </div>
                 
-                <!-- Contact -->
                 <div class="xp-fieldset">
                     <div class="xp-legend">📬 Contact</div>
                     <a href="mailto:rbevruyb@gmail.com" class="contact-card">
@@ -5034,7 +5782,6 @@ app.get('/aboutme', (req, res) => {
                     </div>
                 </div>
                 
-                <!-- Navigation -->
                 <div class="nav-links">
                     <a href="/">🏠 Home</a>
                     <a href="/mobile">📱 Mobile</a>
@@ -5096,288 +5843,6 @@ app.get('/aboutme', (req, res) => {
         
         <div style="position: fixed; bottom: 5px; right: 5px; font-size: 9px; color: #666; background: rgba(255,255,255,0.7); padding: 2px 5px; border-radius: 3px;">
             Fan project. Not affiliated with Microsoft or Skype in any way.
-        </div>
-    </body>
-    </html>
-    `);
-});
-
-// ===== ANALYTICS PAGE =====
-app.get('/analytics', (req, res) => {
-    console.log('📊 Serving analytics page');
-    
-    const onlineUsers = Array.from(users.values()).filter(u => u.status === 'online').length;
-    const totalGroups = groups.size;
-    
-    let messagesToday = 0;
-    const now = Date.now();
-    const oneDay = 24 * 60 * 60 * 1000;
-    
-    chatMessages.forEach((messages) => {
-        messages.forEach(msg => {
-            const msgTime = new Date(msg.timestamp).getTime();
-            if (now - msgTime < oneDay) {
-                messagesToday++;
-            }
-        });
-    });
-    
-    res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Skype Classic - Analytics</title>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Tahoma', 'Arial', sans-serif; }
-            body { 
-            	background: url('/images/bbg.jpg');
-            	background-size: cover;
-            	background-position: center;
-            	background-repeat: no-repeat;
-            	background-attachment: fixed;
-            	display: flex;
-            	justify-content: center;
-            	align-items: center;
-            	min-height: 100vh;
-            	padding: 20px;
-            	margin: 0;
-            	padding-top: 45px;
-            }
-            .global-banner {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                background: linear-gradient(90deg, #FFD700, #FFA500);
-                border-bottom: 3px solid #0A246A;
-                overflow: hidden;
-                padding: 8px 0;
-                z-index: 9999;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-            }
-            .xp-window { 
-                width: 600px; 
-                background: #ECE9D8; 
-                border: 2px solid; 
-                border-top-color: #FFFFFF; 
-                border-left-color: #FFFFFF; 
-                border-right-color: #000000; 
-                border-bottom-color: #000000; 
-            }
-            .xp-titlebar { 
-                background: linear-gradient(90deg, #0A246A, #A6CAF0); 
-                color: white; 
-                padding: 5px 10px; 
-                font-weight: bold; 
-                display: flex; 
-                justify-content: space-between; 
-                align-items: center; 
-            }
-            .xp-content { padding: 20px; }
-            .stat-box { 
-                background: white; 
-                border: 2px solid; 
-                border-top-color: #FFFFFF; 
-                border-left-color: #FFFFFF; 
-                border-right-color: #808080; 
-                border-bottom-color: #808080;
-                padding: 15px; 
-                margin: 15px 0; 
-            }
-            .stat-title { 
-                font-weight: bold; 
-                color: #0A246A; 
-                margin-bottom: 5px; 
-                font-size: 14px;
-            }
-            .stat-value { 
-                font-size: 32px; 
-                color: #6C00A0; 
-                font-weight: bold;
-            }
-            .ascii-art { 
-                font-family: monospace; 
-                background: black; 
-                color: #00ff00; 
-                padding: 15px; 
-                margin: 15px 0; 
-                font-size: 14px;
-                line-height: 1.4;
-            }
-            .nav-links {
-                text-align: center;
-                margin-top: 20px;
-                padding-top: 15px;
-                border-top: 1px solid #808080;
-            }
-            .nav-links a {
-                color: #FFFFFF;
-                margin: 0 10px;
-                text-decoration: none;
-                font-weight: bold;
-            }
-            .nav-links a:hover {
-                text-decoration: underline;
-            }
-            .xp-button {
-                background: #ECE9D8;
-                color: black;
-                width: 22px;
-                height: 20px;
-                text-align: center;
-                line-height: 20px;
-                border: 2px solid;
-                border-top-color: #FFFFFF;
-                border-left-color: #FFFFFF;
-                border-right-color: #808080;
-                border-bottom-color: #808080;
-                cursor: pointer;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="global-banner">
-            <marquee behavior="scroll" direction="left" scrollamount="6" style="color: #0A246A; font-weight: bold; font-size: 14px; font-family: 'Tahoma', 'Arial', sans-serif; text-shadow: 1px 1px 0 #FFFFFF;">
-                🎉 UPDATE 1.3: THE MULTIMEDIA DRIVE UPDATE HAS COME OUT! 🎉 CHECK OUT /ANALYTICS FOR MORE INFO! 📊 NEW FEATURES: MUSIC SHARING • RETRO MODE • DEV TERMINAL • MOBILE SYNC • GROUP CHATS • IMAGE SHARING • AND MORE! 🚀
-            </marquee>
-        </div>
-        
-        <div class="xp-window">
-            <div class="xp-titlebar">
-                <span>📊 Skype Classic Analytics</span>
-                <div style="display: flex; gap: 2px;">
-                    <div class="xp-button" onclick="window.location='/'">_</div>
-                    <div class="xp-button" onclick="window.location='/'">×</div>
-                </div>
-            </div>
-            <div class="xp-content">
-                <h2 style="color: #0A246A; margin-bottom: 20px; text-align: center;">📈 Usage Statistics</h2>
-                
-                <div class="stat-box">
-                    <div class="stat-title">👥 Online Users</div>
-                    <div class="stat-value">${onlineUsers}</div>
-                </div>
-                
-                <div class="stat-box">
-                    <div class="stat-title">💬 Messages Today</div>
-                    <div class="stat-value">${messagesToday}</div>
-                </div>
-                
-                <div class="stat-box">
-                    <div class="stat-title">👥 Active Groups</div>
-                    <div class="stat-value">${totalGroups}</div>
-                </div>
-                
-                <div class="stat-box">
-                    <div class="stat-title">📊 Activity Graph (Last 24h)</div>
-                    <div class="ascii-art">
-                        ${'█'.repeat(Math.min(30, messagesToday))} ${messagesToday} messages<br>
-                        ${'█'.repeat(Math.min(30, onlineUsers))} ${onlineUsers} users online<br>
-                        ${'█'.repeat(Math.min(30, totalGroups))} ${totalGroups} active groups
-                    </div>
-                </div>
-
-                 <!-- ===== WHAT'S NEW BANNER ===== -->
-                 <div style="margin: 30px 0 20px 0; padding: 15px; background: linear-gradient(135deg, #6C00A0, #0A246A); color: white; border-radius: 10px; border: 2px solid gold; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
-                     <div style="text-align: center; margin-bottom: 20px;">
-                         <img src="/images/mmdpatch.png" 
-                              alt="What's New in Skype Classic" 
-                              style="width: 457px; height: 26px; border-radius: 4px; border: 1px solid white; display: block; margin: 0 auto;">
-                     </div>
-                     
-                     <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 15px;">
-                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 15px;">
-                             
-                             <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 6px;">
-                                 <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-                                     <span>📱</span> Mobile Version
-                                 </div>
-                                 <div style="font-size: 13px; line-height: 1.4;">
-                                     • Access at <strong>/mobile</strong><br>
-                                     • Add friends & search<br>
-                                     • Full sync with desktop
-                                 </div>
-                             </div>
-                             
-                             <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 6px;">
-                                 <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-                                     <span>🎶</span> Music Sharing
-                                 </div>
-                                 <div style="font-size: 13px; line-height: 1.4;">
-                                     • Access at <strong>/music</strong><br>
-                                     • Share your own music<br>
-                                     • Like other's creations
-                                 </div>
-                             </div>
-
-                             <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 6px;">
-                                 <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-                                     <span>💻</span> Retro Version
-                                 </div>
-                                 <div style="font-size: 13px; line-height: 1.4;">
-                                     • Access at <strong>/old</strong><br>
-                                     • Works on super old pcs and browsers<br>
-                                     • More of a showcase rather than a functional version
-                                 </div>
-                             </div>
-                             
-                             <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 6px;">
-                                 <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-                                     <span>✨</span> New Features
-                                 </div>
-                                 <div style="font-size: 13px; line-height: 1.4;">
-                                     • Better performance<br>
-                                     • Dark mode<br
-                                 </div>
-                             </div>
-                             
-                         </div>
-                         
-                         <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 6px;">
-                             <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-                                 <span>🚀</span> Coming Soon
-                             </div>
-                             <div style="font-size: 13px; line-height: 1.4; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
-                                 <div>
-                                     <strong>📸 Mobile Images</strong><br>
-                                     Send photos from phone (in testing right now)
-                                 </div>
-                                 <div>
-                                     <strong>👤 User Profiles</strong><br>
-                                     Custom avatars
-                                 </div>
-                                 <div>
-                                     <strong>☎️ VoIP Calling</strong><br>
-                                     Voice/Video calling (in testing right now)
-                                 </div>
-                             </div>
-                         </div>
-                     </div>
-                 </div>
-                
-                <div class="nav-links">
-                    <a href="/">🏠 Home</a>
-                    <a href="/mobile">📱 Mobile</a>
-                    <a href="/music">🎵 Music</a>
-                    <a href="/old">🕹️ Retro</a>
-                    <a href="/dev">💻 Dev</a>
-                </div>
-                
-                <div style="text-align: center; margin-top: 20px; color: #666; font-size: 11px;">
-                    Last updated: ${new Date().toLocaleTimeString()}<br>
-                    <small>skypeclassic.ru - Your Classic Chat Experience</small>
-                </div>
-            </div>
-        </div>
-        
-        <script>
-            setTimeout(() => location.reload(), 60000);
-        </script>
-        
-        <div style="position: fixed; bottom: 5px; right: 5px; font-size: 9px; color: #666; background: rgba(255,255,255,0.7); padding: 2px 5px; border-radius: 3px;">
-            Fan project. Not affiliated with Microsoft.
         </div>
     </body>
     </html>
@@ -5795,7 +6260,7 @@ app.get('/music', (req, res) => {
     <body>
         <div class="global-banner">
             <marquee behavior="scroll" direction="left" scrollamount="6" style="color: #0A246A; font-weight: bold; font-size: 14px;">
-                🎉 UPDATE 1.3: THE MULTIMEDIA DRIVE UPDATE HAS COME OUT! 🎉 CHECK OUT /ANALYTICS FOR MORE INFO! 📊
+                🎉 UPDATE 1.4: THE "SOUND BLASTER" UPDATE HAS COME OUT! 🎉 CHECK OUT /ANALYTICS FOR MORE INFO! 📊
             </marquee>
         </div>
         
@@ -5808,7 +6273,6 @@ app.get('/music', (req, res) => {
                 </div>
             </div>
             <div class="xp-content">
-                <!-- Login Section -->
                 <div id="loginSection" class="login-section" ${currentUser ? 'style="display:none;"' : ''}>
                     <h3 style="color: #0A246A; margin-bottom: 15px;">🔐 Login to Music Sharing</h3>
                     <input type="text" id="musicUsername" class="login-input" placeholder="Username" value="test">
@@ -5817,7 +6281,6 @@ app.get('/music', (req, res) => {
                     <p style="margin-top: 10px; color: #666; font-size: 12px;">Demo: test/test or use your Skype Classic account</p>
                 </div>
                 
-                <!-- User Info -->
                 <div id="userInfo" class="user-info" ${currentUser ? '' : 'style="display:none;"'}>
                     <div>
                         <span style="font-size: 18px;">👋 Welcome, <span id="displayName">${userDisplay || 'Guest'}</span>!</span>
@@ -5828,7 +6291,6 @@ app.get('/music', (req, res) => {
                     </div>
                 </div>
                 
-                <!-- Stats Bar -->
                 <div class="stats-bar">
                     <div class="stat-item">
                         <div class="stat-number" id="totalTracks">${musicPosts.length}</div>
@@ -5848,10 +6310,8 @@ app.get('/music', (req, res) => {
                     </div>
                 </div>
                 
-                <!-- Message Display -->
                 <div id="messageBox" class="message"></div>
                 
-                <!-- Main Tabs -->
                 <div class="tabs">
                     <div class="tab active" onclick="switchTab('discover')">🎵 Discover</div>
                     <div class="tab" onclick="switchTab('upload')">📤 Upload</div>
@@ -5860,7 +6320,6 @@ app.get('/music', (req, res) => {
                     <div class="tab" onclick="switchTab('notifications')">🔔 Notifications</div>
                 </div>
                 
-                <!-- Discover Tab -->
                 <div id="discoverTab" class="tab-content active">
                     <div style="margin-bottom: 20px;">
                         <select id="genreFilter" onchange="filterByGenre()" style="padding: 8px; margin-right: 10px;">
@@ -5912,7 +6371,6 @@ app.get('/music', (req, res) => {
                     </div>
                 </div>
                 
-                <!-- Upload Tab -->
                 <div id="uploadTab" class="tab-content">
                     <div class="share-form">
                         <h3 style="color: #0A246A; margin-bottom: 20px;">📤 Upload Your Music</h3>
@@ -5950,7 +6408,6 @@ app.get('/music', (req, res) => {
                     </div>
                 </div>
                 
-                <!-- Playlists Tab -->
                 <div id="playlistsTab" class="tab-content">
                     <div style="margin-bottom: 20px;">
                         <button class="login-btn" onclick="createPlaylist()">➕ Create New Playlist</button>
@@ -5964,7 +6421,6 @@ app.get('/music', (req, res) => {
                     </div>
                 </div>
                 
-                <!-- Following Tab -->
                 <div id="followingTab" class="tab-content">
                     <div id="followingContainer">
                         <div class="empty-state" style="text-align: center; padding: 40px;">
@@ -5975,7 +6431,6 @@ app.get('/music', (req, res) => {
                     </div>
                 </div>
                 
-                <!-- Notifications Tab -->
                 <div id="notificationsTab" class="tab-content">
                     <div id="notificationsContainer">
                         <div class="empty-state" style="text-align: center; padding: 40px;">
@@ -6007,24 +6462,41 @@ app.get('/music', (req, res) => {
                 loadUserData();
             }
             
-            function musicLogin() {
+            async function musicLogin() {
                 const username = document.getElementById('musicUsername').value.trim();
                 const password = document.getElementById('musicPassword').value.trim();
                 
-                if (username && password) {
-                    currentMusicUser = username;
-                    userDisplayName = username === 'test' ? 'Test User' : username;
-                    
-                    document.getElementById('loginSection').style.display = 'none';
-                    document.getElementById('userInfo').style.display = 'block';
-                    document.getElementById('displayName').textContent = userDisplayName;
-                    
-                    loadUserData();
-                    showMessage('✅ Login successful! Welcome to Music Sharing!', 'success');
-                    
-                    window.history.pushState({}, '', '/music?username=' + username + '&display=' + userDisplayName);
-                } else {
+                if (!username || !password) {
                     showMessage('❌ Please enter username and password', 'error');
+                    return;
+                }
+                
+                try {
+                    const res = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+                    const result = await res.json();
+                    
+                    if (result.success) {
+                        currentMusicUser = username;
+                        userDisplayName = result.displayName || username;
+                        
+                        document.getElementById('loginSection').style.display = 'none';
+                        document.getElementById('userInfo').style.display = 'block';
+                        document.getElementById('displayName').textContent = userDisplayName;
+                        
+                        loadUserData();
+                        showMessage('✅ Login successful! Welcome to Music Sharing!', 'success');
+                        
+                        window.history.pushState({}, '', '/music?username=' + username + '&display=' + userDisplayName);
+                    } else {
+                        showMessage('❌ ' + (result.error || 'Invalid credentials'), 'error');
+                    }
+                } catch (e) {
+                    console.error('Music login error:', e);
+                    showMessage('❌ Login failed. Check server connection.', 'error');
                 }
             }
             
@@ -6339,7 +6811,6 @@ app.get('/music', (req, res) => {
                 }
                 
                 const title = document.getElementById('trackTitle').value.trim();
-                const desc = document.getElementById('trackDesc').value.trim();
                 const fileInput = document.getElementById('musicFile');
                 
                 if (!title) {
@@ -6927,7 +7398,7 @@ app.get('/scr', (req, res) => {
     `);
 });
 
-// Standalone App version for EXE (pure XP window, no outer background/banner)
+// Standalone App version for EXE
 app.get('/app', (req, res) => {
     console.log("📱 Serving standalone app version for EXE");
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -6986,7 +7457,6 @@ app.get('/app', (req, res) => {
             color: var(--text-primary);
         }
         
-        /* Custom titlebar for EXE window dragging */
         .app-titlebar {
             background: linear-gradient(90deg, var(--titlebar-start), var(--titlebar-end));
             color: var(--text-light);
@@ -7506,7 +7976,6 @@ app.get('/app', (req, res) => {
     </style>
 </head>
 <body>
-    <!-- Custom Titlebar for EXE -->
     <div class="app-titlebar">
         <span>📞 Skype Classic</span>
         <div class="app-titlebar-buttons">
@@ -7516,19 +7985,16 @@ app.get('/app', (req, res) => {
         </div>
     </div>
     
-    <!-- Theme Switcher -->
     <div class="theme-switcher">
         <button id="themeToggle" class="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
     </div>
     
-    <!-- Sound Control -->
     <div class="sound-control">
         <label>
             <input type="checkbox" id="soundToggle" checked> Sounds
         </label>
     </div>
 
-    <!-- Audio Elements -->
     <audio id="logoutSound" preload="auto"><source src="/sounds/logoff.mp3" type="audio/mpeg"></audio>
     <audio id="messageSound" preload="auto"><source src="/sounds/messagereceived.mp3" type="audio/mpeg"></audio>
     <audio id="loginSound" preload="auto"><source src="/sounds/logon.mp3" type="audio/mpeg"></audio>
@@ -7539,7 +8005,6 @@ app.get('/app', (req, res) => {
     <audio id="callAcceptSound" preload="auto"><source src="/sounds/call_accept.mp3" type="audio/mpeg"></audio>
     <audio id="callErrorSound" preload="auto"><source src="/sounds/call_error.mp3" type="audio/mpeg"></audio>
 
-    <!-- Login Window -->
     <div id="loginWindow" class="xp-window">
         <div class="xp-titlebar">
             <span>📞 Skype Classic</span>
@@ -7584,7 +8049,6 @@ app.get('/app', (req, res) => {
         </div>
     </div>
 
-    <!-- Main Chat Window -->
     <div id="chatWindow" class="xp-window chat-window hidden">
         <div class="xp-titlebar">
             <span>📞 Skype Classic - <span id="currentUser">User</span></span>
@@ -7596,7 +8060,6 @@ app.get('/app', (req, res) => {
         </div>
         <div class="xp-content">
             <div class="chat-layout">
-                <!-- Contacts Panel -->
                 <div class="contacts-panel">
                     <div class="xp-fieldset" style="margin-bottom: 10px;">
                         <legend class="xp-legend">Contacts</legend>
@@ -7610,12 +8073,10 @@ app.get('/app', (req, res) => {
                     </div>
                 </div>
                 
-                <!-- Chat Panel -->
                 <div class="chat-panel">
                     <div class="xp-fieldset" style="height: 100%; display: flex; flex-direction: column;">
                         <legend class="xp-legend">Chat <span id="currentChatWith"></span></legend>
                         <div id="chatArea" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
-                            <!-- Dynamic chat containers will be added here -->
                         </div>
                     </div>
                 </div>
@@ -7626,7 +8087,6 @@ app.get('/app', (req, res) => {
         </div>
     </div>
 
-    <!-- Incoming Call Window -->
     <div id="incomingCallWindow" class="xp-window hidden" style="width: 300px; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;">
         <div class="xp-titlebar">
             <span>📞 Incoming Call...</span>
@@ -7646,7 +8106,6 @@ app.get('/app', (req, res) => {
         </div>
     </div>
 
-    <!-- Active Call Window -->
     <div id="callWindow" class="xp-window hidden" style="width: 350px; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;">
         <div class="xp-titlebar">
             <span>📞 Active Call</span>
@@ -7679,7 +8138,6 @@ app.get('/app', (req, res) => {
         </div>
     </div>
 
-    <!-- Group Creation Window -->
     <div id="createGroupWindow" class="xp-window hidden" style="width: 350px; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;">
         <div class="xp-titlebar">
             <span>👥 Create Group Chat</span>
@@ -7707,7 +8165,6 @@ app.get('/app', (req, res) => {
         </div>
     </div>
 
-    <!-- Analytics Popup -->
     <div id="analyticsPopup" class="xp-window hidden" style="width: 300px; position: fixed; bottom: 20px; right: 20px; z-index: 1001;">
         <div class="xp-titlebar">
             <span>📊 Analytics</span>
@@ -7727,30 +8184,22 @@ app.get('/app', (req, res) => {
         </div>
     </div>
     
-    <!-- Image Modal -->
     <div id="imageModal" onclick="closeImageModal()">
         <span class="modal-close">&times;</span>
         <img id="modalImage">
     </div>
 
     <script>
-        // ===== EXE WINDOW CONTROLS =====
         function minimizeWindow() {
-            if (window.electronAPI) {
-                window.electronAPI.minimize();
-            }
+            if (window.electronAPI) window.electronAPI.minimize();
         }
         
         function maximizeWindow() {
-            if (window.electronAPI) {
-                window.electronAPI.maximize();
-            }
+            if (window.electronAPI) window.electronAPI.maximize();
         }
         
         function closeWindow() {
-            if (window.electronAPI) {
-                window.electronAPI.close();
-            }
+            if (window.electronAPI) window.electronAPI.close();
         }
         
         let currentUser = null;
@@ -7766,7 +8215,6 @@ app.get('/app', (req, res) => {
         let userGroups = [];
         let chatMessages = {};
         
-        // WebRTC variables
         let localStream = null;
         let remoteStream = null;
         let peerConnection = null;
@@ -7774,20 +8222,11 @@ app.get('/app', (req, res) => {
         let isDeafened = false;
         let microphonePermissionGranted = false;
         let connectionInProgress = false;
+        let pendingIceCandidates = [];
 
-        const rtcConfiguration = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
-            ]
-        };
-
-        // ===== THEME MANAGEMENT =====
         function toggleTheme() {
             const body = document.body;
             const button = document.getElementById('themeToggle');
-            
-            body.style.transition = 'background 0.5s ease, color 0.3s ease';
             
             if (body.classList.contains('dark-theme')) {
                 body.classList.remove('dark-theme');
@@ -7805,8 +8244,6 @@ app.get('/app', (req, res) => {
             const body = document.body;
             const button = document.getElementById('themeToggle');
             
-            body.style.transition = 'none';
-            
             if (savedTheme === 'dark') {
                 body.classList.add('dark-theme');
                 if (button) button.innerHTML = '☀️ Light';
@@ -7814,19 +8251,12 @@ app.get('/app', (req, res) => {
                 body.classList.remove('dark-theme');
                 if (button) button.innerHTML = '🌙 Dark';
             }
-            
-            setTimeout(() => {
-                body.style.transition = '';
-            }, 50);
         }
-
-        // ===== MESSAGE STORAGE FUNCTIONS =====
 
         function syncMessagesToServer() {
             if (!ws || ws.readyState !== WebSocket.OPEN) return;
             if (!currentUser) return;
             
-            // Sync each chat's messages
             Object.keys(chatMessages).forEach(chatId => {
                 const messages = chatMessages[chatId];
                 if (messages && messages.length > 0) {
@@ -7847,21 +8277,17 @@ app.get('/app', (req, res) => {
             const saved = localStorage.getItem('chatMessages_' + currentUser.username);
             if (saved) {
                 chatMessages = JSON.parse(saved);
-                console.log('📦 Loaded messages from localStorage:', Object.keys(chatMessages).length, 'chats');
-                // Sync local messages to server
-                syncMessagesToServer();
             } else {
                 chatMessages = {};
-                // Request message history from server
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    // Request history for each contact
-                    userContacts.forEach(contact => {
-                        ws.send(JSON.stringify({
-                            type: 'get_message_history',
-                            chatId: contact.username
-                        }));
-                    });
-                }
+            }
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                userContacts.forEach(contact => {
+                    ws.send(JSON.stringify({
+                        type: 'get_message_history',
+                        chatId: contact.username
+                    }));
+                });
             }
         }
         
@@ -7870,12 +8296,10 @@ app.get('/app', (req, res) => {
                 chatMessages[contact] = [];
             }
             
-            // Check if message already exists
             const exists = chatMessages[contact].some(m => m.id === messageData.id);
             if (!exists) {
                 chatMessages[contact].push(messageData);
                 saveMessagesToLocalStorage();
-                syncMessagesToServer();
                 return true;
             }
             return false;
@@ -7931,16 +8355,13 @@ app.get('/app', (req, res) => {
             modal.classList.remove('active');
         }
 
-        // ===== CONTACT MANAGEMENT =====
         function loadContacts() {
-            // First load from localStorage as backup
             const savedContacts = localStorage.getItem('userContacts_' + currentUser.username);
             if (savedContacts) {
                 userContacts = JSON.parse(savedContacts);
                 updateContactList();
             }
             
-            // Then request from server to get latest
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                     type: 'get_contacts',
@@ -7961,7 +8382,6 @@ app.get('/app', (req, res) => {
                 return;
             }
             
-            // Create contact tabs
             userContacts.forEach(contact => {
                 const contactTab = document.createElement('div');
                 contactTab.className = 'contact-tab' + (currentChat === contact.username ? ' active' : '');
@@ -7978,7 +8398,6 @@ app.get('/app', (req, res) => {
                 contactTab.onclick = () => switchChat(contact.username, contact.displayName);
                 contactsPanel.appendChild(contactTab);
                 
-                // Create chat container for this contact if it doesn't exist
                 if (!document.getElementById('chatContainer_' + contact.username)) {
                     const chatContainer = document.createElement('div');
                     chatContainer.id = 'chatContainer_' + contact.username;
@@ -7998,13 +8417,11 @@ app.get('/app', (req, res) => {
                     \`;
                     chatArea.appendChild(chatContainer);
                     
-                    // Setup image input for this contact
                     document.getElementById('imageInput_' + contact.username).addEventListener('change', (e) => {
                         handleImageUpload(e, contact.username);
                     });
                 }
                 
-                // Load messages for this contact
                 if (chatMessages[contact.username]) {
                     renderMessagesForChat(contact.username);
                 }
@@ -8022,7 +8439,6 @@ app.get('/app', (req, res) => {
                 }));
             }
             
-            // Hide all chat containers and show the selected one
             document.querySelectorAll('.chat-container').forEach(container => {
                 container.classList.remove('active');
             });
@@ -8031,7 +8447,6 @@ app.get('/app', (req, res) => {
                 activeContainer.classList.add('active');
             }
             
-            // Update active contact tab styling
             document.querySelectorAll('.contact-tab').forEach(tab => {
                 tab.classList.remove('active');
                 if (tab.getAttribute('data-contact') === username) {
@@ -8039,10 +8454,8 @@ app.get('/app', (req, res) => {
                 }
             });
             
-            // Render messages for this contact
             renderMessagesForChat(username);
             
-            // Focus the input
             setTimeout(() => {
                 const input = document.getElementById('messageInput_' + username);
                 if (input) input.focus();
@@ -8168,18 +8581,14 @@ app.get('/app', (req, res) => {
                 
                 localStorage.setItem('userContacts_' + currentUser.username, JSON.stringify(userContacts));
                 updateContactList();
-                addSystemMessage('Added ' + displayName + ' to contacts');
-                
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({
-                        type: 'sync_contacts',
-                        username: currentUser.username,
-                        contacts: userContacts
-                    }));
-                }
             }
             
             if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'sync_contacts',
+                    username: currentUser.username,
+                    contacts: userContacts
+                }));
                 ws.send(JSON.stringify({
                     type: 'contact_add',
                     from: currentUser.username,
@@ -8247,7 +8656,6 @@ app.get('/app', (req, res) => {
         }
         
         function addSystemMessage(message) {
-            // This is a global system message, we can show it in a temporary toast or just log
             console.log('System:', message);
         }
         
@@ -8264,72 +8672,81 @@ app.get('/app', (req, res) => {
             });
         }
 
-        // ===== LOGIN FUNCTIONS =====
-        function login() {
-            const username = document.getElementById('loginUsername').value;
+        async function login() {
+            const username = document.getElementById('loginUsername').value.trim();
             const password = document.getElementById('loginPassword').value;
             const status = document.getElementById('statusMessage');
             
-            if (username && password) {
-                const accounts = JSON.parse(localStorage.getItem('skypeAccounts') || '{}');
+            if (!username || !password) {
+                status.textContent = 'Please enter username and password';
+                return;
+            }
+            
+            status.textContent = 'Logging in...';
+            
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const result = await res.json();
                 
-                if (accounts[username] && accounts[username].password === password) {
-                    currentUser = { 
-                        username: username, 
+                if (result.success) {
+                    currentUser = {
+                        username: username,
                         id: Date.now(),
-                        displayName: accounts[username].displayName || username
+                        displayName: result.displayName || username
                     };
                     status.textContent = 'Login successful!';
                     playLoginSound();
                     showChatWindow();
                     connectWebSocket();
-                } else if (username === 'test' && password === 'test') {
-                    currentUser = { username: 'test', id: 1, displayName: 'Test User' };
-                    status.textContent = 'Login successful!';
-                    playLoginSound();
-                    showChatWindow();
-                    connectWebSocket();
                 } else {
-                    status.textContent = 'Account not found! Please register first.';
+                    status.textContent = result.error || 'Invalid username or password';
                 }
-            } else {
-                status.textContent = 'Please enter username and password';
+            } catch (e) {
+                console.error('Login error:', e);
+                status.textContent = 'Login failed. Check server connection.';
             }
         }
         
-        function register() {
-            const username = document.getElementById('regUsername').value;
+        async function register() {
+            const username = document.getElementById('regUsername').value.trim();
             const password = document.getElementById('regPassword').value;
             const email = document.getElementById('regEmail').value;
             const displayName = document.getElementById('regDisplayName').value || username;
             const status = document.getElementById('statusMessage');
             
-            if (username && password) {
-                const accounts = JSON.parse(localStorage.getItem('skypeAccounts') || '{}');
-                
-                if (accounts[username]) {
-                    status.textContent = 'Username already exists!';
-                    return;
-                }
-                
-                accounts[username] = {
-                    password: password,
-                    email: email,
-                    displayName: displayName,
-                    created: new Date().toISOString()
-                };
-                
-                localStorage.setItem('skypeAccounts', JSON.stringify(accounts));
-                
-                status.textContent = 'Account created! Please login.';
-                showTab('login');
-                
-                document.getElementById('regUsername').value = '';
-                document.getElementById('regPassword').value = '';
-                document.getElementById('regEmail').value = '';
-                document.getElementById('regDisplayName').value = '';
-            } else {
+            if (!username || !password) {
                 status.textContent = 'Please fill in username and password';
+                return;
+            }
+            
+            status.textContent = 'Creating account...';
+            
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, displayName, email })
+                });
+                const result = await res.json();
+                
+                if (result.success) {
+                    status.textContent = 'Account created! Please login.';
+                    showTab('login');
+                    
+                    document.getElementById('regUsername').value = '';
+                    document.getElementById('regPassword').value = '';
+                    document.getElementById('regEmail').value = '';
+                    document.getElementById('regDisplayName').value = '';
+                } else {
+                    status.textContent = result.error || 'Registration failed';
+                }
+            } catch (e) {
+                console.error('Register error:', e);
+                status.textContent = 'Registration failed. Check server connection.';
             }
         }
         
@@ -8379,11 +8796,9 @@ app.get('/app', (req, res) => {
         }
         
         function handleWebSocketMessage(data) {
+            try {
             switch(data.type) {
                 case 'user_join':
-                    updateContactListWithOnlineUsers(data.users);
-                    break;
-                    
                 case 'user_leave':
                     updateContactListWithOnlineUsers(data.users);
                     break;
@@ -8394,7 +8809,6 @@ app.get('/app', (req, res) => {
                         if (!chatMessages[chatId]) {
                             chatMessages[chatId] = [];
                         }
-                        // Merge server messages with local messages
                         data.messages.forEach(msg => {
                             if (!chatMessages[chatId].find(m => m.id === msg.id)) {
                                 chatMessages[chatId].push(msg);
@@ -8460,31 +8874,38 @@ app.get('/app', (req, res) => {
                     document.getElementById('callerName').textContent = data.fromDisplay || data.from;
                     document.getElementById('incomingCallWindow').classList.remove('hidden');
                     playCallSound();
-                    // Store the call ID or just use the from username as identifier
                     window.currentCallId = data.callId || 'call_' + Date.now();
                     break;
                     
                 case 'call_accepted':
-                    console.log('📞 Call accepted by:', data.from);
+                    console.log('🚨 [1/10] call_accepted RECEIVED, data =', JSON.stringify(data));
                     stopCallSounds();
+                    console.log('🚨 [2/10] stopCallSounds OK');
                     playCallAcceptSound();
+                    console.log('🚨 [3/10] playCallAcceptSound OK');
+                    if (data.callId) window.currentCallId = data.callId;
+                    console.log('🚨 [4/10] callId set OK');
                     document.getElementById('callWindow').classList.remove('hidden');
-                    document.getElementById('callTarget').textContent = data.fromDisplay || data.from;
+                    console.log('🚨 [5/10] callWindow unhidden OK');
+                    const ctEl = document.getElementById('callTarget');
+                    if (ctEl) ctEl.textContent = data.fromDisplay || data.from;
+                    console.log('🚨 [6/10] callTarget step OK (found=' + !!ctEl + ')');
                     document.getElementById('callStatus').textContent = 'In call with ' + (data.fromDisplay || data.from);
+                    console.log('🚨 [7/10] callStatus set OK');
                     startCallTimer();
+                    console.log('🚨 [8/10] callTimer started OK');
                     isInCall = true;
                     currentCallWith = data.from;
-                    // Start WebRTC as caller
+                    console.log('🚨 [9/10] state flags set OK, currentCallWith =', currentCallWith);
                     setupWebRTC(true);
+                    console.log('🚨 [10/10] setupWebRTC(true) invoked');
                     break;
                     
                 case 'call_declined':
-                    console.log('📞 Call declined by:', data.from);
                     stopCallSounds();
                     playCallEndSound();
                     document.getElementById('callWindow').classList.add('hidden');
                     document.getElementById('incomingCallWindow').classList.add('hidden');
-                    addSystemMessage((data.fromDisplay || data.from) + ' declined your call');
                     isInCall = false;
                     currentCallWith = null;
                     cleanupWebRTC();
@@ -8512,7 +8933,6 @@ app.get('/app', (req, res) => {
                     break;
                     
                 case 'call_end':
-                    console.log('📞 Call ended by:', data.from);
                     if (isInCall) {
                         stopCallSounds();
                         playCallEndSound();
@@ -8528,7 +8948,6 @@ app.get('/app', (req, res) => {
                         currentCallWith = null;
                         callStartTime = null;
                         cleanupWebRTC();
-                        addSystemMessage('Call ended by ' + (data.fromDisplay || data.from));
                     }
                     break;
                     
@@ -8541,16 +8960,6 @@ app.get('/app', (req, res) => {
                     break;
                     
                 case 'contact_add_result':
-                    if (data.success) {
-                        if (ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({
-                                type: 'get_contacts',
-                                username: currentUser.username
-                            }));
-                        }
-                    }
-                    break;
-                    
                 case 'contact_added':
                     if (ws && ws.readyState === WebSocket.OPEN) {
                         ws.send(JSON.stringify({
@@ -8572,23 +8981,15 @@ app.get('/app', (req, res) => {
                     handleICECandidate(data.candidate);
                     break;
             }
-        }
-        
-        function changeStatus(status) {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'status_change',
-                    status: status
-                }));
-                document.getElementById('chatStatus').textContent = 'Status: ' + status;
+            } catch (err) {
+                console.error('❌ ERROR in handleWebSocketMessage for type ' + data.type + ':', err);
+                console.error('Raw data was:', JSON.stringify(data).substring(0, 500));
             }
         }
         
         function logout() {
             playLogoutSound();
-            if (ws) {
-                ws.close();
-            }
+            if (ws) ws.close();
             document.getElementById('chatWindow').classList.add('hidden');
             document.getElementById('loginWindow').classList.remove('hidden');
             currentUser = null;
@@ -8613,15 +9014,12 @@ app.get('/app', (req, res) => {
             closeAnalyticsPopup();
         }
         
-        setTimeout(showAnalyticsPopup, 30 * 60 * 1000);
-        
-        // ===== SOUND FUNCTIONS =====
         function playMessageSound() {
             if (document.getElementById('soundToggle').checked) {
                 const sound = document.getElementById('messageSound');
                 sound.loop = false;
                 sound.currentTime = 0;
-                sound.play().catch(e => console.log('Audio play failed:', e));
+                sound.play().catch(e => {});
             }
         }
         
@@ -8630,7 +9028,7 @@ app.get('/app', (req, res) => {
                 const sound = document.getElementById('loginSound');
                 sound.loop = false;
                 sound.currentTime = 0;
-                sound.play().catch(e => console.log('Audio play failed:', e));
+                sound.play().catch(e => {});
             }
         }
 
@@ -8639,17 +9037,16 @@ app.get('/app', (req, res) => {
                 const sound = document.getElementById('logoutSound');
                 sound.loop = false;
                 sound.currentTime = 0;
-                sound.play().catch(e => console.log('Audio play failed:', e));
+                sound.play().catch(e => {});
             }
         }
-
         
         function playSendSound() {
             if (document.getElementById('soundToggle').checked) {
                 const sound = document.getElementById('sendSound');
                 sound.loop = false;
                 sound.currentTime = 0;
-                sound.play().catch(e => console.log('Audio play failed:', e));
+                sound.play().catch(e => {});
             }
         }
         
@@ -8658,7 +9055,7 @@ app.get('/app', (req, res) => {
                 const sound = document.getElementById('callSound');
                 sound.loop = true;
                 sound.currentTime = 0;
-                sound.play().catch(e => console.log('Audio play failed:', e));
+                sound.play().catch(e => {});
             }
         }
         
@@ -8667,7 +9064,7 @@ app.get('/app', (req, res) => {
                 const sound = document.getElementById('dialingSound');
                 sound.loop = true;
                 sound.currentTime = 0;
-                sound.play().catch(e => console.log('Audio play failed:', e));
+                sound.play().catch(e => {});
             }
         }
         
@@ -8676,7 +9073,7 @@ app.get('/app', (req, res) => {
                 const sound = document.getElementById('callEndSound');
                 sound.loop = false;
                 sound.currentTime = 0;
-                sound.play().catch(e => console.log('Audio play failed:', e));
+                sound.play().catch(e => {});
                 stopCallSounds();
             }
         }
@@ -8686,7 +9083,7 @@ app.get('/app', (req, res) => {
                 const sound = document.getElementById('callAcceptSound');
                 sound.loop = false;
                 sound.currentTime = 0;
-                sound.play().catch(e => console.log('Audio play failed:', e));
+                sound.play().catch(e => {});
             }
         }
         
@@ -8695,7 +9092,7 @@ app.get('/app', (req, res) => {
                 const sound = document.getElementById('callErrorSound');
                 sound.loop = false;
                 sound.currentTime = 0;
-                sound.play().catch(e => console.log('Audio play failed:', e));
+                sound.play().catch(e => {});
             }
         }
         
@@ -8723,7 +9120,6 @@ app.get('/app', (req, res) => {
                 return;
             }
             
-            // Request permission first if not granted
             if (!microphonePermissionGranted) {
                 requestMicrophonePermission().then(() => {
                     if (microphonePermissionGranted) {
@@ -8737,16 +9133,15 @@ app.get('/app', (req, res) => {
                 playDialingSound();
                 currentCallWith = currentChat;
                 
-                // Create a unique call ID
                 const callId = 'call_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
                 window.currentCallId = callId;
                 
-                document.getElementById('callTarget').textContent = currentChat;
+                const ctEl = document.getElementById('callTarget');
+                if (ctEl) ctEl.textContent = currentChat;
                 document.getElementById('callWindow').classList.remove('hidden');
                 document.getElementById('callStatus').textContent = 'Calling ' + currentChat + '...';
                 document.getElementById('callTimer').textContent = 'Calling...';
                 
-                // Send call request with callId
                 ws.send(JSON.stringify({
                     type: 'call_request',
                     callId: callId,
@@ -8755,12 +9150,10 @@ app.get('/app', (req, res) => {
                     to: currentChat
                 }));
                 
-                // Timeout after 30 seconds
                 setTimeout(() => {
                     if (document.getElementById('callWindow') && 
                         document.getElementById('callWindow').classList.contains('hidden') === false && 
                         document.getElementById('callStatus').textContent.includes('Calling')) {
-                        addSystemMessage('Call timed out - no answer from ' + currentChat);
                         endCall();
                     }
                 }, 30000);
@@ -8768,53 +9161,47 @@ app.get('/app', (req, res) => {
         }
         
         function acceptIncomingCall() {
-            console.log('ANSWER button clicked!');
             stopCallSounds();
             playCallAcceptSound();
             
-            // Request permission first if not granted
-            if (!microphonePermissionGranted) {
-                requestMicrophonePermission().then(() => {
-                    if (microphonePermissionGranted) {
-                        acceptIncomingCall();
-                    }
-                });
-                return;
+            const callPartner = incomingCallFrom;
+            if (callPartner) {
+                ws.send(JSON.stringify({
+                    type: 'call_accepted',
+                    callId: window.currentCallId,
+                    from: currentUser.username,
+                    fromDisplay: currentUser.displayName,
+                    to: callPartner
+                }));
             }
             
             document.getElementById('incomingCallWindow').classList.add('hidden');
             document.getElementById('callWindow').classList.remove('hidden');
-            document.getElementById('callTarget').textContent = incomingCallFrom;
-            document.getElementById('callStatus').textContent = 'In call with ' + incomingCallFrom;
+            const ctEl2 = document.getElementById('callTarget');
+            if (ctEl2) ctEl2.textContent = callPartner;
+            document.getElementById('callStatus').textContent = 'In call with ' + callPartner;
             
             startCallTimer();
             isInCall = true;
-            currentCallWith = incomingCallFrom;
-            
-            // Start WebRTC as callee
-            setupWebRTC(false);
-            
-            // Send acceptance with callId
-            ws.send(JSON.stringify({
-                type: 'call_accepted',
-                callId: window.currentCallId,
-                from: currentUser.username,
-                fromDisplay: currentUser.displayName,
-                to: incomingCallFrom
-            }));
-            
+            currentCallWith = callPartner;
             incomingCallFrom = null;
+            
+            if (!microphonePermissionGranted) {
+                requestMicrophonePermission().then(() => {
+                    setupWebRTC(false);
+                });
+            } else {
+                setupWebRTC(false);
+            }
         }
         
         function declineIncomingCall() {
-            console.log('DECLINE button clicked!');
             stopCallSounds();
             playCallEndSound();
             
             document.getElementById('incomingCallWindow').classList.add('hidden');
             
             if (incomingCallFrom) {
-                // Send decline signal to the caller
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({
                         type: 'call_declined',
@@ -8823,32 +9210,26 @@ app.get('/app', (req, res) => {
                         to: incomingCallFrom
                     }));
                 }
-                addSystemMessage('Call declined');
                 incomingCallFrom = null;
             }
             
-            // Clean up any pending WebRTC setup
             cleanupWebRTC();
         }
         
         function endCall() {
-            console.log('END CALL button clicked!');
             stopCallSounds();
             playCallEndSound();
             
-            // Hide call windows
             const callWindow = document.getElementById('callWindow');
             const incomingCallWindow = document.getElementById('incomingCallWindow');
             if (callWindow) callWindow.classList.add('hidden');
             if (incomingCallWindow) incomingCallWindow.classList.add('hidden');
             
-            // Stop timer
             if (callTimerInterval) {
                 clearInterval(callTimerInterval);
                 callTimerInterval = null;
             }
             
-            // Notify the other person if we're in a call
             if (currentCallWith && ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                     type: 'call_end',
@@ -8857,13 +9238,10 @@ app.get('/app', (req, res) => {
                     fromDisplay: currentUser.displayName,
                     to: currentCallWith
                 }));
-                addSystemMessage('Call ended with ' + currentCallWith);
             }
             
-            // Clean up WebRTC
             cleanupWebRTC();
             
-            // Reset call state
             isInCall = false;
             currentCallWith = null;
             callStartTime = null;
@@ -8882,29 +9260,20 @@ app.get('/app', (req, res) => {
             }, 1000);
         }
         
-        // ===== WEBRTC FUNCTIONS =====
         async function requestMicrophonePermission() {
             try {
-                console.log('Requesting microphone permission...');
-                
-                // Try to get both audio and video
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     audio: true,
                     video: true
                 });
                 
-                console.log('Microphone and camera access granted!');
                 microphonePermissionGranted = true;
-                
-                // Stop all tracks immediately - we just wanted permission
                 stream.getTracks().forEach(track => track.stop());
-                
                 hidePermissionPrompt();
                 return true;
                 
             } catch (error) {
-                console.error('Microphone permission denied:', error);
-                showCallError('Microphone access denied. Please allow microphone access in your browser settings.');
+                showCallError('Microphone access denied.');
                 playCallErrorSound();
                 microphonePermissionGranted = false;
                 return false;
@@ -8927,15 +9296,11 @@ app.get('/app', (req, res) => {
         
         async function setupWebRTC(isCaller) {
             try {
-                console.log('Setting up WebRTC as', isCaller ? 'caller' : 'callee');
-                
                 if (!microphonePermissionGranted) {
-                    console.log('No microphone permission, requesting...');
                     showPermissionPrompt();
                     await requestMicrophonePermission();
                 }
                 
-                // Get user media with specific constraints
                 localStream = await navigator.mediaDevices.getUserMedia({ 
                     audio: {
                         echoCancellation: true,
@@ -8944,115 +9309,71 @@ app.get('/app', (req, res) => {
                         sampleRate: 48000,
                         channelCount: 1
                     },
-                    video: false  // Audio only for now
+                    video: false
                 });
-                console.log('Local stream obtained');
                 
-                // Show local audio indicator (optional)
                 const localVideo = document.getElementById('localVideo');
                 if (localVideo) {
                     localVideo.srcObject = localStream;
                     localVideo.muted = true;
-                    localVideo.play().catch(e => console.log('Local video play error:', e));
+                    localVideo.play().catch(e => {});
                 }
                 
-                // Create peer connection with more STUN servers
                 const config = {
                     iceServers: [
                         { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' },
-                        { urls: 'stun:stun2.l.google.com:19302' },
-                        { urls: 'stun:stun3.l.google.com:19302' },
-                        { urls: 'stun:stun4.l.google.com:19302' },
-                        { urls: 'stun:stun.stunprotocol.org:3478' }
+                        { urls: 'stun:stun1.l.google.com:19302' }
                     ],
                     iceCandidatePoolSize: 10
                 };
                 
                 peerConnection = new RTCPeerConnection(config);
-                console.log('Peer connection created');
                 
-                // Add local stream tracks
                 localStream.getTracks().forEach(track => {
                     peerConnection.addTrack(track, localStream);
-                    console.log('Added track:', track.kind);
                 });
                 
-                // Handle remote stream
                 peerConnection.ontrack = (event) => {
-                    console.log('Received remote track:', event.track.kind);
                     const remoteAudio = document.getElementById('remoteAudio');
                     if (remoteAudio && event.streams[0]) {
                         remoteAudio.srcObject = event.streams[0];
-                        remoteAudio.play().catch(e => console.log('Remote audio play error:', e));
-                        console.log('Remote stream attached');
+                        remoteAudio.play().catch(e => {});
                     }
                 };
                 
-                // Handle ICE candidates
                 peerConnection.onicecandidate = (event) => {
                     if (event.candidate) {
-                        console.log('Sending ICE candidate:', event.candidate.type);
                         ws.send(JSON.stringify({
                             type: 'ice_candidate',
                             to: currentCallWith,
                             candidate: event.candidate
                         }));
-                    } else {
-                        console.log('ICE gathering complete');
                     }
                 };
                 
-                // Handle ICE connection state
                 peerConnection.oniceconnectionstatechange = () => {
-                    console.log('ICE connection state:', peerConnection.iceConnectionState);
                     switch (peerConnection.iceConnectionState) {
                         case 'connected':
                         case 'completed':
-                            console.log('ICE connection established!');
                             hideCallError();
                             break;
                         case 'failed':
-                            console.log('ICE connection failed');
-                            showCallError('Connection failed. Please try again.');
-                            playCallErrorSound();
-                            setTimeout(() => endCall(), 3000);
-                            break;
-                        case 'disconnected':
-                            console.log('ICE connection disconnected');
-                            break;
-                    }
-                };
-                
-                // Handle connection state
-                peerConnection.onconnectionstatechange = () => {
-                    console.log('Connection state:', peerConnection.connectionState);
-                    switch (peerConnection.connectionState) {
-                        case 'connected':
-                            console.log('WebRTC connection established!');
-                            break;
-                        case 'failed':
-                            console.log('WebRTC connection failed');
-                            showCallError('Connection failed. Please try again.');
+                            showCallError('Connection failed.');
                             playCallErrorSound();
                             setTimeout(() => endCall(), 3000);
                             break;
                     }
                 };
                 
-                // Show audio controls
                 const controls = document.getElementById('audioControls');
                 if (controls) controls.classList.remove('hidden');
                 
                 if (isCaller) {
-                    // Create offer
-                    console.log('Creating offer...');
                     const offer = await peerConnection.createOffer({
                         offerToReceiveAudio: true,
                         offerToReceiveVideo: false
                     });
                     await peerConnection.setLocalDescription(offer);
-                    console.log('Local description set (offer)');
                     
                     ws.send(JSON.stringify({
                         type: 'webrtc_offer',
@@ -9062,7 +9383,6 @@ app.get('/app', (req, res) => {
                 }
                 
             } catch (error) {
-                console.error('Error setting up WebRTC:', error);
                 showCallError('Call setup failed: ' + error.message);
                 playCallErrorSound();
                 setTimeout(() => endCall(), 2000);
@@ -9071,19 +9391,16 @@ app.get('/app', (req, res) => {
         
         async function handleWebRTCOffer(offer, from) {
             try {
-                console.log('Handling WebRTC offer from:', from);
+                if (!peerConnection) {
+                    await setupWebRTC(false);
+                } else {
+                    console.log('Reusing existing peer connection');
+                }
                 
-                // Setup WebRTC first (this will get local stream)
-                await setupWebRTC(false);
-                
-                // Set remote description
                 await peerConnection.setRemoteDescription(offer);
-                console.log('Remote description set (offer)');
                 
-                // Create answer
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
-                console.log('Local description set (answer)');
                 
                 ws.send(JSON.stringify({
                     type: 'webrtc_answer',
@@ -9091,9 +9408,10 @@ app.get('/app', (req, res) => {
                     answer: answer
                 }));
                 
+                await flushPendingIceCandidates();
+                
             } catch (error) {
-                console.error('Error handling WebRTC offer:', error);
-                showCallError('Failed to accept call: ' + error.message);
+                showCallError('Failed to accept call.');
                 playCallErrorSound();
                 setTimeout(() => endCall(), 2000);
             }
@@ -9101,15 +9419,13 @@ app.get('/app', (req, res) => {
         
         async function handleWebRTCAnswer(answer) {
             try {
-                console.log('Handling WebRTC answer');
-                if (peerConnection && peerConnection.remoteDescription) {
-                    await peerConnection.setRemoteDescription(answer);
-                    console.log('Remote description set (answer)');
-                } else {
-                    console.log('Peer connection not ready for answer');
+                if (!peerConnection) {
+                    console.log('No peer connection — cannot set answer');
+                    return;
                 }
+                await peerConnection.setRemoteDescription(answer);
+                await flushPendingIceCandidates();
             } catch (error) {
-                console.error('Error handling WebRTC answer:', error);
                 showCallError('Call connection failed: ' + error.message);
                 playCallErrorSound();
             }
@@ -9119,18 +9435,24 @@ app.get('/app', (req, res) => {
             try {
                 if (peerConnection && peerConnection.remoteDescription) {
                     await peerConnection.addIceCandidate(candidate);
-                    console.log('ICE candidate added');
                 } else {
-                    console.log('Peer connection not ready for ICE candidate');
-                    // Store candidate for later
-                    setTimeout(() => {
-                        if (peerConnection && peerConnection.remoteDescription) {
-                            peerConnection.addIceCandidate(candidate).catch(e => console.log('Failed to add stored candidate:', e));
-                        }
-                    }, 1000);
+                    pendingIceCandidates.push(candidate);
                 }
             } catch (error) {
                 console.error('Error adding ICE candidate:', error);
+            }
+        }
+
+        async function flushPendingIceCandidates() {
+            if (!peerConnection || !peerConnection.remoteDescription) return;
+            const candidates = pendingIceCandidates;
+            pendingIceCandidates = [];
+            for (const candidate of candidates) {
+                try {
+                    await peerConnection.addIceCandidate(candidate);
+                } catch (e) {
+                    console.log('Failed to add queued candidate:', e);
+                }
             }
         }
         
@@ -9157,24 +9479,18 @@ app.get('/app', (req, res) => {
         }
         
         function cleanupWebRTC() {
-            console.log('Cleaning up WebRTC');
+            pendingIceCandidates = [];
             
-            // Stop and close local stream
             if (localStream) {
-                localStream.getTracks().forEach(track => {
-                    track.stop();
-                    console.log('Stopped track:', track.kind);
-                });
+                localStream.getTracks().forEach(track => track.stop());
                 localStream = null;
             }
             
-            // Close peer connection
             if (peerConnection) {
                 peerConnection.close();
                 peerConnection = null;
             }
             
-            // Clear video/audio elements
             const localVideo = document.getElementById('localVideo');
             if (localVideo) {
                 localVideo.srcObject = null;
@@ -9187,7 +9503,6 @@ app.get('/app', (req, res) => {
                 remoteAudio.pause();
             }
             
-            // Reset UI states
             isMuted = false;
             isDeafened = false;
             
@@ -9197,24 +9512,27 @@ app.get('/app', (req, res) => {
             const deafenBtn = document.getElementById('deafenButton');
             if (deafenBtn) deafenBtn.textContent = 'Deafen';
             
-            // Hide error and permission prompts
             hideCallError();
             hidePermissionPrompt();
-            
-            // Reset call window UI
-            const callStatus = document.getElementById('callStatus');
-            if (callStatus) callStatus.textContent = 'Call ended';
-            
-            const callTimer = document.getElementById('callTimer');
-            if (callTimer) callTimer.textContent = '00:00';
+        }
+        
+        function showCallError(message) {
+            const err = document.getElementById('callError');
+            if (err) {
+                err.textContent = message;
+                err.classList.remove('hidden');
+            }
+        }
+        
+        function hideCallError() {
+            const err = document.getElementById('callError');
+            if (err) err.classList.add('hidden');
         }
 
-        // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             loadTheme();
             document.getElementById('loginUsername').focus();
             
-            // Close modal on background click
             document.getElementById('imageModal').addEventListener('click', function(e) {
                 if (e.target === this) {
                     closeImageModal();
@@ -9229,7 +9547,6 @@ app.get('/app', (req, res) => {
 
 const PORT = 3000;
 
-// find the first non-internal IPv4 address
 const getLocalIP = () => {
     const nets = os.networkInterfaces();
     for (const name of Object.keys(nets)) {
@@ -9247,16 +9564,11 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🎉 SKYPE CLASSIC SERVER RUNNING!`);
     console.log(`🟣 Local: http://localhost:${PORT}`);
     console.log(`📱 Network: http://${ip}:${PORT}`);
-    console.log(`\n🔑 Test account: username: test, password: test`);
-    console.log(`\n✅ FIXED: Manual microphone permission request!`);
-    console.log(`\n🎤 Now shows permission prompt in call window`);
-    console.log(`\n⏹️ Press Ctrl+C to stop the server\n`);
+    console.log(`\n🔑 Default test account: test / test`);
+    console.log(`\n💾 Accounts: data/users.json`);
+    console.log(`💾 Messages: data/messages.json`);
+    console.log(`\n⏹️  Press Ctrl+C to stop the server\n`);
 });
-
-// Keep alive
-setInterval(() => {
-    // Keep process alive
-}, 1000);
 
 process.on('uncaughtException', (error) => {
     console.error('❌ Uncaught Exception:', error);
