@@ -1137,7 +1137,6 @@ app.get("/", (req, res) => {
             }, 50);
         }
 
-        // ===== STATUS FUNCTIONS =====
         const STATUS_LABELS = {
             online: 'Online',
             busy: 'Busy',
@@ -1189,8 +1188,6 @@ app.get("/", (req, res) => {
                 dd.classList.remove('open');
             }
         });
-
-        // ===== END STATUS FUNCTIONS =====
 
         function syncMessagesToServer() {
             if (!ws || ws.readyState !== WebSocket.OPEN) return;
@@ -1833,36 +1830,24 @@ app.get("/", (req, res) => {
                     break;
                     
                 case 'call_accepted':
-                    console.log('🚨 [1/10] call_accepted RECEIVED, data =', JSON.stringify(data));
                     stopCallSounds();
-                    console.log('🚨 [2/10] stopCallSounds OK');
                     playCallAcceptSound();
-                    console.log('🚨 [3/10] playCallAcceptSound OK');
                     if (data.callId) window.currentCallId = data.callId;
-                    console.log('🚨 [4/10] callId set OK');
                     document.getElementById('callWindow').classList.remove('hidden');
-                    console.log('🚨 [5/10] callWindow unhidden OK');
                     const ctEl = document.getElementById('callTarget');
                     if (ctEl) ctEl.textContent = data.fromDisplay || data.from;
-                    console.log('🚨 [6/10] callTarget step OK (found=' + !!ctEl + ')');
                     document.getElementById('callStatus').textContent = 'In call with ' + (data.fromDisplay || data.from);
-                    console.log('🚨 [7/10] callStatus set OK');
                     startCallTimer();
-                    console.log('🚨 [8/10] callTimer started OK');
                     isInCall = true;
                     currentCallWith = data.from;
-                    console.log('🚨 [9/10] state flags set OK, currentCallWith =', currentCallWith);
                     setupWebRTC(true);
-                    console.log('🚨 [10/10] setupWebRTC(true) invoked');
                     break;
                     
                 case 'call_declined':
-                    console.log('📞 Call declined by:', data.from);
                     stopCallSounds();
                     playCallEndSound();
                     document.getElementById('callWindow').classList.add('hidden');
                     document.getElementById('incomingCallWindow').classList.add('hidden');
-                    addSystemMessage((data.fromDisplay || data.from) + ' declined your call');
                     isInCall = false;
                     currentCallWith = null;
                     cleanupWebRTC();
@@ -1890,7 +1875,6 @@ app.get("/", (req, res) => {
                     break;
                     
                 case 'call_end':
-                    console.log('📞 Call ended by:', data.from);
                     if (isInCall) {
                         stopCallSounds();
                         playCallEndSound();
@@ -1906,7 +1890,6 @@ app.get("/", (req, res) => {
                         currentCallWith = null;
                         callStartTime = null;
                         cleanupWebRTC();
-                        addSystemMessage('Call ended by ' + (data.fromDisplay || data.from));
                     }
                     break;
                     
@@ -1919,16 +1902,6 @@ app.get("/", (req, res) => {
                     break;
                     
                 case 'contact_add_result':
-                    if (data.success) {
-                        if (ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({
-                                type: 'get_contacts',
-                                username: currentUser.username
-                            }));
-                        }
-                    }
-                    break;
-                    
                 case 'contact_added':
                     if (ws && ws.readyState === WebSocket.OPEN) {
                         ws.send(JSON.stringify({
@@ -1956,15 +1929,9 @@ app.get("/", (req, res) => {
             }
         }
         
-        function changeStatus(status) {
-            setStatus(status);
-        }
-        
         function logout() {
             playLogoutSound();
-            if (ws) {
-                ws.close();
-            }
+            if (ws) ws.close();
             document.getElementById('chatWindow').classList.add('hidden');
             document.getElementById('loginWindow').classList.remove('hidden');
             currentUser = null;
@@ -2133,7 +2100,6 @@ app.get("/", (req, res) => {
                     if (document.getElementById('callWindow') && 
                         document.getElementById('callWindow').classList.contains('hidden') === false && 
                         document.getElementById('callStatus').textContent.includes('Calling')) {
-                        addSystemMessage('Call timed out - no answer from ' + currentChat);
                         endCall();
                     }
                 }, 30000);
@@ -2141,7 +2107,6 @@ app.get("/", (req, res) => {
         }
         
         function acceptIncomingCall() {
-            console.log('ANSWER button clicked!');
             stopCallSounds();
             playCallAcceptSound();
             
@@ -2154,9 +2119,6 @@ app.get("/", (req, res) => {
                     fromDisplay: currentUser.displayName,
                     to: callPartner
                 }));
-                console.log('✅ Sent call_accepted to', callPartner);
-            } else {
-                console.warn('⚠️ acceptIncomingCall: incomingCallFrom is null!');
             }
             
             document.getElementById('incomingCallWindow').classList.add('hidden');
@@ -2180,7 +2142,6 @@ app.get("/", (req, res) => {
         }
         
         function declineIncomingCall() {
-            console.log('DECLINE button clicked!');
             stopCallSounds();
             playCallEndSound();
             
@@ -2195,7 +2156,6 @@ app.get("/", (req, res) => {
                         to: incomingCallFrom
                     }));
                 }
-                addSystemMessage('Call declined');
                 incomingCallFrom = null;
             }
             
@@ -2203,7 +2163,6 @@ app.get("/", (req, res) => {
         }
         
         function endCall() {
-            console.log('END CALL button clicked!');
             stopCallSounds();
             playCallEndSound();
             
@@ -2225,7 +2184,6 @@ app.get("/", (req, res) => {
                     fromDisplay: currentUser.displayName,
                     to: currentCallWith
                 }));
-                addSystemMessage('Call ended with ' + currentCallWith);
             }
             
             cleanupWebRTC();
@@ -2250,24 +2208,18 @@ app.get("/", (req, res) => {
         
         async function requestMicrophonePermission() {
             try {
-                console.log('Requesting microphone permission...');
-                
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     audio: true,
                     video: true
                 });
                 
-                console.log('Microphone and camera access granted!');
                 microphonePermissionGranted = true;
-                
                 stream.getTracks().forEach(track => track.stop());
-                
                 hidePermissionPrompt();
                 return true;
                 
             } catch (error) {
-                console.error('Microphone permission denied:', error);
-                showCallError('Microphone access denied. Please allow microphone access in your browser settings.');
+                showCallError('Microphone access denied.');
                 playCallErrorSound();
                 microphonePermissionGranted = false;
                 return false;
@@ -2290,10 +2242,7 @@ app.get("/", (req, res) => {
         
         async function setupWebRTC(isCaller) {
             try {
-                console.log('Setting up WebRTC as', isCaller ? 'caller' : 'callee');
-                
                 if (!microphonePermissionGranted) {
-                    console.log('No microphone permission, requesting...');
                     showPermissionPrompt();
                     await requestMicrophonePermission();
                 }
@@ -2308,13 +2257,12 @@ app.get("/", (req, res) => {
                     },
                     video: false
                 });
-                console.log('Local stream obtained');
                 
                 const localVideo = document.getElementById('localVideo');
                 if (localVideo) {
                     localVideo.srcObject = localStream;
                     localVideo.muted = true;
-                    localVideo.play().catch(e => console.log('Local video play error:', e));
+                    localVideo.play().catch(e => {});
                 }
                 
                 const config = {
@@ -2326,65 +2274,37 @@ app.get("/", (req, res) => {
                 };
                 
                 peerConnection = new RTCPeerConnection(config);
-                console.log('Peer connection created');
                 
                 localStream.getTracks().forEach(track => {
                     peerConnection.addTrack(track, localStream);
-                    console.log('Added track:', track.kind);
                 });
                 
                 peerConnection.ontrack = (event) => {
-                    console.log('Received remote track:', event.track.kind);
                     const remoteAudio = document.getElementById('remoteAudio');
                     if (remoteAudio && event.streams[0]) {
                         remoteAudio.srcObject = event.streams[0];
-                        remoteAudio.play().catch(e => console.log('Remote audio play error:', e));
-                        console.log('Remote stream attached');
+                        remoteAudio.play().catch(e => {});
                     }
                 };
                 
                 peerConnection.onicecandidate = (event) => {
                     if (event.candidate) {
-                        console.log('Sending ICE candidate:', event.candidate.type);
                         ws.send(JSON.stringify({
                             type: 'ice_candidate',
                             to: currentCallWith,
                             candidate: event.candidate
                         }));
-                    } else {
-                        console.log('ICE gathering complete');
                     }
                 };
                 
                 peerConnection.oniceconnectionstatechange = () => {
-                    console.log('ICE connection state:', peerConnection.iceConnectionState);
                     switch (peerConnection.iceConnectionState) {
                         case 'connected':
                         case 'completed':
-                            console.log('ICE connection established!');
                             hideCallError();
                             break;
                         case 'failed':
-                            console.log('ICE connection failed');
-                            showCallError('Connection failed. Please try again.');
-                            playCallErrorSound();
-                            setTimeout(() => endCall(), 3000);
-                            break;
-                        case 'disconnected':
-                            console.log('ICE connection disconnected');
-                            break;
-                    }
-                };
-                
-                peerConnection.onconnectionstatechange = () => {
-                    console.log('Connection state:', peerConnection.connectionState);
-                    switch (peerConnection.connectionState) {
-                        case 'connected':
-                            console.log('WebRTC connection established!');
-                            break;
-                        case 'failed':
-                            console.log('WebRTC connection failed');
-                            showCallError('Connection failed. Please try again.');
+                            showCallError('Connection failed.');
                             playCallErrorSound();
                             setTimeout(() => endCall(), 3000);
                             break;
@@ -2395,13 +2315,11 @@ app.get("/", (req, res) => {
                 if (controls) controls.classList.remove('hidden');
                 
                 if (isCaller) {
-                    console.log('Creating offer...');
                     const offer = await peerConnection.createOffer({
                         offerToReceiveAudio: true,
                         offerToReceiveVideo: false
                     });
                     await peerConnection.setLocalDescription(offer);
-                    console.log('Local description set (offer)');
                     
                     ws.send(JSON.stringify({
                         type: 'webrtc_offer',
@@ -2411,7 +2329,6 @@ app.get("/", (req, res) => {
                 }
                 
             } catch (error) {
-                console.error('Error setting up WebRTC:', error);
                 showCallError('Call setup failed: ' + error.message);
                 playCallErrorSound();
                 setTimeout(() => endCall(), 2000);
@@ -2420,8 +2337,6 @@ app.get("/", (req, res) => {
         
         async function handleWebRTCOffer(offer, from) {
             try {
-                console.log('Handling WebRTC offer from:', from);
-                
                 if (!peerConnection) {
                     await setupWebRTC(false);
                 } else {
@@ -2429,11 +2344,9 @@ app.get("/", (req, res) => {
                 }
                 
                 await peerConnection.setRemoteDescription(offer);
-                console.log('Remote description set (offer)');
                 
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
-                console.log('Local description set (answer)');
                 
                 ws.send(JSON.stringify({
                     type: 'webrtc_answer',
@@ -2444,8 +2357,7 @@ app.get("/", (req, res) => {
                 await flushPendingIceCandidates();
                 
             } catch (error) {
-                console.error('Error handling WebRTC offer:', error);
-                showCallError('Failed to accept call: ' + error.message);
+                showCallError('Failed to accept call.');
                 playCallErrorSound();
                 setTimeout(() => endCall(), 2000);
             }
@@ -2453,16 +2365,13 @@ app.get("/", (req, res) => {
         
         async function handleWebRTCAnswer(answer) {
             try {
-                console.log('Handling WebRTC answer');
                 if (!peerConnection) {
                     console.log('No peer connection — cannot set answer');
                     return;
                 }
                 await peerConnection.setRemoteDescription(answer);
-                console.log('Remote description set (answer)');
                 await flushPendingIceCandidates();
             } catch (error) {
-                console.error('Error handling WebRTC answer:', error);
                 showCallError('Call connection failed: ' + error.message);
                 playCallErrorSound();
             }
@@ -2472,9 +2381,7 @@ app.get("/", (req, res) => {
             try {
                 if (peerConnection && peerConnection.remoteDescription) {
                     await peerConnection.addIceCandidate(candidate);
-                    console.log('ICE candidate added');
                 } else {
-                    console.log('Queueing ICE candidate until remote description is set');
                     pendingIceCandidates.push(candidate);
                 }
             } catch (error) {
@@ -2484,7 +2391,6 @@ app.get("/", (req, res) => {
 
         async function flushPendingIceCandidates() {
             if (!peerConnection || !peerConnection.remoteDescription) return;
-            console.log('Flushing', pendingIceCandidates.length, 'queued ICE candidates');
             const candidates = pendingIceCandidates;
             pendingIceCandidates = [];
             for (const candidate of candidates) {
@@ -2519,15 +2425,10 @@ app.get("/", (req, res) => {
         }
         
         function cleanupWebRTC() {
-            console.log('Cleaning up WebRTC');
-            
             pendingIceCandidates = [];
             
             if (localStream) {
-                localStream.getTracks().forEach(track => {
-                    track.stop();
-                    console.log('Stopped track:', track.kind);
-                });
+                localStream.getTracks().forEach(track => track.stop());
                 localStream = null;
             }
             
@@ -2559,12 +2460,6 @@ app.get("/", (req, res) => {
             
             hideCallError();
             hidePermissionPrompt();
-            
-            const callStatus = document.getElementById('callStatus');
-            if (callStatus) callStatus.textContent = 'Call ended';
-            
-            const callTimer = document.getElementById('callTimer');
-            if (callTimer) callTimer.textContent = '00:00';
         }
         
         function showCallError(message) {
@@ -3455,6 +3350,7 @@ app.get('/mobile', (req, res) => {
                 min-height: 20px;
                 display: flex;
                 align-items: center;
+                flex-shrink: 0;
             }
             
             /* ===== Auth screen ===== */
@@ -3606,6 +3502,7 @@ app.get('/mobile', (req, res) => {
                 flex-direction: column;
                 margin: 8px;
                 min-height: 0;
+                overflow: hidden;
             }
             
             .mobile-tabs {
@@ -3613,6 +3510,7 @@ app.get('/mobile', (req, res) => {
                 background: var(--button-bg);
                 border-bottom: 1px solid var(--border-dark);
                 padding: 4px 4px 0 4px;
+                flex-shrink: 0;
             }
             .mobile-tab {
                 flex: 1;
@@ -3642,7 +3540,11 @@ app.get('/mobile', (req, res) => {
                 min-height: 0;
             }
             .tab-content.active {
-                display: block;
+                display: flex;
+                flex-direction: column;
+            }
+            #chatTab.active {
+                overflow: hidden;
             }
             
             /* ===== Contacts ===== */
@@ -3650,6 +3552,7 @@ app.get('/mobile', (req, res) => {
                 background: var(--button-bg);
                 border-bottom: 1px solid var(--border-dark);
                 padding: 10px;
+                flex-shrink: 0;
             }
             .contacts-header h3 {
                 margin-bottom: 8px;
@@ -3779,6 +3682,20 @@ app.get('/mobile', (req, res) => {
                 align-items: center;
                 gap: 10px;
                 font-size: 12px;
+                flex-shrink: 0;
+            }
+            .chat-header .call-contact-btn {
+                margin-left: auto;
+                background: #00A300;
+                border: 1px solid var(--border-light);
+                color: var(--text-light);
+                font-size: 14px;
+                padding: 3px 8px;
+                cursor: pointer;
+                font-family: 'Tahoma', 'Arial', sans-serif;
+            }
+            .chat-header .call-contact-btn:active {
+                border-color: var(--border-dark);
             }
             .back-btn {
                 background: var(--button-bg);
@@ -3865,6 +3782,7 @@ app.get('/mobile', (req, res) => {
                 display: flex;
                 align-items: center;
                 gap: 6px;
+                flex-shrink: 0;
             }
             .chat-input {
                 flex: 1;
@@ -4147,6 +4065,183 @@ app.get('/mobile', (req, res) => {
                 z-index: 9998;
                 border: 1px solid var(--border-dark);
             }
+            
+            /* ===== Call UI ===== */
+            .xp-window-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.55);
+                z-index: 10500;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                padding: 16px;
+            }
+            .xp-window-overlay.active {
+                display: flex;
+            }
+            
+            .call-window {
+                width: 100%;
+                max-width: 360px;
+                background: var(--window-bg);
+                border: 2px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                box-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+            }
+            
+            .call-window .xp-titlebar {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 4px 8px;
+                font-size: 11px;
+                font-weight: bold;
+                color: var(--text-light);
+                background: linear-gradient(90deg, var(--titlebar-start), var(--titlebar-end));
+                min-height: 22px;
+            }
+            .call-window .xp-button {
+                width: 20px;
+                height: 18px;
+                border: 1px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                background: var(--button-bg);
+                color: var(--text-primary);
+                font-size: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+            }
+            
+            .call-body {
+                padding: 14px;
+                background: var(--window-bg);
+            }
+            
+            .call-name {
+                text-align: center;
+                font-size: 14px;
+                font-weight: bold;
+                margin-bottom: 6px;
+                color: var(--text-primary);
+            }
+            .call-sub {
+                text-align: center;
+                font-size: 12px;
+                color: var(--text-secondary);
+                margin-bottom: 12px;
+            }
+            .call-icon {
+                text-align: center;
+                font-size: 42px;
+                margin: 6px 0 14px 0;
+            }
+            
+            .call-actions {
+                display: flex;
+                gap: 10px;
+                justify-content: center;
+                margin-top: 6px;
+            }
+            .call-actions .xp-button-large {
+                flex: 1;
+                padding: 12px 8px;
+                font-size: 14px;
+                text-align: center;
+            }
+            .btn-answer {
+                background: #00A300 !important;
+                color: #fff !important;
+            }
+            .btn-decline {
+                background: #C00000 !important;
+                color: #fff !important;
+            }
+            .btn-end {
+                background: #C00000 !important;
+                color: #fff !important;
+                width: 100%;
+                padding: 12px;
+                font-size: 14px;
+            }
+            
+            .call-status-line {
+                text-align: center;
+                font-size: 12px;
+                color: var(--text-primary);
+                margin-bottom: 8px;
+                font-weight: bold;
+            }
+            .call-timer {
+                text-align: center;
+                font-size: 20px;
+                font-family: 'Courier New', monospace;
+                color: var(--text-primary);
+                margin: 10px 0;
+                letter-spacing: 2px;
+            }
+            
+            .audio-controls-mobile {
+                display: flex;
+                gap: 8px;
+                justify-content: center;
+                margin: 10px 0;
+            }
+            .audio-controls-mobile button {
+                flex: 1;
+                padding: 10px 6px;
+                font-size: 13px;
+                font-weight: bold;
+                background: var(--button-bg);
+                border: 2px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                color: var(--text-primary);
+                font-family: 'Tahoma', 'Arial', sans-serif;
+                cursor: pointer;
+            }
+            .audio-controls-mobile button:active {
+                border-top-color: var(--border-dark);
+                border-left-color: var(--border-dark);
+                border-right-color: var(--border-light);
+                border-bottom-color: var(--border-light);
+            }
+            
+            .call-error-mobile {
+                background: #FFDDDD;
+                color: #8B0000;
+                border: 1px solid #8B0000;
+                padding: 8px 10px;
+                font-size: 11px;
+                margin: 8px 0;
+                display: none;
+                text-align: center;
+            }
+            .call-error-mobile.show {
+                display: block;
+            }
+            
+            .call-hidden-video {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                overflow: hidden;
+                opacity: 0;
+                pointer-events: none;
+            }
         </style>
     </head>
     <body>
@@ -4284,6 +4379,7 @@ app.get('/mobile', (req, res) => {
                     <div id="chatHeader" class="chat-header hidden">
                         <button class="back-btn" onclick="leaveChat()">←</button>
                         <span id="chatHeaderTitle">Chat</span>
+                        <button class="call-contact-btn" onclick="startMobileCall()" title="Call contact">📞</button>
                     </div>
                     <div class="chat-messages" id="mobileMessages">
                         <div class="empty-state">
@@ -4306,6 +4402,63 @@ app.get('/mobile', (req, res) => {
         </div>
         
         <input type="file" id="imageInput" accept="image/*" style="display: none;">
+
+        <!-- ===== Audio elements for mobile ===== -->
+        <audio id="mLoginSound" preload="auto"><source src="/sounds/logon.mp3" type="audio/mpeg"></audio>
+        <audio id="mLogoutSound" preload="auto"><source src="/sounds/logoff.mp3" type="audio/mpeg"></audio>
+        <audio id="mMessageSound" preload="auto"><source src="/sounds/messagereceived.mp3" type="audio/mpeg"></audio>
+        <audio id="mSendSound" preload="auto"><source src="/sounds/messagesent.mp3" type="audio/mpeg"></audio>
+        <audio id="mCallSound" preload="auto" loop><source src="/sounds/call_incoming.mp3" type="audio/mpeg"></audio>
+        <audio id="mDialingSound" preload="auto" loop><source src="/sounds/dialing.mp3" type="audio/mpeg"></audio>
+        <audio id="mCallEndSound" preload="auto"><source src="/sounds/call_end.mp3" type="audio/mpeg"></audio>
+        <audio id="mCallAcceptSound" preload="auto"><source src="/sounds/call_accept.mp3" type="audio/mpeg"></audio>
+        <audio id="mCallErrorSound" preload="auto"><source src="/sounds/call_error.mp3" type="audio/mpeg"></audio>
+
+        <!-- ===== Incoming call window ===== -->
+        <div id="mobileIncomingCallOverlay" class="xp-window-overlay">
+            <div class="call-window">
+                <div class="xp-titlebar">
+                    <span>📞 Incoming Call...</span>
+                    <div class="xp-button" onclick="declineIncomingCall()">×</div>
+                </div>
+                <div class="call-body">
+                    <div class="call-name" id="mobileCallerName">User</div>
+                    <div class="call-sub">is calling you</div>
+                    <div class="call-icon">📞</div>
+                    <div class="call-actions">
+                        <button class="xp-button-large btn-answer" onclick="acceptIncomingCall()">Answer</button>
+                        <button class="xp-button-large btn-decline" onclick="declineIncomingCall()">Decline</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Active call window ===== -->
+        <div id="mobileCallOverlay" class="xp-window-overlay">
+            <div class="call-window">
+                <div class="xp-titlebar">
+                    <span>📞 Active Call</span>
+                    <div class="xp-button" onclick="endMobileCall()">×</div>
+                </div>
+                <div class="call-body">
+                    <div class="call-status-line" id="mobileCallStatusLine">Calling...</div>
+                    <div class="call-name" id="mobileCallTargetName">User</div>
+                    <div class="call-timer" id="mobileCallTimer">00:00</div>
+                    
+                    <div class="call-error-mobile" id="mobileCallError"></div>
+                    
+                    <div class="audio-controls-mobile" id="mobileAudioControls" style="display:none;">
+                        <button id="mobileMuteBtn" onclick="toggleMute()">Mute</button>
+                        <button id="mobileDeafenBtn" onclick="toggleDeafen()">Deafen</button>
+                    </div>
+                    
+                    <button class="xp-button-large btn-end" onclick="endMobileCall()">End Call</button>
+                    
+                    <video id="mobileLocalVideo" autoplay muted playsinline class="call-hidden-video"></video>
+                    <audio id="mobileRemoteAudio" autoplay></audio>
+                </div>
+            </div>
+        </div>
         
         <div class="footer-note">Fan project. Not affiliated with Microsoft.</div>
 
@@ -4320,6 +4473,19 @@ app.get('/mobile', (req, res) => {
             let renderedMessageIds = new Set();
             let myStatus = 'online';
 
+            // Call state
+            let isInCall = false;
+            let currentCallWith = null;
+            let incomingCallFrom = null;
+            let mobileCallStartTime = null;
+            let mobileCallTimerInterval = null;
+            let mobileLocalStream = null;
+            let mobilePeerConnection = null;
+            let mobileMuted = false;
+            let mobileDeafened = false;
+            let mobileMicGranted = false;
+            let mobilePendingIce = [];
+
             const STATUS_LABELS = {
                 online: 'Online',
                 busy: 'Busy',
@@ -4327,6 +4493,43 @@ app.get('/mobile', (req, res) => {
                 invisible: 'Invisible',
                 offline: 'Appear Offline'
             };
+
+            // ===== Mobile sound helpers =====
+            function mPlaySound(id, loop = false) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                try {
+                    el.loop = loop;
+                    el.currentTime = 0;
+                    el.play().catch(e => console.log('Audio play failed:', e));
+                } catch (e) {}
+            }
+            function mStopSound(id) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                try {
+                    el.pause();
+                    el.currentTime = 0;
+                    el.loop = false;
+                } catch (e) {}
+            }
+            function playMobileLoginSound() { mPlaySound('mLoginSound'); }
+            function playMobileLogoutSound() { mPlaySound('mLogoutSound'); }
+            function playMobileMessageSound() { mPlaySound('mMessageSound'); }
+            function playMobileSendSound() { mPlaySound('mSendSound'); }
+            function playMobileCallSound() { mPlaySound('mCallSound', true); }
+            function playMobileDialingSound() { mPlaySound('mDialingSound', true); }
+            function playMobileCallEndSound() {
+                mPlaySound('mCallEndSound');
+                mStopSound('mCallSound');
+                mStopSound('mDialingSound');
+            }
+            function playMobileCallAcceptSound() { mPlaySound('mCallAcceptSound'); }
+            function playMobileCallErrorSound() { mPlaySound('mCallErrorSound'); }
+            function stopMobileCallSounds() {
+                mStopSound('mCallSound');
+                mStopSound('mDialingSound');
+            }
 
             function updateSelfStatusUI() {
                 const dot = document.getElementById('mobileSelfStatusDot');
@@ -4458,6 +4661,7 @@ app.get('/mobile', (req, res) => {
                         updateSelfStatusUI();
                         statusBar.textContent = 'Connected';
                         connectionInProgress = false;
+                        playMobileLoginSound();
                         connectWebSocket();
                     } else {
                         errorDiv.textContent = result.error || 'Invalid username or password';
@@ -4595,6 +4799,9 @@ app.get('/mobile', (req, res) => {
                         break;
                     case 'new_message':
                         if (data.data) {
+                            if (data.data.from !== mobileUser.username) {
+                                playMobileMessageSound();
+                            }
                             if (data.data.from === currentChat || data.data.to === currentChat) {
                                 displayMessage(data.data, data.data.from === mobileUser.username);
                             } else {
@@ -4603,6 +4810,7 @@ app.get('/mobile', (req, res) => {
                         }
                         break;
                     case 'image_receive':
+                        playMobileMessageSound();
                         if (data.from === currentChat || data.to === currentChat) {
                             displayImage(data);
                         } else {
@@ -4622,6 +4830,79 @@ app.get('/mobile', (req, res) => {
                     case 'user_join':
                     case 'user_leave':
                         if (data.users) updateContactStatuses(data.users);
+                        break;
+
+                    case 'call_request':
+                        if (isInCall) {
+                            if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+                                mobileWs.send(JSON.stringify({
+                                    type: 'call_declined',
+                                    from: mobileUser.username,
+                                    to: data.from
+                                }));
+                            }
+                            return;
+                        }
+                        incomingCallFrom = data.from;
+                        document.getElementById('mobileCallerName').textContent = data.fromDisplay || data.from;
+                        document.getElementById('mobileIncomingCallOverlay').classList.add('active');
+                        playMobileCallSound();
+                        window.currentCallId = data.callId || 'call_' + Date.now();
+                        break;
+
+                    case 'call_accepted':
+                        stopMobileCallSounds();
+                        playMobileCallAcceptSound();
+                        if (data.callId) window.currentCallId = data.callId;
+                        document.getElementById('mobileCallTargetName').textContent = data.fromDisplay || data.from;
+                        document.getElementById('mobileCallStatusLine').textContent = 'In call with';
+                        document.getElementById('mobileCallOverlay').classList.add('active');
+                        startMobileCallTimer();
+                        isInCall = true;
+                        currentCallWith = data.from;
+                        setupMobileWebRTC(true);
+                        break;
+
+                    case 'call_declined':
+                        stopMobileCallSounds();
+                        playMobileCallEndSound();
+                        document.getElementById('mobileCallOverlay').classList.remove('active');
+                        document.getElementById('mobileIncomingCallOverlay').classList.remove('active');
+                        showToast((data.fromDisplay || data.from) + ' declined your call', true);
+                        isInCall = false;
+                        currentCallWith = null;
+                        cleanupMobileWebRTC();
+                        break;
+
+                    case 'call_end':
+                        if (isInCall || incomingCallFrom) {
+                            stopMobileCallSounds();
+                            playMobileCallEndSound();
+                            document.getElementById('mobileCallOverlay').classList.remove('active');
+                            document.getElementById('mobileIncomingCallOverlay').classList.remove('active');
+                            if (mobileCallTimerInterval) {
+                                clearInterval(mobileCallTimerInterval);
+                                mobileCallTimerInterval = null;
+                            }
+                            isInCall = false;
+                            currentCallWith = null;
+                            incomingCallFrom = null;
+                            mobileCallStartTime = null;
+                            cleanupMobileWebRTC();
+                            showToast('Call ended');
+                        }
+                        break;
+
+                    case 'webrtc_offer':
+                        handleMobileWebRTCOffer(data.offer, data.from);
+                        break;
+
+                    case 'webrtc_answer':
+                        handleMobileWebRTCAnswer(data.answer);
+                        break;
+
+                    case 'ice_candidate':
+                        handleMobileICECandidate(data.candidate);
                         break;
                 }
             }
@@ -4774,6 +5055,7 @@ app.get('/mobile', (req, res) => {
                     timestamp: new Date().toISOString()
                 };
                 mobileWs.send(JSON.stringify({ type: 'message', data: messageData }));
+                playMobileSendSound();
                 displayMessage(messageData, true);
                 input.value = '';
             }
@@ -4844,6 +5126,8 @@ app.get('/mobile', (req, res) => {
             }
 
             function mobileLogout() {
+                playMobileLogoutSound();
+                endMobileCall();
                 if (mobileWs) mobileWs.close();
                 mobileUser = null;
                 currentChat = null;
@@ -4856,6 +5140,374 @@ app.get('/mobile', (req, res) => {
                 document.getElementById('authErrorMessage').classList.remove('show');
                 document.getElementById('authStatusMessage').textContent = 'Ready to connect...';
                 showToast('Logged out');
+            }
+
+            // ===== Mobile Call Functions =====
+            function startMobileCall() {
+                if (!currentChat) {
+                    showToast('Open a chat first', true);
+                    return;
+                }
+                if (isInCall) {
+                    showToast('Already in a call', true);
+                    return;
+                }
+                
+                if (!mobileMicGranted) {
+                    requestMobileMicPermission().then(ok => {
+                        if (ok) startMobileCall();
+                    });
+                    return;
+                }
+                
+                if (!mobileWs || mobileWs.readyState !== WebSocket.OPEN) {
+                    showToast('Not connected to server', true);
+                    return;
+                }
+                
+                currentCallWith = currentChat;
+                playMobileDialingSound();
+                
+                const callId = 'call_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+                window.currentCallId = callId;
+                
+                document.getElementById('mobileCallTargetName').textContent = currentChat;
+                document.getElementById('mobileCallStatusLine').textContent = 'Calling...';
+                document.getElementById('mobileCallTimer').textContent = 'Ringing';
+                document.getElementById('mobileCallOverlay').classList.add('active');
+                
+                mobileWs.send(JSON.stringify({
+                    type: 'call_request',
+                    callId: callId,
+                    from: mobileUser.username,
+                    fromDisplay: mobileUser.displayName,
+                    to: currentChat
+                }));
+                
+                setTimeout(() => {
+                    const overlay = document.getElementById('mobileCallOverlay');
+                    const statusLine = document.getElementById('mobileCallStatusLine');
+                    if (overlay.classList.contains('active') && statusLine.textContent === 'Calling...') {
+                        showToast('Call timed out', true);
+                        endMobileCall();
+                    }
+                }, 30000);
+            }
+
+            function acceptIncomingCall() {
+                stopMobileCallSounds();
+                playMobileCallAcceptSound();
+                
+                const callPartner = incomingCallFrom;
+                if (!callPartner) return;
+                
+                document.getElementById('mobileIncomingCallOverlay').classList.remove('active');
+                document.getElementById('mobileCallTargetName').textContent = callPartner;
+                document.getElementById('mobileCallStatusLine').textContent = 'In call with';
+                document.getElementById('mobileCallOverlay').classList.add('active');
+                startMobileCallTimer();
+                isInCall = true;
+                currentCallWith = callPartner;
+                incomingCallFrom = null;
+                
+                if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+                    mobileWs.send(JSON.stringify({
+                        type: 'call_accepted',
+                        callId: window.currentCallId,
+                        from: mobileUser.username,
+                        fromDisplay: mobileUser.displayName,
+                        to: callPartner
+                    }));
+                }
+                
+                if (!mobileMicGranted) {
+                    requestMobileMicPermission().then(ok => {
+                        if (ok) setupMobileWebRTC(false);
+                    });
+                } else {
+                    setupMobileWebRTC(false);
+                }
+            }
+
+            function declineIncomingCall() {
+                stopMobileCallSounds();
+                playMobileCallEndSound();
+                document.getElementById('mobileIncomingCallOverlay').classList.remove('active');
+                
+                if (incomingCallFrom && mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+                    mobileWs.send(JSON.stringify({
+                        type: 'call_declined',
+                        callId: window.currentCallId,
+                        from: mobileUser.username,
+                        to: incomingCallFrom
+                    }));
+                }
+                incomingCallFrom = null;
+                cleanupMobileWebRTC();
+            }
+
+            function endMobileCall() {
+                stopMobileCallSounds();
+                if (isInCall || incomingCallFrom) {
+                    playMobileCallEndSound();
+                }
+                
+                document.getElementById('mobileCallOverlay').classList.remove('active');
+                document.getElementById('mobileIncomingCallOverlay').classList.remove('active');
+                
+                if (mobileCallTimerInterval) {
+                    clearInterval(mobileCallTimerInterval);
+                    mobileCallTimerInterval = null;
+                }
+                
+                if (currentCallWith && mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+                    mobileWs.send(JSON.stringify({
+                        type: 'call_end',
+                        callId: window.currentCallId,
+                        from: mobileUser.username,
+                        fromDisplay: mobileUser.displayName,
+                        to: currentCallWith
+                    }));
+                }
+                
+                cleanupMobileWebRTC();
+                isInCall = false;
+                currentCallWith = null;
+                incomingCallFrom = null;
+                mobileCallStartTime = null;
+            }
+
+            function startMobileCallTimer() {
+                mobileCallStartTime = new Date();
+                document.getElementById('mobileCallTimer').textContent = '00:00';
+                if (mobileCallTimerInterval) clearInterval(mobileCallTimerInterval);
+                mobileCallTimerInterval = setInterval(() => {
+                    const diff = Math.floor((Date.now() - mobileCallStartTime) / 1000);
+                    const m = Math.floor(diff / 60);
+                    const s = diff % 60;
+                    document.getElementById('mobileCallTimer').textContent =
+                        m.toString().padStart(2, '0') + ':' + s.toString().padStart(2, '0');
+                }, 1000);
+            }
+
+            async function requestMobileMicPermission() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                    mobileMicGranted = true;
+                    stream.getTracks().forEach(t => t.stop());
+                    return true;
+                } catch (e) {
+                    showMobileCallError('Microphone access denied. Please allow microphone in browser settings.');
+                    playMobileCallErrorSound();
+                    return false;
+                }
+            }
+
+            function showMobileCallError(msg) {
+                const el = document.getElementById('mobileCallError');
+                if (!el) return;
+                el.textContent = msg;
+                el.classList.add('show');
+            }
+
+            function hideMobileCallError() {
+                const el = document.getElementById('mobileCallError');
+                if (el) el.classList.remove('show');
+            }
+
+            async function setupMobileWebRTC(isCaller) {
+                try {
+                    if (!mobileMicGranted) {
+                        const ok = await requestMobileMicPermission();
+                        if (!ok) return;
+                    }
+                    
+                    mobileLocalStream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true,
+                            sampleRate: 48000,
+                            channelCount: 1
+                        },
+                        video: false
+                    });
+                    
+                    const localVideo = document.getElementById('mobileLocalVideo');
+                    if (localVideo) {
+                        localVideo.srcObject = mobileLocalStream;
+                        localVideo.muted = true;
+                        localVideo.play().catch(e => {});
+                    }
+                    
+                    const config = {
+                        iceServers: [
+                            { urls: 'stun:stun.l.google.com:19302' },
+                            { urls: 'stun:stun1.l.google.com:19302' }
+                        ],
+                        iceCandidatePoolSize: 10
+                    };
+                    
+                    mobilePeerConnection = new RTCPeerConnection(config);
+                    
+                    mobileLocalStream.getTracks().forEach(track => {
+                        mobilePeerConnection.addTrack(track, mobileLocalStream);
+                    });
+                    
+                    mobilePeerConnection.ontrack = (event) => {
+                        const remoteAudio = document.getElementById('mobileRemoteAudio');
+                        if (remoteAudio && event.streams[0]) {
+                            remoteAudio.srcObject = event.streams[0];
+                            remoteAudio.play().catch(e => console.log('Remote audio play failed:', e));
+                        }
+                    };
+                    
+                    mobilePeerConnection.onicecandidate = (event) => {
+                        if (event.candidate && mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+                            mobileWs.send(JSON.stringify({
+                                type: 'ice_candidate',
+                                to: currentCallWith,
+                                candidate: event.candidate
+                            }));
+                        }
+                    };
+                    
+                    mobilePeerConnection.oniceconnectionstatechange = () => {
+                        if (mobilePeerConnection.iceConnectionState === 'connected' ||
+                            mobilePeerConnection.iceConnectionState === 'completed') {
+                            hideMobileCallError();
+                            document.getElementById('mobileAudioControls').style.display = 'flex';
+                        } else if (mobilePeerConnection.iceConnectionState === 'failed') {
+                            showMobileCallError('Connection failed.');
+                            playMobileCallErrorSound();
+                            setTimeout(() => endMobileCall(), 2500);
+                        }
+                    };
+                    
+                    if (isCaller) {
+                        const offer = await mobilePeerConnection.createOffer({
+                            offerToReceiveAudio: true,
+                            offerToReceiveVideo: false
+                        });
+                        await mobilePeerConnection.setLocalDescription(offer);
+                        if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+                            mobileWs.send(JSON.stringify({
+                                type: 'webrtc_offer',
+                                to: currentCallWith,
+                                offer: offer
+                            }));
+                        }
+                    }
+                } catch (e) {
+                    console.error('Mobile WebRTC setup error:', e);
+                    showMobileCallError('Call setup failed: ' + e.message);
+                    playMobileCallErrorSound();
+                    setTimeout(() => endMobileCall(), 2500);
+                }
+            }
+
+            async function handleMobileWebRTCOffer(offer, from) {
+                try {
+                    if (!mobilePeerConnection) {
+                        await setupMobileWebRTC(false);
+                    }
+                    await mobilePeerConnection.setRemoteDescription(offer);
+                    const answer = await mobilePeerConnection.createAnswer();
+                    await mobilePeerConnection.setLocalDescription(answer);
+                    if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+                        mobileWs.send(JSON.stringify({
+                            type: 'webrtc_answer',
+                            to: from,
+                            answer: answer
+                        }));
+                    }
+                    await flushMobileIce();
+                } catch (e) {
+                    console.error('Mobile offer handling error:', e);
+                    showMobileCallError('Failed to accept call.');
+                    playMobileCallErrorSound();
+                    setTimeout(() => endMobileCall(), 2500);
+                }
+            }
+
+            async function handleMobileWebRTCAnswer(answer) {
+                try {
+                    if (!mobilePeerConnection) return;
+                    await mobilePeerConnection.setRemoteDescription(answer);
+                    await flushMobileIce();
+                } catch (e) {
+                    console.error('Mobile answer handling error:', e);
+                }
+            }
+
+            async function handleMobileICECandidate(candidate) {
+                try {
+                    if (mobilePeerConnection && mobilePeerConnection.remoteDescription) {
+                        await mobilePeerConnection.addIceCandidate(candidate);
+                    } else {
+                        mobilePendingIce.push(candidate);
+                    }
+                } catch (e) {
+                    console.error('Mobile ICE error:', e);
+                }
+            }
+
+            async function flushMobileIce() {
+                if (!mobilePeerConnection || !mobilePeerConnection.remoteDescription) return;
+                const queued = mobilePendingIce;
+                mobilePendingIce = [];
+                for (const c of queued) {
+                    try { await mobilePeerConnection.addIceCandidate(c); } catch (e) {}
+                }
+            }
+
+            function toggleMute() {
+                if (mobileLocalStream) {
+                    const tracks = mobileLocalStream.getAudioTracks();
+                    tracks.forEach(t => t.enabled = !t.enabled);
+                    mobileMuted = !mobileMuted;
+                    const btn = document.getElementById('mobileMuteBtn');
+                    if (btn) btn.textContent = mobileMuted ? 'Unmute' : 'Mute';
+                }
+            }
+
+            function toggleDeafen() {
+                const remote = document.getElementById('mobileRemoteAudio');
+                if (remote) {
+                    remote.muted = !remote.muted;
+                    mobileDeafened = !mobileDeafened;
+                    const btn = document.getElementById('mobileDeafenBtn');
+                    if (btn) btn.textContent = mobileDeafened ? 'Undeafen' : 'Deafen';
+                }
+            }
+
+            function cleanupMobileWebRTC() {
+                mobilePendingIce = [];
+                
+                if (mobileLocalStream) {
+                    mobileLocalStream.getTracks().forEach(t => t.stop());
+                    mobileLocalStream = null;
+                }
+                if (mobilePeerConnection) {
+                    mobilePeerConnection.close();
+                    mobilePeerConnection = null;
+                }
+                
+                const lv = document.getElementById('mobileLocalVideo');
+                if (lv) { lv.srcObject = null; lv.pause(); }
+                const ra = document.getElementById('mobileRemoteAudio');
+                if (ra) { ra.srcObject = null; ra.pause(); }
+                
+                mobileMuted = false;
+                mobileDeafened = false;
+                
+                const mb = document.getElementById('mobileMuteBtn');
+                if (mb) mb.textContent = 'Mute';
+                const db = document.getElementById('mobileDeafenBtn');
+                if (db) db.textContent = 'Deafen';
+                
+                document.getElementById('mobileAudioControls').style.display = 'none';
+                hideMobileCallError();
             }
 
             document.addEventListener('DOMContentLoaded', function() {
@@ -5348,8 +6000,8 @@ ${'█'.repeat(Math.min(40, totalGroups))} ${totalGroups} active groups
                             <div class="feature-card-title"><span>📱</span> Mobile Version</div>
                             <div class="feature-card-body">
                                 • Access at <strong>/mobile</strong><br>
-                                • Classic XP theme now matches desktop<br>
-                                • Status picker bottom sheet
+                                • XP theme matching desktop<br>
+                                • Calling + sounds built in
                             </div>
                         </div>
                         
@@ -10049,7 +10701,7 @@ app.get('/app', (req, res) => {
             const muteBtn = document.getElementById('muteButton');
             if (muteBtn) muteBtn.textContent = 'Mute';
             
-            const deafenBtn = document.getElementById('deafenButton');
+            const deafenBtn = document.getElementById('deafenBtn');
             if (deafenBtn) deafenBtn.textContent = 'Deafen';
             
             hideCallError();
