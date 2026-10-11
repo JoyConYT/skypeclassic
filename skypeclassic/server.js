@@ -38,6 +38,18 @@ let groups = new Map();
 let activeCalls = new Map();
 let userCallStatus = new Map();
 
+// ==================== STATUS HELPERS ====================
+const VALID_STATUSES = ['online', 'busy', 'away', 'invisible', 'offline'];
+
+function isValidStatus(s) {
+    return typeof s === 'string' && VALID_STATUSES.includes(s);
+}
+
+function visibleStatus(status) {
+    if (status === 'invisible') return 'offline';
+    return status || 'offline';
+}
+
 // ==================== ACCOUNT STORAGE ====================
 const usersFile = path.join(dataDir, 'users.json');
 let accounts = {};
@@ -206,6 +218,10 @@ app.get("/", (req, res) => {
             --banner-text: #0A246A;
             --bg-image: url('/images/bbg.jpg');
             --text-secondary: #666666;
+            --status-online: #4CAF50;
+            --status-busy: #E53935;
+            --status-away: #FFB300;
+            --status-offline: #999999;
         }
         
         .dark-theme {
@@ -459,8 +475,10 @@ app.get("/", (req, res) => {
             gap: 3px;
         }
         
-        .status-online-small { color: #4CAF50; }
-        .status-offline-small { color: #999; }
+        .status-online-small { color: var(--status-online); }
+        .status-offline-small { color: var(--status-offline); }
+        .status-busy-small { color: var(--status-busy); }
+        .status-away-small { color: var(--status-away); }
         
         .chat-container {
             display: none;
@@ -742,6 +760,77 @@ app.get("/", (req, res) => {
             font-size: 40px;
             cursor: pointer;
         }
+
+        .self-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            padding: 1px 4px;
+            border-radius: 2px;
+            position: relative;
+        }
+        .self-status:hover {
+            background: rgba(255,255,255,0.15);
+        }
+        .self-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 0 4px rgba(0,0,0,0.3);
+        }
+        .self-status-dot.online { background: #4CAF50; }
+        .self-status-dot.busy { background: #E53935; }
+        .self-status-dot.away { background: #FFB300; }
+        .self-status-dot.invisible { background: #999999; }
+        .self-status-dot.offline { background: #999999; }
+
+        .status-dropdown {
+            position: absolute;
+            top: 18px;
+            left: 0;
+            min-width: 140px;
+            background: var(--window-bg);
+            border: 2px solid;
+            border-top-color: var(--border-light);
+            border-left-color: var(--border-light);
+            border-right-color: var(--border-dark);
+            border-bottom-color: var(--border-dark);
+            box-shadow: 2px 2px 6px rgba(0,0,0,0.4);
+            z-index: 99999;
+            padding: 2px;
+            display: none;
+        }
+        .status-dropdown.open {
+            display: block;
+        }
+        .status-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            cursor: pointer;
+            color: var(--text-primary);
+            font-size: 11px;
+            user-select: none;
+        }
+        .status-option:hover {
+            background: var(--titlebar-start);
+            color: var(--text-light);
+        }
+        .status-option .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 0 4px rgba(0,0,0,0.3);
+        }
+        .status-option .dot.online { background: #4CAF50; }
+        .status-option .dot.busy { background: #E53935; }
+        .status-option .dot.away { background: #FFB300; }
+        .status-option .dot.invisible { background: #999999; }
+        .status-option .dot.offline { background: #999999; }
     </style>
 </head>
 <body style="background: var(--bg-primary) var(--bg-image); background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;">
@@ -751,7 +840,7 @@ app.get("/", (req, res) => {
     
     <div class="global-banner">
         <marquee behavior="scroll" direction="left" scrollamount="6">
-            🎉 UPDATE 1.4: THE "SOUND BLASTER" UPDATE HAS COME OUT! 🎉 CHECK OUT /ANALYTICS FOR MORE INFO! 📊 NOW FEATURING: WORKING VOICE CALLS • PLUG-AND-PLAY MICROPHONES • SERVER-SIDE ACCOUNTS • PERSISTENT MESSAGES • MUSIC SHARING • MOBILE SYNC • RETRO MODE • DEV TERMINAL • AND MORE! 🚀
+            🎉 UPDATE 1.4: THE "SOUND BLASTER" UPDATE HAS COME OUT! 🎉 CHECK OUT /ANALYTICS FOR MORE INFO! 📊 NOW FEATURING: WORKING VOICE CALLS • PLUG-AND-PLAY MICROPHONES • SERVER-SIDE ACCOUNTS • PERSISTENT MESSAGES • STATUS SELECTOR • MUSIC SHARING • MOBILE SYNC • RETRO MODE • DEV TERMINAL • AND MORE! 🚀
         </marquee>
     </div>
     
@@ -817,7 +906,32 @@ app.get("/", (req, res) => {
 
     <div id="chatWindow" class="xp-window chat-window hidden">
         <div class="xp-titlebar">
-            <span>📞 Skype Classic - <span id="currentUser">User</span></span>
+            <span style="display: flex; align-items: center; gap: 8px;">
+                📞 Skype Classic -
+                <span class="self-status" id="selfStatus" onclick="toggleStatusDropdown(event)">
+                    <span class="self-status-dot online" id="selfStatusDot"></span>
+                    <span id="selfStatusText">Online</span>
+                    <span id="currentUser">User</span>
+                    <span style="font-size: 8px; opacity: 0.8;">▼</span>
+                </span>
+                <div class="status-dropdown" id="statusDropdown" onclick="event.stopPropagation()">
+                    <div class="status-option" onclick="setStatus('online')">
+                        <span class="dot online"></span><span>Online</span>
+                    </div>
+                    <div class="status-option" onclick="setStatus('busy')">
+                        <span class="dot busy"></span><span>Busy</span>
+                    </div>
+                    <div class="status-option" onclick="setStatus('away')">
+                        <span class="dot away"></span><span>Away</span>
+                    </div>
+                    <div class="status-option" onclick="setStatus('invisible')">
+                        <span class="dot invisible"></span><span>Invisible</span>
+                    </div>
+                    <div class="status-option" onclick="setStatus('offline')">
+                        <span class="dot offline"></span><span>Appear Offline</span>
+                    </div>
+                </div>
+            </span>
             <div class="xp-titlebar-controls">
                 <div class="xp-button">_</div>
                 <div class="xp-button">□</div>
@@ -968,6 +1082,7 @@ app.get("/", (req, res) => {
         let userContacts = [];
         let userGroups = [];
         let chatMessages = {};
+        let myStatus = 'online';
         
         let localStream = null;
         let remoteStream = null;
@@ -1021,6 +1136,61 @@ app.get("/", (req, res) => {
                 body.style.transition = '';
             }, 50);
         }
+
+        // ===== STATUS FUNCTIONS =====
+        const STATUS_LABELS = {
+            online: 'Online',
+            busy: 'Busy',
+            away: 'Away',
+            invisible: 'Invisible',
+            offline: 'Appear Offline'
+        };
+
+        function updateSelfStatusUI() {
+            const dot = document.getElementById('selfStatusDot');
+            const txt = document.getElementById('selfStatusText');
+            if (!dot || !txt) return;
+            dot.className = 'self-status-dot ' + myStatus;
+            txt.textContent = STATUS_LABELS[myStatus] || 'Online';
+        }
+
+        function toggleStatusDropdown(e) {
+            if (e) e.stopPropagation();
+            const dd = document.getElementById('statusDropdown');
+            if (!dd) return;
+            dd.classList.toggle('open');
+        }
+
+        function closeStatusDropdown() {
+            const dd = document.getElementById('statusDropdown');
+            if (dd) dd.classList.remove('open');
+        }
+
+        function setStatus(status) {
+            if (!STATUS_LABELS[status]) return;
+            myStatus = status;
+            updateSelfStatusUI();
+            closeStatusDropdown();
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'status_change',
+                    status: status
+                }));
+            }
+            const cs = document.getElementById('chatStatus');
+            if (cs) cs.textContent = 'Status: ' + STATUS_LABELS[status];
+        }
+
+        document.addEventListener('click', function(e) {
+            const dd = document.getElementById('statusDropdown');
+            const picker = document.getElementById('selfStatus');
+            if (!dd || !picker) return;
+            if (!picker.contains(e.target)) {
+                dd.classList.remove('open');
+            }
+        });
+
+        // ===== END STATUS FUNCTIONS =====
 
         function syncMessagesToServer() {
             if (!ws || ws.readyState !== WebSocket.OPEN) return;
@@ -1156,12 +1326,17 @@ app.get("/", (req, res) => {
                 const contactTab = document.createElement('div');
                 contactTab.className = 'contact-tab' + (currentChat === contact.username ? ' active' : '');
                 contactTab.setAttribute('data-contact', contact.username);
+                
+                const st = contact.status || 'offline';
+                const stClass = 'status-' + st + '-small';
+                const stLabel = st.charAt(0).toUpperCase() + st.slice(1);
+                
                 contactTab.innerHTML = \`
                     <div class="contact-avatar-small">\${contact.displayName.charAt(0).toUpperCase()}</div>
                     <div class="contact-info-small">
                         <div class="contact-name-small">\${contact.displayName}</div>
-                        <div class="contact-status-small status-\${contact.status === 'online' ? 'online-small' : 'offline-small'}">
-                            <span>●</span> \${contact.status === 'online' ? 'Online' : 'Offline'}
+                        <div class="contact-status-small \${stClass}">
+                            <span>●</span> \${stLabel}
                         </div>
                     </div>
                 \`;
@@ -1325,7 +1500,7 @@ app.get("/", (req, res) => {
             userContacts.forEach(contact => {
                 const onlineUser = onlineUsers.find(u => u.username === contact.username);
                 if (onlineUser) {
-                    contact.status = onlineUser.status;
+                    contact.status = onlineUser.status || 'online';
                 } else {
                     contact.status = 'offline';
                 }
@@ -1472,6 +1647,7 @@ app.get("/", (req, res) => {
                         id: Date.now(),
                         displayName: result.displayName || username
                     };
+                    myStatus = 'online';
                     status.textContent = 'Login successful!';
                     playLoginSound();
                     showChatWindow();
@@ -1528,6 +1704,7 @@ app.get("/", (req, res) => {
             document.getElementById('loginWindow').classList.add('hidden');
             document.getElementById('chatWindow').classList.remove('hidden');
             document.getElementById('currentUser').textContent = currentUser.displayName;
+            updateSelfStatusUI();
             
             loadMessagesFromLocalStorage();
             loadContacts();
@@ -1554,7 +1731,8 @@ app.get("/", (req, res) => {
                     username: currentUser.username,
                     userId: currentUser.id,
                     displayName: currentUser.displayName,
-                    contacts: savedContacts
+                    contacts: savedContacts,
+                    status: myStatus
                 }));
             };
             
@@ -1779,13 +1957,7 @@ app.get("/", (req, res) => {
         }
         
         function changeStatus(status) {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'status_change',
-                    status: status
-                }));
-                document.getElementById('chatStatus').textContent = 'Status: ' + status;
-            }
+            setStatus(status);
         }
         
         function logout() {
@@ -1799,6 +1971,7 @@ app.get("/", (req, res) => {
             currentChat = null;
             messageCounter = 0;
             chatMessages = {};
+            myStatus = 'online';
             document.getElementById('statusMessage').textContent = 'Logged out successfully';
             cleanupWebRTC();
         }
@@ -2443,12 +2616,13 @@ wss.on('connection', (ws) => {
             
             if (data.type === 'join') {
                 currentUser = data.username;
+                const requestedStatus = isValidStatus(data.status) ? data.status : 'online';
                 const user = {
                     id: data.userId,
                     username: currentUser,
                     displayName: data.displayName,
                     ws: ws,
-                    status: 'online'
+                    status: requestedStatus
                 };
                 users.set(currentUser, user);
                 
@@ -2468,7 +2642,7 @@ wss.on('connection', (ws) => {
                     users: Array.from(users.values()).map(u => ({ 
                         username: u.username, 
                         displayName: u.displayName,
-                        status: u.status 
+                        status: visibleStatus(u.status)
                     }))
                 });
 
@@ -2620,15 +2794,17 @@ wss.on('connection', (ws) => {
                 
             } else if (data.type === 'status_change') {
                 if (users.has(currentUser)) {
-                    users.get(currentUser).status = data.status;
+                    const newStatus = isValidStatus(data.status) ? data.status : 'online';
+                    users.get(currentUser).status = newStatus;
+                    console.log('🟢 Status change:', currentUser, '→', newStatus);
                     
                     broadcast({
                         type: 'user_join',
-                        message: currentUser + ' is now ' + data.status,
+                        message: currentUser + ' is now ' + newStatus,
                         users: Array.from(users.values()).map(u => ({ 
                             username: u.username, 
                             displayName: u.displayName,
-                            status: u.status 
+                            status: visibleStatus(u.status)
                         }))
                     });
                 }
@@ -2941,7 +3117,7 @@ wss.on('connection', (ws) => {
                 users: Array.from(users.values()).map(u => ({ 
                     username: u.username, 
                     displayName: u.displayName,
-                    status: u.status 
+                    status: visibleStatus(u.status)
                 }))
             });
         }
@@ -3102,276 +3278,360 @@ app.get('/mobile', (req, res) => {
                 margin: 0;
                 padding: 0;
                 box-sizing: border-box;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                font-family: 'Tahoma', 'Arial', sans-serif;
                 -webkit-tap-highlight-color: transparent;
             }
             
             :root {
                 --bg-primary: #6C00A0;
-                --bg-gradient: linear-gradient(135deg, #6C00A0, #0A246A);
-                --header-gradient: linear-gradient(90deg, #0A246A, #6C00A0);
-                --window-bg: #ffffff;
-                --contact-bg: #ffffff;
-                --contact-border: #f0f0f0;
-                --text-primary: #333333;
+                --window-bg: #ECE9D8;
+                --titlebar-start: #0A246A;
+                --titlebar-end: #6B8DC3;
+                --border-light: #FFFFFF;
+                --border-dark: #808080;
+                --text-primary: #000000;
+                --text-light: #FFFFFF;
+                --button-bg: #ECE9D8;
+                --contact-hover: #6C00A0;
+                --banner-bg: linear-gradient(90deg, #FFD700, #FFA500);
+                --banner-text: #0A246A;
+                --bg-image: url('/images/bbg.jpg');
                 --text-secondary: #666666;
-                --text-light: #ffffff;
-                --button-primary: #6C00A0;
-                --button-secondary: #0A246A;
-                --bubble-other: #ffffff;
-                --bubble-self: linear-gradient(135deg, #6C00A0, #0A246A);
-                --input-bg: #f8f9fa;
-                --input-border: #dddddd;
-                --tab-bg: #4B0082;
-                --tab-inactive: rgba(255,255,255,0.7);
-                --tab-active: #ffffff;
-                --empty-state: #999999;
-                --toast-bg: rgba(0,0,0,0.8);
-                --toast-error: rgba(198,40,40,0.9);
-                --modal-bg: rgba(0,0,0,0.9);
                 --status-online: #4CAF50;
+                --status-busy: #E53935;
+                --status-away: #FFB300;
                 --status-offline: #999999;
+                --accent: #6C00A0;
             }
             
             .dark-theme {
                 --bg-primary: #1a1a1a;
-                --bg-gradient: linear-gradient(135deg, #2d2d2d, #1a1a1a);
-                --header-gradient: linear-gradient(90deg, #2b2b2b, #4a4a4a);
                 --window-bg: #2d2d2d;
-                --contact-bg: #3d3d3d;
-                --contact-border: #4a4a4a;
+                --titlebar-start: #2b2b2b;
+                --titlebar-end: #4a4a4a;
+                --border-light: #4a4a4a;
+                --border-dark: #1a1a1a;
                 --text-primary: #e0e0e0;
-                --text-secondary: #b0b0b0;
                 --text-light: #ffffff;
-                --button-primary: #4a4a4a;
-                --button-secondary: #2b2b2b;
-                --bubble-other: #3d3d3d;
-                --bubble-self: linear-gradient(135deg, #4a4a4a, #2b2b2b);
-                --input-bg: #3d3d3d;
-                --input-border: #4a4a4a;
-                --tab-bg: #2b2b2b;
-                --tab-inactive: rgba(255,255,255,0.5);
-                --tab-active: #ffffff;
-                --empty-state: #888888;
-                --toast-bg: rgba(255,255,255,0.1);
-                --toast-error: rgba(198,40,40,0.8);
-                --modal-bg: rgba(0,0,0,0.95);
-                --status-online: #4CAF50;
-                --status-offline: #666666;
+                --button-bg: #3d3d3d;
+                --contact-hover: #4a4a4a;
+                --banner-bg: linear-gradient(90deg, #b8860b, #8b4513);
+                --banner-text: #ffd700;
+                --bg-image: url('/images/dbg.jpg');
+                --text-secondary: #b0b0b0;
+                --accent: #9b59b6;
+            }
+            
+            html, body {
+                height: 100%;
             }
             
             body {
-                background: var(--bg-gradient);
-                height: 100vh;
-                overflow: hidden;
+                background: var(--bg-primary) var(--bg-image);
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-attachment: fixed;
                 color: var(--text-primary);
                 transition: background 0.5s ease, color 0.3s ease;
+                overflow: hidden;
             }
             
-            .auth-overlay {
+            /* ===== Global banner ===== */
+            .global-banner {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                background: var(--banner-bg);
+                border-bottom: 3px solid var(--titlebar-start);
+                overflow: hidden;
+                padding: 6px 0;
+                z-index: 9999;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            }
+            .global-banner marquee {
+                background: none;
+                color: var(--banner-text);
+                text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
+                font-size: 11px;
+            }
+            
+            /* ===== Theme switcher ===== */
+            .theme-switcher {
+                position: fixed;
+                top: 38px;
+                left: 8px;
+                z-index: 9999;
+                background: var(--window-bg);
+                border: 2px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                padding: 2px;
+                border-radius: 3px;
+            }
+            .theme-btn {
+                background: var(--button-bg);
+                border: 2px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                padding: 3px 8px;
+                font-size: 10px;
+                font-weight: bold;
+                cursor: pointer;
+                color: var(--text-primary);
+            }
+            .theme-btn:active {
+                background: var(--contact-hover);
+                color: var(--text-light);
+            }
+            
+            /* ===== Window chrome ===== */
+            .xp-window {
+                background: var(--window-bg);
+                border: 2px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                box-shadow: 2px 2px 6px rgba(0,0,0,0.4);
+            }
+            
+            .xp-titlebar {
+                background: linear-gradient(90deg, var(--titlebar-start), var(--titlebar-end));
+                color: var(--text-light);
+                padding: 5px 8px;
+                font-size: 11px;
+                font-weight: bold;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                min-height: 22px;
+            }
+            .xp-titlebar-title {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                min-width: 0;
+                flex: 1;
+            }
+            .xp-titlebar-controls {
+                display: flex;
+                gap: 2px;
+                flex-shrink: 0;
+            }
+            .xp-button {
+                width: 20px;
+                height: 18px;
+                border: 1px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                background: var(--button-bg);
+                font-size: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                line-height: 1;
+                color: var(--text-primary);
+            }
+            .xp-button:active {
+                background: var(--contact-hover);
+                color: var(--text-light);
+            }
+            
+            .xp-status-bar {
+                background: var(--window-bg);
+                border-top: 1px solid var(--border-dark);
+                padding: 4px 8px;
+                font-size: 10px;
+                color: var(--text-primary);
+                min-height: 20px;
+                display: flex;
+                align-items: center;
+            }
+            
+            /* ===== Auth screen ===== */
+            #authOverlay {
                 position: fixed;
                 top: 0;
                 left: 0;
                 right: 0;
                 bottom: 0;
-                background: var(--bg-gradient);
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                padding: 20px;
+                padding-top: 70px;
                 z-index: 1000;
-                padding: 20px;
+                overflow-y: auto;
             }
             
-            .auth-box {
-                background: var(--window-bg);
-                border-radius: 20px;
+            .auth-window {
                 width: 100%;
-                max-width: 400px;
-                overflow: hidden;
-                box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+                max-width: 420px;
             }
             
-            .auth-header {
-                background: var(--header-gradient);
-                color: var(--text-light);
-                padding: 30px 25px;
-                text-align: center;
-            }
-            
-            .auth-header h2 {
-                font-size: 28px;
-                margin-bottom: 8px;
-                font-weight: 600;
-            }
-            
-            .auth-header p {
-                font-size: 14px;
-                opacity: 0.9;
-            }
-            
-            .auth-form {
-                padding: 25px;
+            .auth-tabs {
+                display: flex;
+                margin-bottom: 0;
+                padding: 8px 8px 0 8px;
                 background: var(--window-bg);
             }
-            
-            .auth-input {
-                width: 100%;
-                padding: 16px;
-                margin-bottom: 16px;
-                border: 2px solid var(--input-border);
-                border-radius: 12px;
-                font-size: 16px;
-                background: var(--input-bg);
-                color: var(--text-primary);
-                transition: all 0.2s;
-            }
-            
-            .auth-input:focus {
-                border-color: var(--button-primary);
-                background: var(--window-bg);
-                outline: none;
-                box-shadow: 0 0 0 3px rgba(108, 0, 160, 0.1);
-            }
-            
-            .auth-button {
-                width: 100%;
-                padding: 16px;
-                background: var(--button-primary);
-                color: var(--text-light);
-                border: none;
-                border-radius: 12px;
-                font-size: 18px;
-                font-weight: 600;
+            .auth-tab {
+                padding: 6px 14px;
+                background: var(--button-bg);
+                border: 1px solid var(--border-dark);
+                border-bottom: none;
+                font-size: 12px;
+                font-weight: bold;
                 cursor: pointer;
-                transition: all 0.2s;
-                margin-top: 8px;
+                color: var(--text-primary);
+                margin-right: 2px;
             }
-            
-            .auth-button:active {
-                transform: scale(0.98);
-                opacity: 0.9;
-            }
-            
-            .auth-footer {
-                text-align: center;
-                padding: 20px;
-                color: var(--text-secondary);
-                font-size: 14px;
-                border-top: 1px solid var(--input-border);
+            .auth-tab.active {
                 background: var(--window-bg);
             }
             
-            .auth-footer a {
-                color: var(--button-primary);
-                text-decoration: none;
-                font-weight: 600;
+            .auth-body {
+                padding: 12px;
+                background: var(--window-bg);
+            }
+            
+            .auth-fieldset {
+                border: 1px solid var(--border-dark);
+                padding: 14px;
+                margin-bottom: 12px;
+                position: relative;
+                background: var(--window-bg);
+            }
+            .auth-legend {
+                background: var(--window-bg);
+                padding: 2px 8px;
+                font-size: 11px;
+                font-weight: bold;
+                position: absolute;
+                top: -8px;
+                left: 8px;
+                color: var(--text-primary);
+            }
+            
+            .xp-input {
+                width: 100%;
+                padding: 8px;
+                border: 2px solid;
+                border-top-color: var(--border-dark);
+                border-left-color: var(--border-dark);
+                border-right-color: var(--border-light);
+                border-bottom-color: var(--border-light);
+                background: var(--window-bg);
+                font-size: 14px;
+                margin-bottom: 10px;
+                color: var(--text-primary);
+                font-family: 'Tahoma', 'Arial', sans-serif;
+            }
+            .xp-input:focus {
+                outline: 1px dotted var(--titlebar-start);
+                outline-offset: -3px;
+            }
+            
+            .xp-button-large {
+                background: var(--button-bg);
+                border: 2px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                padding: 8px 20px;
+                font-size: 13px;
+                font-weight: bold;
+                cursor: pointer;
+                color: var(--text-primary);
+                font-family: 'Tahoma', 'Arial', sans-serif;
+            }
+            .xp-button-large:active {
+                border-top-color: var(--border-dark);
+                border-left-color: var(--border-dark);
+                border-right-color: var(--border-light);
+                border-bottom-color: var(--border-light);
+                background: var(--contact-hover);
+                color: var(--text-light);
             }
             
             .auth-error {
-                background: #ffebee;
-                color: #c62828;
-                padding: 12px;
-                border-radius: 8px;
-                margin-bottom: 16px;
-                font-size: 14px;
-                text-align: center;
+                background: #ffdddd;
+                color: #8B0000;
+                padding: 8px 10px;
+                border: 1px solid #8B0000;
+                margin-bottom: 10px;
+                font-size: 11px;
                 display: none;
             }
+            .auth-error.show { display: block; }
             
-            .auth-error.show {
-                display: block;
-            }
-            
-            .theme-switcher {
-                position: fixed;
-                top: 15px;
-                left: 15px;
-                z-index: 10000;
+            .auth-footer {
+                text-align: center;
+                padding: 10px;
+                color: var(--text-secondary);
+                font-size: 10px;
+                border-top: 1px solid var(--border-dark);
                 background: var(--window-bg);
-                border-radius: 30px;
-                padding: 5px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-                border: 1px solid var(--input-border);
             }
-            
-            .theme-btn {
-                background: var(--button-primary);
-                color: var(--text-light);
-                border: none;
-                padding: 8px 16px;
-                border-radius: 25px;
-                font-size: 14px;
-                font-weight: 600;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                gap: 5px;
+            .auth-footer a {
+                color: var(--titlebar-start);
+                text-decoration: underline;
+                font-weight: bold;
             }
+            .dark-theme .auth-footer a { color: var(--accent); }
             
-            .theme-btn:active {
-                transform: scale(0.95);
-            }
-            
+            /* ===== Main app ===== */
             #mobileApp {
+                display: none;
+                flex-direction: column;
                 height: 100vh;
+                padding-top: 30px;
+                padding-bottom: 20px;
+            }
+            #mobileApp.active { display: flex; }
+            
+            .mobile-window {
+                flex: 1;
                 display: flex;
                 flex-direction: column;
-                background: var(--window-bg);
-            }
-            
-            .mobile-header {
-                background: var(--header-gradient);
-                color: var(--text-light);
-                padding: 18px 15px;
-                font-weight: bold;
-                font-size: 18px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-                position: relative;
-                z-index: 10;
-            }
-            
-            .mobile-header-content {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            
-            .mobile-header-title {
-                font-size: 18px;
-                font-weight: 600;
-            }
-            
-            .mobile-header-user {
-                background: rgba(255,255,255,0.2);
-                padding: 6px 12px;
-                border-radius: 20px;
-                font-size: 14px;
+                margin: 8px;
+                min-height: 0;
             }
             
             .mobile-tabs {
                 display: flex;
-                background: var(--tab-bg);
-                border-bottom: 1px solid var(--input-border);
+                background: var(--button-bg);
+                border-bottom: 1px solid var(--border-dark);
+                padding: 4px 4px 0 4px;
             }
-            
             .mobile-tab {
                 flex: 1;
-                padding: 16px;
+                padding: 10px 8px;
                 text-align: center;
-                background: none;
-                border: none;
-                color: var(--tab-inactive);
-                font-size: 15px;
-                font-weight: 500;
+                background: var(--button-bg);
+                border: 1px solid var(--border-dark);
+                border-bottom: none;
+                color: var(--text-primary);
+                font-size: 12px;
+                font-weight: bold;
                 cursor: pointer;
-                border-bottom: 3px solid transparent;
-                transition: all 0.2s;
+                font-family: 'Tahoma', 'Arial', sans-serif;
+                margin-right: 2px;
             }
-            
             .mobile-tab.active {
-                color: var(--tab-active);
-                border-bottom-color: var(--tab-active);
-                background: rgba(255,255,255,0.1);
+                background: var(--window-bg);
+                position: relative;
+                z-index: 2;
             }
             
             .tab-content {
@@ -3379,35 +3639,39 @@ app.get('/mobile', (req, res) => {
                 flex: 1;
                 overflow-y: auto;
                 background: var(--window-bg);
+                min-height: 0;
             }
-            
             .tab-content.active {
                 display: block;
             }
             
+            /* ===== Contacts ===== */
             .contacts-header {
-                background: var(--header-gradient);
-                color: var(--text-light);
-                padding: 15px;
+                background: var(--button-bg);
+                border-bottom: 1px solid var(--border-dark);
+                padding: 10px;
             }
-            
             .contacts-header h3 {
-                margin-bottom: 10px;
-                font-size: 16px;
-            }
-            
-            .search-box {
-                width: 100%;
-                padding: 12px 15px;
-                border: none;
-                border-radius: 25px;
-                font-size: 14px;
-                background: rgba(255,255,255,0.9);
+                margin-bottom: 8px;
+                font-size: 12px;
                 color: var(--text-primary);
             }
-            
-            .search-box::placeholder {
-                color: var(--text-secondary);
+            .search-box {
+                width: 100%;
+                padding: 8px 10px;
+                border: 2px solid;
+                border-top-color: var(--border-dark);
+                border-left-color: var(--border-dark);
+                border-right-color: var(--border-light);
+                border-bottom-color: var(--border-light);
+                font-size: 13px;
+                background: var(--window-bg);
+                color: var(--text-primary);
+                font-family: 'Tahoma', 'Arial', sans-serif;
+            }
+            .search-box:focus {
+                outline: 1px dotted var(--titlebar-start);
+                outline-offset: -3px;
             }
             
             .contact-list {
@@ -3418,268 +3682,260 @@ app.get('/mobile', (req, res) => {
             .mobile-contact {
                 display: flex;
                 align-items: center;
-                padding: 16px;
-                background: var(--contact-bg);
-                border-bottom: 1px solid var(--contact-border);
+                padding: 12px;
+                background: var(--window-bg);
+                border-bottom: 1px solid var(--border-dark);
                 cursor: pointer;
             }
-            
             .mobile-contact:active {
-                background: var(--input-bg);
+                background: var(--contact-hover);
+                color: var(--text-light);
             }
             
             .contact-avatar {
-                width: 50px;
-                height: 50px;
+                width: 42px;
+                height: 42px;
                 border-radius: 50%;
-                background: var(--header-gradient);
+                background: linear-gradient(135deg, var(--titlebar-start), var(--titlebar-end));
                 color: var(--text-light);
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 font-weight: bold;
-                font-size: 20px;
-                margin-right: 15px;
+                font-size: 18px;
+                margin-right: 12px;
                 flex-shrink: 0;
+                border: 1px solid var(--border-dark);
             }
             
             .contact-info {
                 flex: 1;
                 min-width: 0;
             }
-            
             .contact-name {
                 font-weight: 600;
-                font-size: 16px;
-                margin-bottom: 4px;
+                font-size: 13px;
+                margin-bottom: 3px;
                 color: var(--text-primary);
             }
-            
+            .mobile-contact:active .contact-name,
+            .mobile-contact:active .contact-status {
+                color: var(--text-light);
+            }
             .contact-status {
-                font-size: 13px;
+                font-size: 11px;
                 display: flex;
                 align-items: center;
                 color: var(--text-secondary);
             }
-            
             .status-dot {
                 width: 8px;
                 height: 8px;
                 border-radius: 50%;
                 margin-right: 6px;
-            }
-            
-            .online .status-dot {
-                background: var(--status-online);
-                box-shadow: 0 0 8px var(--status-online);
-            }
-            
-            .offline .status-dot {
-                background: var(--status-offline);
-            }
-            
-            .chat-messages {
-                height: calc(100vh - 180px);
-                overflow-y: auto;
-                padding: 15px;
-                background: var(--window-bg);
-            }
-            
-            .message {
-                margin-bottom: 16px;
-                clear: both;
-            }
-            
-            .message-other {
-                float: left;
-                max-width: 80%;
-            }
-            
-            .message-self {
-                float: right;
-                max-width: 80%;
-            }
-            
-            .message-bubble {
-                padding: 12px 16px;
-                border-radius: 18px;
-                font-size: 15px;
-                line-height: 1.4;
-                word-wrap: break-word;
-                max-width: 100%;
-            }
-            
-            .message-other .message-bubble {
-                background: var(--bubble-other);
-                color: var(--text-primary);
-                border-bottom-left-radius: 5px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            }
-            
-            .message-self .message-bubble {
-                background: var(--bubble-self);
-                color: var(--text-light);
-                border-bottom-right-radius: 5px;
-            }
-            
-            .message-image {
-                max-width: 200px;
-                max-height: 200px;
-                border-radius: 10px;
-                margin: 5px 0;
-                border: 2px solid var(--button-primary);
-                cursor: pointer;
-            }
-            
-            .message-sender {
-                font-size: 12px;
-                font-weight: 600;
-                margin-bottom: 4px;
-                color: var(--text-secondary);
-                padding: 0 5px;
-            }
-            
-            .message-time {
-                font-size: 11px;
-                color: var(--text-secondary);
-                margin-top: 4px;
-                text-align: right;
-                padding: 0 5px;
-            }
-            
-            .chat-input-container {
-                background: var(--window-bg);
-                border-top: 1px solid var(--input-border);
-                padding: 12px 15px;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                position: sticky;
-                bottom: 0;
-            }
-            
-            .chat-input {
-                flex: 1;
-                padding: 12px 16px;
-                border: 1px solid var(--input-border);
-                border-radius: 25px;
-                font-size: 16px;
-                outline: none;
-                background: var(--input-bg);
-                color: var(--text-primary);
-            }
-            
-            .chat-input:focus {
-                border-color: var(--button-primary);
-                background: var(--window-bg);
-            }
-            
-            .chat-input::placeholder {
-                color: var(--text-secondary);
-            }
-            
-            .send-button, .image-button {
-                width: 50px;
-                height: 50px;
-                border-radius: 50%;
-                background: var(--button-primary);
-                color: var(--text-light);
-                border: none;
-                font-size: 20px;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
                 flex-shrink: 0;
             }
-            
-            .image-button {
-                background: var(--button-secondary);
-                font-size: 18px;
-            }
-            
-            .send-button:active, .image-button:active {
-                transform: scale(0.95);
-            }
+            .online .status-dot { background: var(--status-online); box-shadow: 0 0 6px var(--status-online); }
+            .busy .status-dot { background: var(--status-busy); box-shadow: 0 0 6px var(--status-busy); }
+            .away .status-dot { background: var(--status-away); box-shadow: 0 0 6px var(--status-away); }
+            .offline .status-dot { background: var(--status-offline); }
             
             .add-contact-btn, .create-group-btn {
-                background: var(--window-bg);
-                color: var(--button-primary);
-                border: 2px solid var(--button-primary);
-                padding: 12px 20px;
-                margin: 15px;
-                border-radius: 12px;
-                font-size: 16px;
-                font-weight: 600;
+                background: var(--button-bg);
+                color: var(--text-primary);
+                border: 2px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                padding: 10px 16px;
+                margin: 10px;
+                font-size: 13px;
+                font-weight: bold;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 gap: 8px;
                 cursor: pointer;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                font-family: 'Tahoma', 'Arial', sans-serif;
+                width: calc(100% - 20px);
             }
-            
             .add-contact-btn:active, .create-group-btn:active {
-                transform: scale(0.98);
-                background: var(--input-bg);
-            }
-            
-            .empty-state {
-                text-align: center;
-                padding: 60px 20px;
-                color: var(--empty-state);
-            }
-            
-            .empty-icon {
-                font-size: 60px;
-                margin-bottom: 20px;
-                opacity: 0.5;
-            }
-            
-            .empty-title {
-                font-size: 18px;
-                margin-bottom: 10px;
-                color: var(--text-primary);
-            }
-            
-            .empty-text {
-                font-size: 14px;
-                color: var(--text-secondary);
-            }
-            
-            .hidden {
-                display: none !important;
-            }
-            
-            .logout-btn {
-                background: none;
-                border: 1px solid rgba(255,255,255,0.3);
+                border-top-color: var(--border-dark);
+                border-left-color: var(--border-dark);
+                border-right-color: var(--border-light);
+                border-bottom-color: var(--border-light);
+                background: var(--contact-hover);
                 color: var(--text-light);
-                padding: 6px 12px;
-                border-radius: 20px;
-                font-size: 13px;
-                cursor: pointer;
             }
             
+            /* ===== Chat ===== */
             .chat-header {
-                background: var(--tab-bg);
+                background: var(--titlebar-start);
                 color: var(--text-light);
-                padding: 12px 15px;
+                padding: 8px 12px;
                 font-weight: 600;
                 display: flex;
                 align-items: center;
                 gap: 10px;
+                font-size: 12px;
             }
-            
             .back-btn {
-                background: none;
-                border: none;
-                color: var(--text-light);
-                font-size: 24px;
+                background: var(--button-bg);
+                border: 1px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                color: var(--text-primary);
+                font-size: 14px;
                 cursor: pointer;
-                padding: 0 5px;
+                padding: 2px 8px;
+                font-weight: bold;
+                line-height: 1;
             }
             
+            .chat-messages {
+                flex: 1;
+                overflow-y: auto;
+                padding: 10px;
+                background: var(--window-bg);
+                min-height: 0;
+            }
+            
+            .message {
+                margin-bottom: 12px;
+                clear: both;
+            }
+            .message-other { float: left; max-width: 85%; }
+            .message-self { float: right; max-width: 85%; }
+            
+            .message-bubble {
+                padding: 8px 12px;
+                font-size: 13px;
+                line-height: 1.4;
+                word-wrap: break-word;
+                max-width: 100%;
+                border: 1px solid var(--border-dark);
+            }
+            .message-other .message-bubble {
+                background: var(--window-bg);
+                color: var(--text-primary);
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+            }
+            .message-self .message-bubble {
+                background: var(--titlebar-start);
+                color: var(--text-light);
+                border-top-color: var(--titlebar-end);
+                border-left-color: var(--titlebar-end);
+                border-right-color: var(--titlebar-start);
+                border-bottom-color: var(--titlebar-start);
+            }
+            
+            .message-image {
+                max-width: 200px;
+                max-height: 200px;
+                cursor: pointer;
+                border: 2px solid var(--titlebar-start);
+            }
+            
+            .message-sender {
+                font-size: 10px;
+                font-weight: 600;
+                margin-bottom: 3px;
+                color: var(--text-secondary);
+                padding: 0 2px;
+            }
+            .message-time {
+                font-size: 10px;
+                color: var(--text-secondary);
+                margin-top: 3px;
+                text-align: right;
+                padding: 0 2px;
+            }
+            .message-self .message-time {
+                color: rgba(255,255,255,0.7);
+            }
+            
+            .chat-input-container {
+                background: var(--button-bg);
+                border-top: 1px solid var(--border-dark);
+                padding: 8px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .chat-input {
+                flex: 1;
+                padding: 8px 10px;
+                border: 2px solid;
+                border-top-color: var(--border-dark);
+                border-left-color: var(--border-dark);
+                border-right-color: var(--border-light);
+                border-bottom-color: var(--border-light);
+                font-size: 14px;
+                outline: none;
+                background: var(--window-bg);
+                color: var(--text-primary);
+                font-family: 'Tahoma', 'Arial', sans-serif;
+                min-width: 0;
+            }
+            
+            .send-button, .image-button {
+                height: 40px;
+                min-width: 44px;
+                border: 2px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                background: var(--titlebar-start);
+                color: var(--text-light);
+                font-size: 14px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: 'Tahoma', 'Arial', sans-serif;
+                flex-shrink: 0;
+            }
+            .image-button {
+                background: var(--accent);
+            }
+            .send-button:active, .image-button:active {
+                border-top-color: var(--border-dark);
+                border-left-color: var(--border-dark);
+                border-right-color: var(--border-light);
+                border-bottom-color: var(--border-light);
+                opacity: 0.85;
+            }
+            
+            /* ===== Empty state ===== */
+            .empty-state {
+                text-align: center;
+                padding: 40px 20px;
+                color: var(--text-secondary);
+            }
+            .empty-icon {
+                font-size: 48px;
+                margin-bottom: 15px;
+                opacity: 0.6;
+            }
+            .empty-title {
+                font-size: 14px;
+                margin-bottom: 6px;
+                color: var(--text-primary);
+                font-weight: bold;
+            }
+            .empty-text {
+                font-size: 12px;
+                color: var(--text-secondary);
+            }
+            
+            .hidden { display: none !important; }
+            
+            /* ===== Modal / status sheet / toast ===== */
             .modal {
                 display: none;
                 position: fixed;
@@ -3687,73 +3943,219 @@ app.get('/mobile', (req, res) => {
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: var(--modal-bg);
+                background: rgba(0,0,0,0.85);
                 z-index: 10001;
                 justify-content: center;
                 align-items: center;
             }
-            
-            .modal.active {
-                display: flex;
-            }
-            
+            .modal.active { display: flex; }
             .modal-content {
                 max-width: 90%;
                 max-height: 90%;
-                border-radius: 10px;
+                border: 2px solid var(--border-light);
             }
-            
             .modal-close {
                 position: absolute;
-                top: 20px;
-                right: 30px;
+                top: 15px;
+                right: 20px;
                 color: var(--text-light);
-                font-size: 40px;
+                font-size: 32px;
                 cursor: pointer;
                 font-weight: bold;
             }
             
             .toast {
                 position: fixed;
-                bottom: 30px;
+                bottom: 20px;
                 left: 50%;
                 transform: translateX(-50%);
-                background: var(--toast-bg);
-                color: var(--text-light);
-                padding: 12px 24px;
-                border-radius: 25px;
-                font-size: 14px;
+                background: var(--window-bg);
+                color: var(--text-primary);
+                padding: 10px 18px;
+                border: 2px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                font-size: 12px;
+                font-weight: bold;
                 z-index: 10002;
                 display: none;
-                backdrop-filter: blur(5px);
-                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                box-shadow: 2px 2px 8px rgba(0,0,0,0.4);
+                max-width: 90%;
+                text-align: center;
+            }
+            .toast.show { display: block; }
+            .toast.error {
+                background: #FFDDDD;
+                color: #8B0000;
+                border-color: #8B0000;
             }
             
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-                to { opacity: 1; transform: translateX(-50%) translateY(0); }
+            .status-sheet-overlay {
+                display: none;
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 10100;
+                align-items: flex-end;
+                justify-content: center;
+            }
+            .status-sheet-overlay.active { display: flex; }
+            .status-sheet {
+                background: var(--window-bg);
+                width: 100%;
+                max-width: 500px;
+                border: 2px solid;
+                border-top-color: var(--border-light);
+                border-left-color: var(--border-light);
+                border-right-color: var(--border-dark);
+                border-bottom-color: var(--border-dark);
+                border-bottom: none;
+                padding: 0;
+                box-shadow: 0 -6px 20px rgba(0,0,0,0.4);
+                animation: slideUp 0.2s ease;
+            }
+            @keyframes slideUp {
+                from { transform: translateY(100%); }
+                to { transform: translateY(0); }
+            }
+            .status-sheet-title {
+                background: linear-gradient(90deg, var(--titlebar-start), var(--titlebar-end));
+                color: var(--text-light);
+                padding: 8px 12px;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            .status-sheet-body {
+                padding: 6px;
+            }
+            .status-sheet-option {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 12px 14px;
+                font-size: 14px;
+                color: var(--text-primary);
+                cursor: pointer;
+                border: 1px solid transparent;
+                background: none;
+                width: 100%;
+                text-align: left;
+                font-family: 'Tahoma', 'Arial', sans-serif;
+            }
+            .status-sheet-option:active {
+                background: var(--contact-hover);
+                color: var(--text-light);
+            }
+            .status-sheet-option .dot {
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                flex-shrink: 0;
+                border: 1px solid var(--border-dark);
+            }
+            .status-sheet-option .dot.online { background: #4CAF50; }
+            .status-sheet-option .dot.busy { background: #E53935; }
+            .status-sheet-option .dot.away { background: #FFB300; }
+            .status-sheet-option .dot.invisible { background: #999999; }
+            .status-sheet-option .dot.offline { background: #999999; }
+            .status-sheet-option .check {
+                margin-left: auto;
+                opacity: 0;
+                color: var(--titlebar-start);
+                font-weight: bold;
+            }
+            .dark-theme .status-sheet-option .check { color: var(--accent); }
+            .status-sheet-option.current .check { opacity: 1; }
+            .status-sheet-cancel {
+                text-align: center;
+                padding: 12px;
+                font-size: 14px;
+                color: var(--titlebar-start);
+                font-weight: bold;
+                cursor: pointer;
+                border-top: 1px solid var(--border-dark);
+                background: var(--button-bg);
+            }
+            .dark-theme .status-sheet-cancel { color: var(--accent); }
+            .status-sheet-cancel:active {
+                background: var(--contact-hover);
+                color: var(--text-light);
             }
             
-            .toast.show {
-                display: block;
-                animation: fadeIn 0.3s;
+            /* ===== Titlebar user chip ===== */
+            .titlebar-user-chip {
+                background: rgba(255,255,255,0.18);
+                border: 1px solid rgba(255,255,255,0.3);
+                padding: 3px 8px;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                cursor: pointer;
+                font-size: 11px;
+                font-weight: bold;
+                color: var(--text-light);
+                max-width: 55%;
+                min-width: 0;
+            }
+            .titlebar-user-chip:active {
+                background: rgba(255,255,255,0.3);
+            }
+            .titlebar-user-name {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .mobile-self-status-dot {
+                width: 9px;
+                height: 9px;
+                border-radius: 50%;
+                flex-shrink: 0;
+                border: 1px solid rgba(0,0,0,0.3);
+            }
+            .mobile-self-status-dot.online { background: #4CAF50; }
+            .mobile-self-status-dot.busy { background: #E53935; }
+            .mobile-self-status-dot.away { background: #FFB300; }
+            .mobile-self-status-dot.invisible { background: #999999; }
+            .mobile-self-status-dot.offline { background: #999999; }
+            
+            .logout-chip {
+                background: rgba(255,255,255,0.18);
+                border: 1px solid rgba(255,255,255,0.3);
+                color: var(--text-light);
+                padding: 3px 8px;
+                font-size: 11px;
+                font-weight: bold;
+                cursor: pointer;
+                font-family: 'Tahoma', 'Arial', sans-serif;
+                flex-shrink: 0;
+            }
+            .logout-chip:active {
+                background: rgba(255,255,255,0.3);
             }
             
             .footer-note {
                 position: fixed;
-                bottom: 5px;
+                bottom: 3px;
                 right: 5px;
-                font-size: 9px;
+                font-size: 8px;
                 color: var(--text-secondary);
                 background: var(--window-bg);
-                padding: 2px 5px;
-                border-radius: 3px;
+                padding: 1px 4px;
                 opacity: 0.7;
-                z-index: 9999;
+                z-index: 9998;
+                border: 1px solid var(--border-dark);
             }
         </style>
     </head>
     <body>
+        <div class="global-banner">
+            <marquee behavior="scroll" direction="left" scrollamount="6">
+                🎉 UPDATE 1.4: THE "SOUND BLASTER" UPDATE HAS COME OUT! 🎉 CHECK OUT /ANALYTICS FOR MORE INFO! 📊 STATUS SELECTOR • VOICE CALLS • PERSISTENT MESSAGES • MOBILE SYNC • AND MORE! 🚀
+            </marquee>
+        </div>
+        
         <div class="theme-switcher">
             <button id="themeToggle" class="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
         </div>
@@ -3765,79 +4167,147 @@ app.get('/mobile', (req, res) => {
         
         <div id="toast" class="toast"></div>
         
-        <div id="authOverlay" class="auth-overlay">
-            <div class="auth-box">
-                <div class="auth-header">
-                    <h2>Skype Classic</h2>
-                    <p>Mobile Edition</p>
+        <div id="statusSheetOverlay" class="status-sheet-overlay" onclick="if (event.target === this) closeStatusSheet()">
+            <div class="status-sheet" onclick="event.stopPropagation()">
+                <div class="status-sheet-title">Change your status</div>
+                <div class="status-sheet-body">
+                    <button class="status-sheet-option" data-status="online" onclick="setStatus('online')">
+                        <span class="dot online"></span><span>Online</span><span class="check">✓</span>
+                    </button>
+                    <button class="status-sheet-option" data-status="busy" onclick="setStatus('busy')">
+                        <span class="dot busy"></span><span>Busy</span><span class="check">✓</span>
+                    </button>
+                    <button class="status-sheet-option" data-status="away" onclick="setStatus('away')">
+                        <span class="dot away"></span><span>Away</span><span class="check">✓</span>
+                    </button>
+                    <button class="status-sheet-option" data-status="invisible" onclick="setStatus('invisible')">
+                        <span class="dot invisible"></span><span>Invisible</span><span class="check">✓</span>
+                    </button>
+                    <button class="status-sheet-option" data-status="offline" onclick="setStatus('offline')">
+                        <span class="dot offline"></span><span>Appear Offline</span><span class="check">✓</span>
+                    </button>
                 </div>
-                <div class="auth-form">
+                <div class="status-sheet-cancel" onclick="closeStatusSheet()">Cancel</div>
+            </div>
+        </div>
+        
+        <!-- ===== AUTH ===== -->
+        <div id="authOverlay">
+            <div class="auth-window xp-window">
+                <div class="xp-titlebar">
+                    <div class="xp-titlebar-title">
+                        <span>📞 Skype Classic - Sign In</span>
+                    </div>
+                    <div class="xp-titlebar-controls">
+                        <div class="xp-button">×</div>
+                    </div>
+                </div>
+                <div class="auth-tabs">
+                    <div class="auth-tab active" id="loginTabBtn" onclick="showAuthTab('login')">Login</div>
+                    <div class="auth-tab" id="registerTabBtn" onclick="showAuthTab('register')">Create Account</div>
+                </div>
+                <div class="auth-body">
                     <div id="authErrorMessage" class="auth-error"></div>
-                    <input type="text" id="mobileUsername" class="auth-input" placeholder="Username" value="test" autocomplete="off">
-                    <input type="password" id="mobilePassword" class="auth-input" placeholder="Password" value="test" autocomplete="off">
-                    <button class="auth-button" id="mobileLoginBtn">Sign In</button>
-                    <button class="auth-button" id="mobileRegisterBtn" style="background: var(--button-secondary); margin-top: 8px;">Create Account</button>
+                    
+                    <div id="loginTabContent">
+                        <div class="auth-fieldset">
+                            <div class="auth-legend">Account Information</div>
+                            <input type="text" id="mobileUsername" class="xp-input" placeholder="Username" value="test" autocomplete="off">
+                            <input type="password" id="mobilePassword" class="xp-input" placeholder="Password" value="test" autocomplete="off">
+                        </div>
+                        <div style="text-align: center;">
+                            <button class="xp-button-large" id="mobileLoginBtn">Sign In</button>
+                        </div>
+                    </div>
+                    
+                    <div id="registerTabContent" class="hidden">
+                        <div class="auth-fieldset">
+                            <div class="auth-legend">New Account</div>
+                            <input type="text" id="regUsername" class="xp-input" placeholder="Username" autocomplete="off">
+                            <input type="password" id="regPassword" class="xp-input" placeholder="Password" autocomplete="off">
+                            <input type="email" id="regEmail" class="xp-input" placeholder="Email (optional)" autocomplete="off">
+                            <input type="text" id="regDisplayName" class="xp-input" placeholder="Display Name (optional)" autocomplete="off">
+                        </div>
+                        <div style="text-align: center;">
+                            <button class="xp-button-large" id="mobileRegisterBtn">Create Account</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="auth-footer">
                     <a href="/?desktop=true">Desktop Version</a> • Demo: test/test
                 </div>
+                <div class="xp-status-bar">
+                    <span id="authStatusMessage">Ready to connect...</span>
+                </div>
             </div>
         </div>
         
-        <div id="mobileApp" class="hidden">
-            <div class="mobile-header">
-                <div class="mobile-header-content">
-                    <span class="mobile-header-title">Skype Classic</span>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <span class="mobile-header-user" id="currentUserDisplay">User</span>
-                        <button class="logout-btn" onclick="mobileLogout()">Logout</button>
+        <!-- ===== MAIN APP ===== -->
+        <div id="mobileApp">
+            <div class="mobile-window xp-window">
+                <div class="xp-titlebar">
+                    <div class="xp-titlebar-title">
+                        <span style="flex-shrink: 0;">📞 Skype Classic</span>
+                        <span class="titlebar-user-chip" id="mobileUserChip" onclick="openStatusSheet()">
+                            <span class="mobile-self-status-dot online" id="mobileSelfStatusDot"></span>
+                            <span class="titlebar-user-name" id="currentUserDisplay">User</span>
+                        </span>
+                    </div>
+                    <div class="xp-titlebar-controls">
+                        <div class="xp-button" onclick="mobileLogout()" title="Logout">×</div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="mobile-tabs">
-                <button class="mobile-tab active" onclick="switchTab('contacts', event)">👥 Contacts</button>
-                <button class="mobile-tab" onclick="switchTab('chat', event)">💬 Chat</button>
-            </div>
-            
-            <div id="contactsTab" class="tab-content active">
-                <div class="contacts-header">
-                    <h3>👥 Contacts</h3>
-                    <input type="text" id="contactSearch" class="search-box" placeholder="🔍 Search contacts..." oninput="searchContacts()">
+                
+                <div class="mobile-tabs">
+                    <button class="mobile-tab active" onclick="switchTab('contacts', event)">👥 Contacts</button>
+                    <button class="mobile-tab" onclick="switchTab('chat', event)">💬 Chat</button>
                 </div>
-                <button class="add-contact-btn" onclick="addContact()">
-                    <span style="font-size: 24px;">+</span> Add Friend
-                </button>
-                <div class="contact-list" id="mobileContactList">
-                    <div class="empty-state">
-                        <div class="empty-icon">👤</div>
-                        <div class="empty-title">No contacts yet</div>
-                        <div class="empty-text">Tap "Add Friend" to get started</div>
+                
+                <div id="contactsTab" class="tab-content active">
+                    <div class="contacts-header">
+                        <h3>👥 Contacts</h3>
+                        <input type="text" id="contactSearch" class="search-box" placeholder="🔍 Search contacts..." oninput="searchContacts()">
+                    </div>
+                    <button class="add-contact-btn" onclick="addContact()">
+                        <span style="font-size: 18px;">+</span> Add Friend
+                    </button>
+                    <div class="contact-list" id="mobileContactList">
+                        <div class="empty-state">
+                            <div class="empty-icon">👤</div>
+                            <div class="empty-title">No contacts yet</div>
+                            <div class="empty-text">Tap "Add Friend" to get started</div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <div id="chatTab" class="tab-content">
-                <div id="chatHeader" class="chat-header hidden">
-                    <button class="back-btn" onclick="leaveChat()">←</button>
-                    <span id="chatHeaderTitle">Chat</span>
-                </div>
-                <div class="chat-messages" id="mobileMessages">
-                    <div class="empty-state">
-                        <div class="empty-icon">💬</div>
-                        <div class="empty-title">No chat selected</div>
-                        <div class="empty-text">Select a contact to start messaging</div>
+                
+                <div id="chatTab" class="tab-content">
+                    <div id="chatHeader" class="chat-header hidden">
+                        <button class="back-btn" onclick="leaveChat()">←</button>
+                        <span id="chatHeaderTitle">Chat</span>
+                    </div>
+                    <div class="chat-messages" id="mobileMessages">
+                        <div class="empty-state">
+                            <div class="empty-icon">💬</div>
+                            <div class="empty-title">No chat selected</div>
+                            <div class="empty-text">Select a contact to start messaging</div>
+                        </div>
+                    </div>
+                    <div class="chat-input-container hidden" id="chatInputContainer">
+                        <input type="text" id="mobileMessageInput" class="chat-input" placeholder="Type a message..." onkeypress="if(event.key === 'Enter') sendMobileMessage()">
+                        <button class="image-button" onclick="selectImage()" title="Send Image">📷</button>
+                        <button class="send-button" onclick="sendMobileMessage()">➤</button>
                     </div>
                 </div>
-                <div class="chat-input-container hidden" id="chatInputContainer">
-                    <input type="text" id="mobileMessageInput" class="chat-input" placeholder="Type a message..." onkeypress="if(event.key === 'Enter') sendMobileMessage()">
-                    <button class="image-button" onclick="selectImage()" title="Send Image">📷</button>
-                    <button class="send-button" onclick="sendMobileMessage()">➤</button>
+                
+                <div class="xp-status-bar">
+                    <span id="chatStatusBar">Ready to chat...</span>
                 </div>
             </div>
         </div>
         
         <input type="file" id="imageInput" accept="image/*" style="display: none;">
+        
+        <div class="footer-note">Fan project. Not affiliated with Microsoft.</div>
 
         <script>
             let mobileUser = null;
@@ -3848,33 +4318,94 @@ app.get('/mobile', (req, res) => {
             const MAX_RECONNECT = 5;
             let connectionInProgress = false;
             let renderedMessageIds = new Set();
+            let myStatus = 'online';
+
+            const STATUS_LABELS = {
+                online: 'Online',
+                busy: 'Busy',
+                away: 'Away',
+                invisible: 'Invisible',
+                offline: 'Appear Offline'
+            };
+
+            function updateSelfStatusUI() {
+                const dot = document.getElementById('mobileSelfStatusDot');
+                if (!dot) return;
+                dot.className = 'mobile-self-status-dot ' + myStatus;
+            }
+
+            function openStatusSheet() {
+                const sheet = document.getElementById('statusSheetOverlay');
+                if (!sheet) return;
+                document.querySelectorAll('.status-sheet-option').forEach(opt => {
+                    if (opt.getAttribute('data-status') === myStatus) {
+                        opt.classList.add('current');
+                    } else {
+                        opt.classList.remove('current');
+                    }
+                });
+                sheet.classList.add('active');
+            }
+
+            function closeStatusSheet() {
+                const sheet = document.getElementById('statusSheetOverlay');
+                if (sheet) sheet.classList.remove('active');
+            }
+
+            function setStatus(status) {
+                if (!STATUS_LABELS[status]) return;
+                myStatus = status;
+                updateSelfStatusUI();
+                closeStatusSheet();
+                if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+                    mobileWs.send(JSON.stringify({
+                        type: 'status_change',
+                        status: status
+                    }));
+                }
+                const bar = document.getElementById('chatStatusBar');
+                if (bar) bar.textContent = 'Status: ' + STATUS_LABELS[status];
+                showToast('Status: ' + STATUS_LABELS[status]);
+            }
+
+            function showAuthTab(tab) {
+                const loginBtn = document.getElementById('loginTabBtn');
+                const registerBtn = document.getElementById('registerTabBtn');
+                const loginContent = document.getElementById('loginTabContent');
+                const registerContent = document.getElementById('registerTabContent');
+                const err = document.getElementById('authErrorMessage');
+                err.classList.remove('show');
+                if (tab === 'login') {
+                    loginBtn.classList.add('active');
+                    registerBtn.classList.remove('active');
+                    loginContent.classList.remove('hidden');
+                    registerContent.classList.add('hidden');
+                } else {
+                    registerBtn.classList.add('active');
+                    loginBtn.classList.remove('active');
+                    registerContent.classList.remove('hidden');
+                    loginContent.classList.add('hidden');
+                }
+            }
 
             function toggleTheme() {
                 const body = document.body;
                 const button = document.getElementById('themeToggle');
-                
-                body.style.transition = 'background 0.5s ease, color 0.3s ease';
-                
                 if (body.classList.contains('dark-theme')) {
                     body.classList.remove('dark-theme');
                     button.innerHTML = '🌙 Dark';
-                    localStorage.setItem('mobileTheme', 'light');
-                    showToast('Light theme activated');
+                    localStorage.setItem('skypeTheme', 'light');
                 } else {
                     body.classList.add('dark-theme');
                     button.innerHTML = '☀️ Light';
-                    localStorage.setItem('mobileTheme', 'dark');
-                    showToast('Dark theme activated');
+                    localStorage.setItem('skypeTheme', 'dark');
                 }
             }
-            
+
             function loadTheme() {
-                const savedTheme = localStorage.getItem('mobileTheme');
+                const savedTheme = localStorage.getItem('skypeTheme');
                 const body = document.body;
                 const button = document.getElementById('themeToggle');
-                
-                body.style.transition = 'none';
-                
                 if (savedTheme === 'dark') {
                     body.classList.add('dark-theme');
                     if (button) button.innerHTML = '☀️ Light';
@@ -3882,36 +4413,34 @@ app.get('/mobile', (req, res) => {
                     body.classList.remove('dark-theme');
                     if (button) button.innerHTML = '🌙 Dark';
                 }
-                
-                setTimeout(() => {
-                    body.style.transition = '';
-                }, 50);
             }
-            
+
             function showToast(message, isError = false) {
                 const toast = document.getElementById('toast');
                 toast.textContent = message;
-                toast.style.background = isError ? 'var(--toast-error)' : 'var(--toast-bg)';
+                toast.classList.toggle('error', isError);
                 toast.classList.add('show');
-                
-                setTimeout(() => {
+                clearTimeout(toast._timeout);
+                toast._timeout = setTimeout(() => {
                     toast.classList.remove('show');
                 }, 3000);
             }
-            
+
             async function mobileLogin() {
                 const username = document.getElementById('mobileUsername').value.trim();
                 const password = document.getElementById('mobilePassword').value.trim();
                 const errorDiv = document.getElementById('authErrorMessage');
-                
+                const statusBar = document.getElementById('authStatusMessage');
                 errorDiv.classList.remove('show');
-                
+
                 if (!username || !password) {
                     errorDiv.textContent = 'Please enter username and password';
                     errorDiv.classList.add('show');
                     return;
                 }
-                
+
+                statusBar.textContent = 'Logging in...';
+
                 try {
                     const res = await fetch('/api/login', {
                         method: 'POST',
@@ -3919,84 +4448,89 @@ app.get('/mobile', (req, res) => {
                         body: JSON.stringify({ username, password })
                     });
                     const result = await res.json();
-                    
+
                     if (result.success) {
-                        mobileUser = {
-                            username: username,
-                            displayName: result.displayName || username
-                        };
-                        
+                        mobileUser = { username: username, displayName: result.displayName || username };
+                        myStatus = 'online';
                         document.getElementById('authOverlay').style.display = 'none';
-                        document.getElementById('mobileApp').classList.remove('hidden');
+                        document.getElementById('mobileApp').classList.add('active');
                         document.getElementById('currentUserDisplay').textContent = mobileUser.displayName;
-                        
+                        updateSelfStatusUI();
+                        statusBar.textContent = 'Connected';
                         connectionInProgress = false;
                         connectWebSocket();
-                        
-                        showToast('Login successful!');
                     } else {
                         errorDiv.textContent = result.error || 'Invalid username or password';
                         errorDiv.classList.add('show');
+                        statusBar.textContent = 'Login failed';
                     }
                 } catch (e) {
                     console.error('Login error:', e);
                     errorDiv.textContent = 'Login failed. Check server connection.';
                     errorDiv.classList.add('show');
+                    statusBar.textContent = 'Connection error';
                 }
             }
-            
+
             async function mobileRegister() {
-                const username = prompt('Choose a username (2-20 letters/numbers/underscores):');
-                if (!username) return;
-                const password = prompt('Choose a password:');
-                if (!password) return;
-                const displayName = prompt('Display name (optional):') || username;
-                
+                const username = document.getElementById('regUsername').value.trim();
+                const password = document.getElementById('regPassword').value;
+                const email = document.getElementById('regEmail').value.trim();
+                const displayName = document.getElementById('regDisplayName').value.trim() || username;
+                const errorDiv = document.getElementById('authErrorMessage');
+                errorDiv.classList.remove('show');
+
+                if (!username || !password) {
+                    errorDiv.textContent = 'Please enter username and password';
+                    errorDiv.classList.add('show');
+                    return;
+                }
+
                 try {
                     const res = await fetch('/api/register', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username, password, displayName })
+                        body: JSON.stringify({ username, password, displayName, email })
                     });
                     const result = await res.json();
-                    
                     if (result.success) {
-                        showToast('✅ Account created! Now sign in.');
+                        showToast('Account created! Please sign in.');
                         document.getElementById('mobileUsername').value = username;
                         document.getElementById('mobilePassword').value = '';
-                        document.getElementById('mobilePassword').focus();
+                        document.getElementById('regUsername').value = '';
+                        document.getElementById('regPassword').value = '';
+                        document.getElementById('regEmail').value = '';
+                        document.getElementById('regDisplayName').value = '';
+                        showAuthTab('login');
                     } else {
-                        showToast('❌ ' + (result.error || 'Registration failed'), true);
+                        errorDiv.textContent = result.error || 'Registration failed';
+                        errorDiv.classList.add('show');
                     }
                 } catch (e) {
                     console.error('Register error:', e);
-                    showToast('❌ Registration failed', true);
+                    errorDiv.textContent = 'Registration failed. Check server connection.';
+                    errorDiv.classList.add('show');
                 }
             }
-            
+
             function connectWebSocket() {
                 if (connectionInProgress) return;
                 connectionInProgress = true;
-                
                 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
                 const wsUrl = protocol + '//' + window.location.host;
-                
                 try {
                     mobileWs = new WebSocket(wsUrl);
-                    
                     mobileWs.onopen = function() {
                         connectionInProgress = false;
                         reconnectAttempts = 0;
                         showToast('Connected to server');
-                        
                         mobileWs.send(JSON.stringify({
                             type: 'join',
                             username: mobileUser.username,
                             userId: Date.now(),
                             displayName: mobileUser.displayName,
-                            status: 'online'
+                            status: myStatus
                         }));
-                        
                         setTimeout(() => {
                             if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
                                 mobileWs.send(JSON.stringify({
@@ -4006,7 +4540,6 @@ app.get('/mobile', (req, res) => {
                             }
                         }, 500);
                     };
-                    
                     mobileWs.onmessage = function(event) {
                         try {
                             const data = JSON.parse(event.data);
@@ -4015,15 +4548,12 @@ app.get('/mobile', (req, res) => {
                             console.error('Error parsing message:', e);
                         }
                     };
-                    
-                    mobileWs.onerror = function(error) {
+                    mobileWs.onerror = function() {
                         connectionInProgress = false;
                         showToast('Connection error', true);
                     };
-                    
                     mobileWs.onclose = function() {
                         connectionInProgress = false;
-                        
                         if (mobileUser) {
                             if (reconnectAttempts < MAX_RECONNECT) {
                                 reconnectAttempts++;
@@ -4034,48 +4564,35 @@ app.get('/mobile', (req, res) => {
                             }
                         }
                     };
-                    
                 } catch (e) {
                     connectionInProgress = false;
                     showToast('Failed to connect', true);
                 }
             }
-            
+
             function handleMessage(data) {
                 switch(data.type) {
                     case 'contact_list':
-                        if (data.contacts) {
-                            contacts = data.contacts;
-                            renderContacts();
-                        }
+                        if (data.contacts) { contacts = data.contacts; renderContacts(); }
                         break;
-                        
                     case 'contact_add_result':
                         if (data.success) {
                             showToast('✅ Contact added!');
                             if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                                mobileWs.send(JSON.stringify({
-                                    type: 'get_contacts',
-                                    username: mobileUser.username
-                                }));
+                                mobileWs.send(JSON.stringify({ type: 'get_contacts', username: mobileUser.username }));
                             }
                         } else {
                             showToast('❌ ' + (data.message || 'Failed to add contact'), true);
                         }
                         break;
-                        
                     case 'contact_added':
                         if (data.contact) {
                             showToast('👤 ' + (data.contact.displayName || 'Someone') + ' added you!');
                             if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                                mobileWs.send(JSON.stringify({
-                                    type: 'get_contacts',
-                                    username: mobileUser.username
-                                }));
+                                mobileWs.send(JSON.stringify({ type: 'get_contacts', username: mobileUser.username }));
                             }
                         }
                         break;
-                        
                     case 'new_message':
                         if (data.data) {
                             if (data.data.from === currentChat || data.data.to === currentChat) {
@@ -4085,7 +4602,6 @@ app.get('/mobile', (req, res) => {
                             }
                         }
                         break;
-                        
                     case 'image_receive':
                         if (data.from === currentChat || data.to === currentChat) {
                             displayImage(data);
@@ -4093,29 +4609,23 @@ app.get('/mobile', (req, res) => {
                             showToast('📷 Image from ' + (data.fromDisplay || data.from));
                         }
                         break;
-                        
                     case 'chat_history':
                         if (data.messages && data.chatId === currentChat) {
                             document.getElementById('mobileMessages').innerHTML = '';
+                            renderedMessageIds.clear();
                             data.messages.forEach(msg => {
-                                if (msg.imageData) {
-                                    displayImage(msg, msg.from === mobileUser.username);
-                                } else {
-                                    displayMessage(msg, msg.from === mobileUser.username);
-                                }
+                                if (msg.imageData) displayImage(msg, msg.from === mobileUser.username);
+                                else displayMessage(msg, msg.from === mobileUser.username);
                             });
                         }
                         break;
-                        
                     case 'user_join':
                     case 'user_leave':
-                        if (data.users) {
-                            updateContactStatuses(data.users);
-                        }
+                        if (data.users) updateContactStatuses(data.users);
                         break;
                 }
             }
-            
+
             function updateContactStatuses(onlineUsers) {
                 contacts.forEach(contact => {
                     const online = onlineUsers.find(u => u.username === contact.username);
@@ -4123,10 +4633,9 @@ app.get('/mobile', (req, res) => {
                 });
                 renderContacts();
             }
-            
+
             function renderContacts() {
                 const list = document.getElementById('mobileContactList');
-                
                 if (contacts.length === 0) {
                     list.innerHTML = \`
                         <div class="empty-state">
@@ -4137,91 +4646,69 @@ app.get('/mobile', (req, res) => {
                     \`;
                     return;
                 }
-                
-                list.innerHTML = contacts.map(contact => \`
+                list.innerHTML = contacts.map(contact => {
+                    const st = contact.status || 'offline';
+                    const stLabel = st.charAt(0).toUpperCase() + st.slice(1);
+                    return \`
                     <div class="mobile-contact" onclick="selectContact('\${contact.username}', '\${contact.displayName}')">
                         <div class="contact-avatar">\${contact.displayName.charAt(0).toUpperCase()}</div>
                         <div class="contact-info">
                             <div class="contact-name">\${contact.displayName}</div>
-                            <div class="contact-status \${contact.status === 'online' ? 'online' : 'offline'}">
+                            <div class="contact-status \${st}">
                                 <span class="status-dot"></span>
-                                \${contact.status === 'online' ? 'Online' : 'Offline'}
+                                \${stLabel}
                             </div>
                         </div>
                     </div>
-                \`).join('');
+                \`;
+                }).join('');
             }
-            
+
             function searchContacts() {
                 const searchTerm = document.getElementById('contactSearch').value.toLowerCase();
-                const contactElements = document.querySelectorAll('.mobile-contact');
-                
-                contactElements.forEach(contact => {
+                document.querySelectorAll('.mobile-contact').forEach(contact => {
                     const name = contact.querySelector('.contact-name').textContent.toLowerCase();
                     contact.style.display = name.includes(searchTerm) ? 'flex' : 'none';
                 });
             }
-            
+
             function addContact() {
-                if (!mobileUser) {
-                    showToast('Please login first', true);
-                    return;
-                }
-                
+                if (!mobileUser) { showToast('Please login first', true); return; }
                 if (!mobileWs || mobileWs.readyState !== WebSocket.OPEN) {
                     showToast('Connecting to server...', true);
                     connectWebSocket();
                     return;
                 }
-                
                 const username = prompt('Enter username to add:');
                 if (!username || !username.trim()) return;
-                
-                if (username === mobileUser.username) {
-                    showToast("You can't add yourself!", true);
-                    return;
-                }
-                
-                if (contacts.find(c => c.username === username)) {
-                    showToast('Contact already exists!', true);
-                    return;
-                }
-                
+                if (username === mobileUser.username) { showToast("You can't add yourself!", true); return; }
+                if (contacts.find(c => c.username === username)) { showToast('Contact already exists!', true); return; }
                 const displayName = prompt('Enter display name (optional):') || username;
-                
                 mobileWs.send(JSON.stringify({
                     type: 'add_contact',
                     username: mobileUser.username,
                     contactUsername: username,
                     contactDisplayName: displayName
                 }));
-                
                 showToast('Adding contact...');
             }
-            
+
             function selectContact(username, displayName) {
                 currentChat = username;
-                
                 document.getElementById('chatHeader').classList.remove('hidden');
                 document.getElementById('chatHeaderTitle').textContent = displayName;
                 document.getElementById('chatInputContainer').classList.remove('hidden');
                 document.getElementById('mobileMessages').innerHTML = '';
                 renderedMessageIds.clear();
-                
                 switchTab('chat');
-                
                 if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                    mobileWs.send(JSON.stringify({
-                        type: 'get_history',
-                        with: username
-                    }));
+                    mobileWs.send(JSON.stringify({ type: 'get_history', with: username }));
                 }
-                
                 setTimeout(() => {
                     document.getElementById('mobileMessageInput').focus();
                 }, 300);
             }
-            
+
             function leaveChat() {
                 currentChat = null;
                 renderedMessageIds.clear();
@@ -4236,35 +4723,18 @@ app.get('/mobile', (req, res) => {
                 \`;
                 switchTab('contacts');
             }
-            
+
             function selectImage() {
-                if (!currentChat) {
-                    showToast('Select a chat first!', true);
-                    return;
-                }
-                
-                if (!mobileWs || mobileWs.readyState !== WebSocket.OPEN) {
-                    showToast('Not connected to server', true);
-                    return;
-                }
-                
+                if (!currentChat) { showToast('Select a chat first!', true); return; }
+                if (!mobileWs || mobileWs.readyState !== WebSocket.OPEN) { showToast('Not connected to server', true); return; }
                 document.getElementById('imageInput').click();
             }
-            
+
             document.getElementById('imageInput').addEventListener('change', function(e) {
                 const file = e.target.files[0];
                 if (!file) return;
-                
-                if (!file.type.startsWith('image/')) {
-                    showToast('Please select an image file', true);
-                    return;
-                }
-                
-                if (file.size > 5 * 1024 * 1024) {
-                    showToast('Image too large! Max 5MB', true);
-                    return;
-                }
-                
+                if (!file.type.startsWith('image/')) { showToast('Please select an image file', true); return; }
+                if (file.size > 5 * 1024 * 1024) { showToast('Image too large! Max 5MB', true); return; }
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     if (mobileWs && mobileWs.readyState === WebSocket.OPEN && currentChat) {
@@ -4277,7 +4747,6 @@ app.get('/mobile', (req, res) => {
                             fileName: file.name,
                             timestamp: new Date().toISOString()
                         }));
-                        
                         displayImage({
                             id: Date.now(),
                             from: mobileUser.username,
@@ -4288,21 +4757,14 @@ app.get('/mobile', (req, res) => {
                     }
                 };
                 reader.readAsDataURL(file);
-                
                 e.target.value = '';
             });
-            
+
             function sendMobileMessage() {
                 const input = document.getElementById('mobileMessageInput');
                 const message = input.value.trim();
-                
                 if (!message || !currentChat || !mobileWs) return;
-                
-                if (mobileWs.readyState !== WebSocket.OPEN) {
-                    showToast('Not connected to server', true);
-                    return;
-                }
-                
+                if (mobileWs.readyState !== WebSocket.OPEN) { showToast('Not connected to server', true); return; }
                 const messageData = {
                     id: Date.now(),
                     from: mobileUser.username,
@@ -4311,170 +4773,115 @@ app.get('/mobile', (req, res) => {
                     message: message,
                     timestamp: new Date().toISOString()
                 };
-                
-                mobileWs.send(JSON.stringify({
-                    type: 'message',
-                    data: messageData
-                }));
-                
+                mobileWs.send(JSON.stringify({ type: 'message', data: messageData }));
                 displayMessage(messageData, true);
                 input.value = '';
             }
-            
+
             function displayMessage(data, isSelf = false) {
-                // Dedupe by message id - prevents double-render when the server echoes our own sent message back
                 const msgId = data.id;
                 if (msgId != null) {
-                    if (renderedMessageIds.has(msgId)) {
-                        console.log('Skipping duplicate message', msgId);
-                        return;
-                    }
+                    if (renderedMessageIds.has(msgId)) { console.log('Skipping duplicate message', msgId); return; }
                     renderedMessageIds.add(msgId);
                 }
-                
                 const messagesDiv = document.getElementById('mobileMessages');
-                
                 const emptyState = messagesDiv.querySelector('.empty-state');
                 if (emptyState) emptyState.remove();
-                
-                const time = new Date(data.timestamp).toLocaleTimeString([], { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-                
+                const time = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 const messageDiv = document.createElement('div');
-                messageDiv.className = \`message \${isSelf ? 'message-self' : 'message-other'}\`;
-                
+                messageDiv.className = 'message ' + (isSelf ? 'message-self' : 'message-other');
                 messageDiv.innerHTML = \`
                     <div class="message-sender">\${data.fromDisplay || data.from}</div>
                     <div class="message-bubble">\${data.message}</div>
                     <div class="message-time">\${time}</div>
                 \`;
-                
                 messagesDiv.appendChild(messageDiv);
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
             }
-            
+
             function displayImage(data, isSelf = false) {
-                // Dedupe by message id - same protection as displayMessage
                 const msgId = data.id;
                 if (msgId != null) {
-                    if (renderedMessageIds.has(msgId)) {
-                        console.log('Skipping duplicate image', msgId);
-                        return;
-                    }
+                    if (renderedMessageIds.has(msgId)) { console.log('Skipping duplicate image', msgId); return; }
                     renderedMessageIds.add(msgId);
                 }
-                
                 const messagesDiv = document.getElementById('mobileMessages');
-                
                 const emptyState = messagesDiv.querySelector('.empty-state');
                 if (emptyState) emptyState.remove();
-                
-                const time = new Date(data.timestamp).toLocaleTimeString([], { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-                
+                const time = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 const messageDiv = document.createElement('div');
-                messageDiv.className = \`message \${isSelf ? 'message-self' : 'message-other'}\`;
-                
+                messageDiv.className = 'message ' + (isSelf ? 'message-self' : 'message-other');
                 messageDiv.innerHTML = \`
                     <div class="message-sender">\${data.fromDisplay || data.from}</div>
-                    <div class="message-bubble" style="background: none; padding: 5px;">
+                    <div class="message-bubble" style="background: none; padding: 4px;">
                         <img src="\${data.imageData}" class="message-image" onclick="openModal('\${data.imageData}')">
                     </div>
                     <div class="message-time">\${time}</div>
                 \`;
-                
                 messagesDiv.appendChild(messageDiv);
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
             }
-            
+
             function openModal(imageSrc) {
                 document.getElementById('modalImage').src = imageSrc;
                 document.getElementById('imageModal').classList.add('active');
             }
-            
             function closeModal() {
                 document.getElementById('imageModal').classList.remove('active');
             }
-            
+
             function switchTab(tabName, event) {
-                document.querySelectorAll('.mobile-tab').forEach(tab => {
-                    tab.classList.remove('active');
-                });
+                document.querySelectorAll('.mobile-tab').forEach(tab => tab.classList.remove('active'));
                 if (event && event.target) {
                     event.target.classList.add('active');
                 } else {
                     document.querySelectorAll('.mobile-tab').forEach(tab => {
-                        if (tab.textContent.toLowerCase().includes(tabName)) {
-                            tab.classList.add('active');
-                        }
+                        if (tab.textContent.toLowerCase().includes(tabName)) tab.classList.add('active');
                     });
                 }
-                
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.remove('active');
-                });
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
                 document.getElementById(tabName + 'Tab').classList.add('active');
             }
-            
+
             function mobileLogout() {
-                if (mobileWs) {
-                    mobileWs.close();
-                }
-                
+                if (mobileWs) mobileWs.close();
                 mobileUser = null;
                 currentChat = null;
                 contacts = [];
                 connectionInProgress = false;
                 renderedMessageIds.clear();
-                
-                document.getElementById('mobileApp').classList.add('hidden');
+                myStatus = 'online';
+                document.getElementById('mobileApp').classList.remove('active');
                 document.getElementById('authOverlay').style.display = 'flex';
-                document.getElementById('mobileUsername').value = 'test';
-                document.getElementById('mobilePassword').value = 'test';
                 document.getElementById('authErrorMessage').classList.remove('show');
+                document.getElementById('authStatusMessage').textContent = 'Ready to connect...';
                 showToast('Logged out');
             }
-            
+
             document.addEventListener('DOMContentLoaded', function() {
                 loadTheme();
-                
                 const loginBtn = document.getElementById('mobileLoginBtn');
-                if (loginBtn) {
-                    loginBtn.addEventListener('click', mobileLogin);
-                }
-                
+                if (loginBtn) loginBtn.addEventListener('click', mobileLogin);
                 const registerBtn = document.getElementById('mobileRegisterBtn');
-                if (registerBtn) {
-                    registerBtn.addEventListener('click', mobileRegister);
-                }
-                
+                if (registerBtn) registerBtn.addEventListener('click', mobileRegister);
                 document.getElementById('mobilePassword').addEventListener('keypress', function(e) {
                     if (e.key === 'Enter') mobileLogin();
                 });
-                
                 document.getElementById('imageModal').addEventListener('click', function(e) {
                     if (e.target === this) closeModal();
                 });
             });
         </script>
-        
-        <div class="footer-note">
-            Fan project. Not affiliated with Microsoft.
-        </div>
     </body>
     </html>
     `);
 });
 
-// ==================== ANALYTICS PAGE (THEMED TO MATCH DESKTOP) ====================
+// ==================== ANALYTICS PAGE ====================
 app.get('/analytics', (req, res) => {
     console.log('📊 Serving analytics page');
     
-    const onlineUsers = Array.from(users.values()).filter(u => u.status === 'online').length;
+    const onlineUsers = Array.from(users.values()).filter(u => visibleStatus(u.status) === 'online').length;
     const totalGroups = groups.size;
     
     let messagesToday = 0;
@@ -4838,7 +5245,7 @@ app.get('/analytics', (req, res) => {
         
         <div class="global-banner">
             <marquee behavior="scroll" direction="left" scrollamount="6">
-                🎉 UPDATE 1.4: THE "SOUND BLASTER" UPDATE HAS COME OUT! 🎉 CHECK OUT /ANALYTICS FOR MORE INFO! 📊 NOW FEATURING: WORKING VOICE CALLS • PLUG-AND-PLAY MICROPHONES • SERVER-SIDE ACCOUNTS • PERSISTENT MESSAGES • MUSIC SHARING • MOBILE SYNC • RETRO MODE • DEV TERMINAL • AND MORE! 🚀
+                🎉 UPDATE 1.4: THE "SOUND BLASTER" UPDATE HAS COME OUT! 🎉 CHECK OUT /ANALYTICS FOR MORE INFO! 📊 NOW FEATURING: WORKING VOICE CALLS • STATUS SELECTOR • PLUG-AND-PLAY MICROPHONES • SERVER-SIDE ACCOUNTS • PERSISTENT MESSAGES • MUSIC SHARING • MOBILE SYNC • RETRO MODE • DEV TERMINAL • AND MORE! 🚀
             </marquee>
         </div>
         
@@ -4893,6 +5300,15 @@ ${'█'.repeat(Math.min(40, totalGroups))} ${totalGroups} active groups
                         </div>
                         
                         <div class="feature-card">
+                            <div class="feature-card-title"><span>🟢</span> Status Selector</div>
+                            <div class="feature-card-body">
+                                • Online / Busy / Away / Invisible<br>
+                                • Click your name to change<br>
+                                • Syncs across all devices
+                            </div>
+                        </div>
+                        
+                        <div class="feature-card">
                             <div class="feature-card-title"><span>🎤</span> Plug-and-Play Mics</div>
                             <div class="feature-card-body">
                                 • Automatic microphone detection<br>
@@ -4932,17 +5348,8 @@ ${'█'.repeat(Math.min(40, totalGroups))} ${totalGroups} active groups
                             <div class="feature-card-title"><span>📱</span> Mobile Version</div>
                             <div class="feature-card-body">
                                 • Access at <strong>/mobile</strong><br>
-                                • Fixed message duplication<br>
-                                • Full sync with desktop
-                            </div>
-                        </div>
-                        
-                        <div class="feature-card">
-                            <div class="feature-card-title"><span>💻</span> Retro Version</div>
-                            <div class="feature-card-body">
-                                • Access at <strong>/old</strong><br>
-                                • Works on IE5, Netscape 6<br>
-                                • Showcase / nostalgia mode
+                                • Classic XP theme now matches desktop<br>
+                                • Status picker bottom sheet
                             </div>
                         </div>
                         
@@ -4952,24 +5359,6 @@ ${'█'.repeat(Math.min(40, totalGroups))} ${totalGroups} active groups
                                 • callTarget null bug squashed<br>
                                 • ICE candidate queueing<br>
                                 • Duplicate message renders fixed
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25);">
-                        <div style="font-size: 12px; font-weight: bold; margin-bottom: 6px;">🚀 Coming Soon</div>
-                        <div class="feature-grid">
-                            <div class="feature-card">
-                                <div class="feature-card-title"><span>📸</span> Mobile Images</div>
-                                <div class="feature-card-body">Send photos from your phone (in testing)</div>
-                            </div>
-                            <div class="feature-card">
-                                <div class="feature-card-title"><span>👤</span> User Profiles</div>
-                                <div class="feature-card-body">Custom avatars and status messages</div>
-                            </div>
-                            <div class="feature-card">
-                                <div class="feature-card-title"><span>🎥</span> Video Calls</div>
-                                <div class="feature-card-body">See the person you're talking to</div>
                             </div>
                         </div>
                     </div>
@@ -7430,6 +7819,10 @@ app.get('/app', (req, res) => {
             --button-bg: #ECE9D8;
             --contact-hover: #6C00A0;
             --text-secondary: #666666;
+            --status-online: #4CAF50;
+            --status-busy: #E53935;
+            --status-away: #FFB300;
+            --status-offline: #999999;
         }
         
         .dark-theme {
@@ -7711,8 +8104,10 @@ app.get('/app', (req, res) => {
             gap: 3px;
         }
         
-        .status-online-small { color: #4CAF50; }
-        .status-offline-small { color: #999; }
+        .status-online-small { color: var(--status-online); }
+        .status-offline-small { color: var(--status-offline); }
+        .status-busy-small { color: var(--status-busy); }
+        .status-away-small { color: var(--status-away); }
         
         .chat-container {
             display: none;
@@ -7973,6 +8368,74 @@ app.get('/app', (req, res) => {
             font-size: 40px;
             cursor: pointer;
         }
+
+        .self-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            padding: 1px 4px;
+            border-radius: 2px;
+            position: relative;
+        }
+        .self-status:hover {
+            background: rgba(255,255,255,0.15);
+        }
+        .self-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 0 4px rgba(0,0,0,0.3);
+        }
+        .self-status-dot.online { background: #4CAF50; }
+        .self-status-dot.busy { background: #E53935; }
+        .self-status-dot.away { background: #FFB300; }
+        .self-status-dot.invisible { background: #999999; }
+        .self-status-dot.offline { background: #999999; }
+        .status-dropdown {
+            position: absolute;
+            top: 18px;
+            left: 0;
+            min-width: 140px;
+            background: var(--window-bg);
+            border: 2px solid;
+            border-top-color: var(--border-light);
+            border-left-color: var(--border-light);
+            border-right-color: var(--border-dark);
+            border-bottom-color: var(--border-dark);
+            box-shadow: 2px 2px 6px rgba(0,0,0,0.4);
+            z-index: 99999;
+            padding: 2px;
+            display: none;
+        }
+        .status-dropdown.open { display: block; }
+        .status-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            cursor: pointer;
+            color: var(--text-primary);
+            font-size: 11px;
+            user-select: none;
+        }
+        .status-option:hover {
+            background: var(--titlebar-start);
+            color: var(--text-light);
+        }
+        .status-option .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 0 4px rgba(0,0,0,0.3);
+        }
+        .status-option .dot.online { background: #4CAF50; }
+        .status-option .dot.busy { background: #E53935; }
+        .status-option .dot.away { background: #FFB300; }
+        .status-option .dot.invisible { background: #999999; }
+        .status-option .dot.offline { background: #999999; }
     </style>
 </head>
 <body>
@@ -8051,7 +8514,32 @@ app.get('/app', (req, res) => {
 
     <div id="chatWindow" class="xp-window chat-window hidden">
         <div class="xp-titlebar">
-            <span>📞 Skype Classic - <span id="currentUser">User</span></span>
+            <span style="display: flex; align-items: center; gap: 8px;">
+                📞 Skype Classic -
+                <span class="self-status" id="selfStatus" onclick="toggleStatusDropdown(event)">
+                    <span class="self-status-dot online" id="selfStatusDot"></span>
+                    <span id="selfStatusText">Online</span>
+                    <span id="currentUser">User</span>
+                    <span style="font-size: 8px; opacity: 0.8;">▼</span>
+                </span>
+                <div class="status-dropdown" id="statusDropdown" onclick="event.stopPropagation()">
+                    <div class="status-option" onclick="setStatus('online')">
+                        <span class="dot online"></span><span>Online</span>
+                    </div>
+                    <div class="status-option" onclick="setStatus('busy')">
+                        <span class="dot busy"></span><span>Busy</span>
+                    </div>
+                    <div class="status-option" onclick="setStatus('away')">
+                        <span class="dot away"></span><span>Away</span>
+                    </div>
+                    <div class="status-option" onclick="setStatus('invisible')">
+                        <span class="dot invisible"></span><span>Invisible</span>
+                    </div>
+                    <div class="status-option" onclick="setStatus('offline')">
+                        <span class="dot offline"></span><span>Appear Offline</span>
+                    </div>
+                </div>
+            </span>
             <div class="xp-titlebar-controls">
                 <div class="xp-button">_</div>
                 <div class="xp-button">□</div>
@@ -8214,6 +8702,7 @@ app.get('/app', (req, res) => {
         let userContacts = [];
         let userGroups = [];
         let chatMessages = {};
+        let myStatus = 'online';
         
         let localStream = null;
         let remoteStream = null;
@@ -8223,6 +8712,58 @@ app.get('/app', (req, res) => {
         let microphonePermissionGranted = false;
         let connectionInProgress = false;
         let pendingIceCandidates = [];
+
+        const STATUS_LABELS = {
+            online: 'Online',
+            busy: 'Busy',
+            away: 'Away',
+            invisible: 'Invisible',
+            offline: 'Appear Offline'
+        };
+
+        function updateSelfStatusUI() {
+            const dot = document.getElementById('selfStatusDot');
+            const txt = document.getElementById('selfStatusText');
+            if (!dot || !txt) return;
+            dot.className = 'self-status-dot ' + myStatus;
+            txt.textContent = STATUS_LABELS[myStatus] || 'Online';
+        }
+
+        function toggleStatusDropdown(e) {
+            if (e) e.stopPropagation();
+            const dd = document.getElementById('statusDropdown');
+            if (!dd) return;
+            dd.classList.toggle('open');
+        }
+
+        function closeStatusDropdown() {
+            const dd = document.getElementById('statusDropdown');
+            if (dd) dd.classList.remove('open');
+        }
+
+        function setStatus(status) {
+            if (!STATUS_LABELS[status]) return;
+            myStatus = status;
+            updateSelfStatusUI();
+            closeStatusDropdown();
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'status_change',
+                    status: status
+                }));
+            }
+            const cs = document.getElementById('chatStatus');
+            if (cs) cs.textContent = 'Status: ' + STATUS_LABELS[status];
+        }
+
+        document.addEventListener('click', function(e) {
+            const dd = document.getElementById('statusDropdown');
+            const picker = document.getElementById('selfStatus');
+            if (!dd || !picker) return;
+            if (!picker.contains(e.target)) {
+                dd.classList.remove('open');
+            }
+        });
 
         function toggleTheme() {
             const body = document.body;
@@ -8386,12 +8927,17 @@ app.get('/app', (req, res) => {
                 const contactTab = document.createElement('div');
                 contactTab.className = 'contact-tab' + (currentChat === contact.username ? ' active' : '');
                 contactTab.setAttribute('data-contact', contact.username);
+                
+                const st = contact.status || 'offline';
+                const stClass = 'status-' + st + '-small';
+                const stLabel = st.charAt(0).toUpperCase() + st.slice(1);
+                
                 contactTab.innerHTML = \`
                     <div class="contact-avatar-small">\${contact.displayName.charAt(0).toUpperCase()}</div>
                     <div class="contact-info-small">
                         <div class="contact-name-small">\${contact.displayName}</div>
-                        <div class="contact-status-small status-\${contact.status === 'online' ? 'online-small' : 'offline-small'}">
-                            <span>●</span> \${contact.status === 'online' ? 'Online' : 'Offline'}
+                        <div class="contact-status-small \${stClass}">
+                            <span>●</span> \${stLabel}
                         </div>
                     </div>
                 \`;
@@ -8555,7 +9101,7 @@ app.get('/app', (req, res) => {
             userContacts.forEach(contact => {
                 const onlineUser = onlineUsers.find(u => u.username === contact.username);
                 if (onlineUser) {
-                    contact.status = onlineUser.status;
+                    contact.status = onlineUser.status || 'online';
                 } else {
                     contact.status = 'offline';
                 }
@@ -8698,6 +9244,7 @@ app.get('/app', (req, res) => {
                         id: Date.now(),
                         displayName: result.displayName || username
                     };
+                    myStatus = 'online';
                     status.textContent = 'Login successful!';
                     playLoginSound();
                     showChatWindow();
@@ -8754,6 +9301,7 @@ app.get('/app', (req, res) => {
             document.getElementById('loginWindow').classList.add('hidden');
             document.getElementById('chatWindow').classList.remove('hidden');
             document.getElementById('currentUser').textContent = currentUser.displayName;
+            updateSelfStatusUI();
             
             loadMessagesFromLocalStorage();
             loadContacts();
@@ -8780,7 +9328,8 @@ app.get('/app', (req, res) => {
                     username: currentUser.username,
                     userId: currentUser.id,
                     displayName: currentUser.displayName,
-                    contacts: savedContacts
+                    contacts: savedContacts,
+                    status: myStatus
                 }));
             };
             
@@ -8878,27 +9427,17 @@ app.get('/app', (req, res) => {
                     break;
                     
                 case 'call_accepted':
-                    console.log('🚨 [1/10] call_accepted RECEIVED, data =', JSON.stringify(data));
                     stopCallSounds();
-                    console.log('🚨 [2/10] stopCallSounds OK');
                     playCallAcceptSound();
-                    console.log('🚨 [3/10] playCallAcceptSound OK');
                     if (data.callId) window.currentCallId = data.callId;
-                    console.log('🚨 [4/10] callId set OK');
                     document.getElementById('callWindow').classList.remove('hidden');
-                    console.log('🚨 [5/10] callWindow unhidden OK');
                     const ctEl = document.getElementById('callTarget');
                     if (ctEl) ctEl.textContent = data.fromDisplay || data.from;
-                    console.log('🚨 [6/10] callTarget step OK (found=' + !!ctEl + ')');
                     document.getElementById('callStatus').textContent = 'In call with ' + (data.fromDisplay || data.from);
-                    console.log('🚨 [7/10] callStatus set OK');
                     startCallTimer();
-                    console.log('🚨 [8/10] callTimer started OK');
                     isInCall = true;
                     currentCallWith = data.from;
-                    console.log('🚨 [9/10] state flags set OK, currentCallWith =', currentCallWith);
                     setupWebRTC(true);
-                    console.log('🚨 [10/10] setupWebRTC(true) invoked');
                     break;
                     
                 case 'call_declined':
@@ -8996,6 +9535,7 @@ app.get('/app', (req, res) => {
             currentChat = null;
             messageCounter = 0;
             chatMessages = {};
+            myStatus = 'online';
             document.getElementById('statusMessage').textContent = 'Logged out successfully';
             cleanupWebRTC();
         }
