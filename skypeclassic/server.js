@@ -570,7 +570,7 @@ app.get("/", (req, res) => {
             border-radius: 4px;
         }
         
-        .send-button, .call-button, .image-button {
+        .send-button, .call-button, .image-button, .file-button {
             padding: 8px 15px;
             background: var(--titlebar-start);
             color: var(--text-light);
@@ -579,7 +579,7 @@ app.get("/", (req, res) => {
             border-radius: 4px;
         }
         
-        .send-button:hover, .call-button:hover, .image-button:hover {
+        .send-button:hover, .call-button:hover, .image-button:hover, .file-button:hover {
             background: var(--titlebar-end);
         }
         
@@ -589,6 +589,10 @@ app.get("/", (req, res) => {
         
         .image-button {
             background: #6C00A0;
+        }
+        
+        .file-button {
+            background: #C07000;
         }
         
         .hidden {
@@ -831,6 +835,209 @@ app.get("/", (req, res) => {
         .status-option .dot.away { background: #FFB300; }
         .status-option .dot.invisible { background: #999999; }
         .status-option .dot.offline { background: #999999; }
+
+        /* ==================== FILE TRANSFER UI ==================== */
+        .ft-progress-bar {
+            width: 100%;
+            height: 18px;
+            background: var(--window-bg);
+            border: 2px solid;
+            border-top-color: var(--border-dark);
+            border-left-color: var(--border-dark);
+            border-right-color: var(--border-light);
+            border-bottom-color: var(--border-light);
+            position: relative;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+        .ft-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0A246A, #6B8DC3);
+            width: 0%;
+            transition: width 0.15s linear;
+        }
+        .ft-progress-segments {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            pointer-events: none;
+        }
+        .ft-progress-segments > div {
+            flex: 1;
+            border-right: 1px solid rgba(0,0,0,0.15);
+        }
+        .ft-progress-segments > div:last-child {
+            border-right: none;
+        }
+        .ft-info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+        .ft-filename {
+            font-weight: bold;
+            color: var(--text-primary);
+            font-size: 12px;
+            word-break: break-all;
+            margin-bottom: 4px;
+        }
+        .ft-filesize {
+            color: var(--text-secondary);
+            font-size: 10px;
+            margin-bottom: 10px;
+        }
+        .ft-popup-icon {
+            font-size: 40px;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .ft-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 12px;
+        }
+        .ft-btn-accept {
+            background: #00A300 !important;
+            color: #fff !important;
+        }
+        .ft-btn-decline {
+            background: #C00000 !important;
+            color: #fff !important;
+        }
+        .ft-status-text {
+            text-align: center;
+            font-size: 11px;
+            margin: 6px 0;
+            color: var(--text-primary);
+        }
+        .ft-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+        }
+        .ft-cancel-btn {
+            background: #C00000;
+            color: white;
+            border: 2px solid;
+            border-top-color: var(--border-light);
+            border-left-color: var(--border-light);
+            border-right-color: #800000;
+            border-bottom-color: #800000;
+            padding: 5px 15px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 11px;
+        }
+            ws.send(JSON.stringify({
+                type: 'ft_offer',
+                transferId: transferId,
+                from: currentUser.username,
+                fromDisplay: currentUser.displayName,
+                to: recipient,
+                filename: file.name,
+                filesize: file.size,
+                mime: transfer.mime
+            }));
+            console.log('📤 FT: sent ft_offer', {
+                transferId: transferId,
+                to: recipient,
+                filename: file.name,
+                size: file.size
+            });
+        }
+        .ft-window .xp-content {
+            padding: 12px;
+        }
+        .ft-transfers-stack {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 80vh;
+            overflow-y: auto;
+            pointer-events: none;
+        }
+        .ft-transfers-stack > .ft-window {
+            pointer-events: auto;
+        }
+
+        /* ==================== INLINE FILE TRANSFER CHAT BARS ==================== */
+        .ft-chat-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            margin: 8px 0;
+            background: var(--button-bg);
+            border: 1px solid var(--border-dark);
+            border-left: 4px solid var(--titlebar-start);
+            font-size: 11px;
+            color: var(--text-primary);
+            clear: both;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: left;
+        }
+        .ft-chat-bar .ft-bar-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+        .ft-chat-bar .ft-bar-text {
+            flex: 1;
+            min-width: 0;
+            word-break: break-word;
+        }
+        .ft-chat-bar .ft-bar-text strong {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 2px;
+            font-size: 11px;
+        }
+        .ft-chat-bar .ft-bar-text small {
+            color: var(--text-secondary);
+            font-size: 10px;
+        }
+        .ft-chat-bar .ft-bar-progress {
+            width: 100%;
+            height: 6px;
+            background: rgba(0,0,0,0.1);
+            border: 1px solid var(--border-dark);
+            margin-top: 4px;
+            overflow: hidden;
+        }
+        .ft-chat-bar .ft-bar-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0A246A, #6B8DC3);
+            width: 0%;
+            transition: width 0.2s linear;
+        }
+        .ft-chat-bar.success { border-left-color: #4CAF50; }
+        .ft-chat-bar.success .ft-bar-progress-fill { background: #4CAF50; }
+        .ft-chat-bar.error { border-left-color: #E53935; }
+        .ft-chat-bar.error .ft-bar-progress-fill { background: #E53935; }
+        .ft-chat-bar.cancelled { border-left-color: #999999; }
+        .ft-chat-bar .ft-bar-close {
+            flex-shrink: 0;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-weight: bold;
+            padding: 2px 6px;
+            user-select: none;
+            font-size: 14px;
+        }
+        .ft-chat-bar .ft-bar-close:hover {
+            color: var(--text-primary);
+        }
     </style>
 </head>
 <body style="background: var(--bg-primary) var(--bg-image); background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;">
@@ -840,7 +1047,7 @@ app.get("/", (req, res) => {
     
     <div class="global-banner">
         <marquee behavior="scroll" direction="left" scrollamount="6">
-            🎉 UPDATE 1.4: THE "SOUND BLASTER" UPDATE HAS COME OUT! 🎉 CHECK OUT /ANALYTICS FOR MORE INFO! 📊 NOW FEATURING: WORKING VOICE CALLS • PLUG-AND-PLAY MICROPHONES • SERVER-SIDE ACCOUNTS • PERSISTENT MESSAGES • STATUS SELECTOR • MUSIC SHARING • MOBILE SYNC • RETRO MODE • DEV TERMINAL • AND MORE! 🚀
+            🎉 UPDATE 1.5: THE "P2P FILE TRANSFER" UPDATE IS HERE! 🎉 SEND FILES DIRECTLY TO YOUR FRIENDS • PEER-TO-PEER • NO SERVER STORAGE • JUST LIKE CLASSIC SKYPE! 📁
         </marquee>
     </div>
     
@@ -859,6 +1066,9 @@ app.get("/", (req, res) => {
     <audio id="callEndSound" preload="auto"><source src="/sounds/call_end.mp3" type="audio/mpeg"></audio>
     <audio id="callAcceptSound" preload="auto"><source src="/sounds/call_accept.mp3" type="audio/mpeg"></audio>
     <audio id="callErrorSound" preload="auto"><source src="/sounds/call_error.mp3" type="audio/mpeg"></audio>
+    <audio id="ftStartSound" preload="auto"><source src="/sounds/ft-start.mp3" type="audio/mpeg"></audio>
+    <audio id="ftSuccessSound" preload="auto"><source src="/sounds/ft-success.mp3" type="audio/mpeg"></audio>
+    <audio id="ftFailSound" preload="auto"><source src="/sounds/ft-fail.mp3" type="audio/mpeg"></audio>
 
     <div id="loginWindow" class="xp-window">
         <div class="xp-titlebar">
@@ -1063,7 +1273,32 @@ app.get("/", (req, res) => {
             </div>
         </div>
     </div>
-    
+
+    <!-- FILE TRANSFER STACK (progress windows, centered) -->
+    <div id="ftTransfersStack" class="ft-transfers-stack"></div>
+
+    <!-- FILE TRANSFER OFFER POPUP -->
+    <div id="ftOfferWindow" class="xp-window ft-window hidden" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
+        <div class="xp-titlebar">
+            <span>📁 Incoming File Transfer</span>
+            <div class="xp-titlebar-controls">
+                <div class="xp-button" onclick="declineIncomingTransfer()">×</div>
+            </div>
+        </div>
+        <div class="xp-content">
+            <div style="text-align: center;">
+                <div class="ft-popup-icon">📄</div>
+                <div class="ft-status-text" id="ftOfferFrom">Someone wants to send you a file!</div>
+                <div class="ft-filename" id="ftOfferFilename">file.bin</div>
+                <div class="ft-filesize" id="ftOfferFilesize">0 B</div>
+                <div class="ft-buttons">
+                    <button class="xp-button-large ft-btn-accept" onclick="acceptIncomingTransfer()">Accept</button>
+                    <button class="xp-button-large ft-btn-decline" onclick="declineIncomingTransfer()">Decline</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="imageModal" onclick="closeImageModal()">
         <span class="modal-close">&times;</span>
         <img id="modalImage">
@@ -1092,6 +1327,12 @@ app.get("/", (req, res) => {
         let microphonePermissionGranted = false;
         let connectionInProgress = false;
         let pendingIceCandidates = [];
+
+        // ==================== FILE TRANSFER STATE ====================
+        const FT_CHUNK_SIZE = 16 * 1024; // 16KB chunks
+        const FT_BUFFER_THRESHOLD = 1024 * 1024; // wait if buffered > 1MB
+        const ftTransfers = new Map(); // transferId -> transfer object
+        let ftIncomingOffer = null; // { transferId, from, fromDisplay, filename, filesize, mime }
 
         const rtcConfiguration = {
             iceServers: [
@@ -1355,12 +1596,17 @@ app.get("/", (req, res) => {
                             <button class="call-button" onclick="startCallTo('\${contact.username}')">📞</button>
                             <input type="file" id="imageInput_\${contact.username}" accept="image/*" style="display: none">
                             <button class="image-button" onclick="document.getElementById('imageInput_\${contact.username}').click()" title="Send Image">🖼️</button>
+                            <input type="file" id="fileInput_\${contact.username}" style="display: none">
+                            <button class="file-button" onclick="document.getElementById('fileInput_\${contact.username}').click()" title="Send File (P2P)">📎</button>
                         </div>
                     \`;
                     chatArea.appendChild(chatContainer);
                     
                     document.getElementById('imageInput_' + contact.username).addEventListener('change', (e) => {
                         handleImageUpload(e, contact.username);
+                    });
+                    document.getElementById('fileInput_' + contact.username).addEventListener('change', (e) => {
+                        handleFilePick(e, contact.username);
                     });
                 }
                 
@@ -1398,6 +1644,29 @@ app.get("/", (req, res) => {
             
             renderMessagesForChat(username);
             
+            // Re-attach any existing FT bars for this chat (they may have been
+            // wiped by renderMessagesForChat). We re-create them from ftTransfers.
+            ftTransfers.forEach(t => {
+                if (t.peer === username) {
+                    const done = t.direction === 'send' ? t.bytesSent : t.receivedBytes;
+                    const total = t.filesize || 1;
+                    const pctVal = Math.min(100, (done / total) * 100);
+                    let barIcon, barTitle, barSub, barStatus;
+                    if (t.direction === 'send') { barIcon = '📤'; barTitle = 'Sending "' + t.filename + '"'; }
+                    else { barIcon = '📥'; barTitle = 'Receiving "' + t.filename + '"'; }
+                    switch (t.status) {
+                        case 'offered':     barSub = formatBytes(total) + ' • waiting for accept…'; break;
+                        case 'connecting':  barSub = formatBytes(total) + ' • connecting…'; break;
+                        case 'transferring': barSub = formatBytes(done) + ' / ' + formatBytes(total) + (t.speed > 0 ? ' • ' + formatSpeed(t.speed) : ''); break;
+                        case 'done':        barSub = formatBytes(total) + ' • complete'; barStatus = 'success'; break;
+                        case 'declined':    barSub = 'Declined'; barStatus = 'error'; break;
+                        case 'cancelled':   barSub = 'Cancelled'; barStatus = 'cancelled'; break;
+                        case 'failed':      barSub = 'Failed: ' + (t.error || 'error'); barStatus = 'error'; break;
+                    }
+                    showFtChatBar(username, t.id, { icon: barIcon, title: barTitle, sub: barSub, progress: pctVal, status: barStatus });
+                }
+            });
+            
             setTimeout(() => {
                 const input = document.getElementById('messageInput_' + username);
                 if (input) input.focus();
@@ -1429,6 +1698,8 @@ app.get("/", (req, res) => {
                     
                     if (currentChat === recipient) {
                         renderMessagesForChat(recipient);
+                        // Re-attach FT bars after render
+                        reattachFtBars(recipient);
                     }
                     
                     playSendSound();
@@ -1480,6 +1751,7 @@ app.get("/", (req, res) => {
                     
                     if (currentChat === recipient) {
                         renderMessagesForChat(recipient);
+                        reattachFtBars(recipient);
                     }
                 }
             };
@@ -1769,6 +2041,7 @@ app.get("/", (req, res) => {
                         saveMessagesToLocalStorage();
                         if (currentChat === chatId) {
                             renderMessagesForChat(chatId);
+                            reattachFtBars(chatId);
                         }
                     }
                     break;
@@ -1785,6 +2058,7 @@ app.get("/", (req, res) => {
                         
                         if (currentChat === chatPartner) {
                             renderMessagesForChat(chatPartner);
+                            reattachFtBars(chatPartner);
                         }
                         
                         if (data.data.from !== currentUser.username) {
@@ -1809,6 +2083,7 @@ app.get("/", (req, res) => {
                     
                     if (currentChat === sender) {
                         renderMessagesForChat(sender);
+                        reattachFtBars(sender);
                     }
                     playMessageSound();
                     break;
@@ -1866,6 +2141,7 @@ app.get("/", (req, res) => {
                         });
                         if (currentChat === chatId) {
                             renderMessagesForChat(chatId);
+                            reattachFtBars(chatId);
                         }
                         if (data.messages.length > 0) {
                             const sortedMessages = [...data.messages].sort((a, b) => a.id - b.id);
@@ -1922,6 +2198,23 @@ app.get("/", (req, res) => {
                 case 'ice_candidate':
                     handleICECandidate(data.candidate);
                     break;
+
+                // ==================== FILE TRANSFER SIGNALING ====================
+                case 'ft_offer':
+                    handleFtOffer(data);
+                    break;
+                case 'ft_accept':
+                    handleFtAccept(data);
+                    break;
+                case 'ft_decline':
+                    handleFtDecline(data);
+                    break;
+                case 'ft_cancel':
+                    handleFtCancel(data);
+                    break;
+                case 'ft_signal':
+                    handleFtSignal(data);
+                    break;
             }
             } catch (err) {
                 console.error('❌ ERROR in handleWebSocketMessage for type ' + data.type + ':', err);
@@ -1941,6 +2234,16 @@ app.get("/", (req, res) => {
             myStatus = 'online';
             document.getElementById('statusMessage').textContent = 'Logged out successfully';
             cleanupWebRTC();
+            
+            // Clean up any in-progress transfers
+            ftTransfers.forEach(t => {
+                if (t.pc) { try { t.pc.close(); } catch(e){} }
+                if (t.cleanup) { try { t.cleanup(); } catch(e){} }
+            });
+            ftTransfers.clear();
+            document.getElementById('ftTransfersStack').innerHTML = '';
+            document.getElementById('ftOfferWindow').classList.add('hidden');
+            ftIncomingOffer = null;
         }
         
         function showAnalyticsPopup() {
@@ -2036,6 +2339,32 @@ app.get("/", (req, res) => {
         function playCallErrorSound() {
             if (document.getElementById('soundToggle').checked) {
                 const sound = document.getElementById('callErrorSound');
+                sound.loop = false;
+                sound.currentTime = 0;
+                sound.play().catch(e => console.log('Audio play failed:', e));
+            }
+        }
+
+        // ==================== FILE TRANSFER SOUNDS ====================
+        function playFtStartSound() {
+            if (document.getElementById('soundToggle').checked) {
+                const sound = document.getElementById('ftStartSound');
+                sound.loop = false;
+                sound.currentTime = 0;
+                sound.play().catch(e => console.log('Audio play failed:', e));
+            }
+        }
+        function playFtSuccessSound() {
+            if (document.getElementById('soundToggle').checked) {
+                const sound = document.getElementById('ftSuccessSound');
+                sound.loop = false;
+                sound.currentTime = 0;
+                sound.play().catch(e => console.log('Audio play failed:', e));
+            }
+        }
+        function playFtFailSound() {
+            if (document.getElementById('soundToggle').checked) {
+                const sound = document.getElementById('ftFailSound');
                 sound.loop = false;
                 sound.currentTime = 0;
                 sound.play().catch(e => console.log('Audio play failed:', e));
@@ -2475,6 +2804,952 @@ app.get("/", (req, res) => {
             if (err) err.classList.add('hidden');
         }
 
+        // ==================== FILE TRANSFER: HELPERS ====================
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return (bytes / Math.pow(k, i)).toFixed(i === 0 ? 0 : 1) + ' ' + sizes[i];
+        }
+
+        function formatSpeed(bytesPerSec) {
+            if (!bytesPerSec || bytesPerSec <= 0) return '0 B/s';
+            return formatBytes(bytesPerSec) + '/s';
+        }
+
+        function formatEta(seconds) {
+            if (!isFinite(seconds) || seconds <= 0) return '--:--';
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return m.toString().padStart(2, '0') + ':' + s.toString().padStart(2, '0');
+        }
+
+        function makeTransferId() {
+            return 'ft_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+        }
+
+        // ==================== FILE TRANSFER CHAT BARS ====================
+        // Renders/updates a full-width bar inside the chat with the given peer.
+        // If transferId is provided, the bar updates in-place (progress, status).
+        // If not, it's a one-shot notification (declines, cancels without transfer id).
+        function showFtChatBar(peer, transferId, opts) {
+            if (!peer || !currentUser) return;
+            opts = opts || {};
+
+            const container = document.getElementById('messages_' + peer);
+            if (!container) return; // chat with this peer isn't open
+
+            const barId = 'ftbar_' + (transferId || (Date.now() + '_' + Math.random().toString(36).substr(2, 5)));
+            let bar = document.getElementById(barId);
+
+            if (!bar) {
+                bar = document.createElement('div');
+                bar.id = barId;
+                bar.className = 'ft-chat-bar';
+                bar.innerHTML = \`
+                    <div class="ft-bar-icon">📎</div>
+                    <div class="ft-bar-text">
+                        <strong class="ft-bar-title"></strong>
+                        <small class="ft-bar-sub"></small>
+                        <div class="ft-bar-progress"><div class="ft-bar-progress-fill"></div></div>
+                    </div>
+                    <div class="ft-bar-close" title="Dismiss">×</div>
+                \`;
+                bar.querySelector('.ft-bar-close').onclick = () => bar.remove();
+                container.appendChild(bar);
+            }
+
+            const titleEl = bar.querySelector('.ft-bar-title');
+            const subEl = bar.querySelector('.ft-bar-sub');
+            const fillEl = bar.querySelector('.ft-bar-progress-fill');
+            const progressWrap = bar.querySelector('.ft-bar-progress');
+
+            if (opts.title) titleEl.textContent = opts.title;
+            if (opts.sub) subEl.textContent = opts.sub;
+
+            if (typeof opts.progress === 'number') {
+                progressWrap.style.display = '';
+                fillEl.style.width = Math.max(0, Math.min(100, opts.progress)).toFixed(1) + '%';
+            } else if (opts.hideProgress) {
+                progressWrap.style.display = 'none';
+            }
+
+            bar.classList.remove('success', 'error', 'cancelled');
+            if (opts.status === 'success') bar.classList.add('success');
+            else if (opts.status === 'error') bar.classList.add('error');
+            else if (opts.status === 'cancelled') bar.classList.add('cancelled');
+
+            if (opts.icon) bar.querySelector('.ft-bar-icon').textContent = opts.icon;
+
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Re-render FT bars for the given peer (called after a chat re-render)
+        function reattachFtBars(peer) {
+            ftTransfers.forEach(t => {
+                if (t.peer !== peer) return;
+                const done = t.direction === 'send' ? t.bytesSent : t.receivedBytes;
+                const total = t.filesize || 1;
+                const pctVal = Math.min(100, (done / total) * 100);
+                let barIcon, barTitle, barSub, barStatus;
+                if (t.direction === 'send') { barIcon = '📤'; barTitle = 'Sending "' + t.filename + '"'; }
+                else { barIcon = '📥'; barTitle = 'Receiving "' + t.filename + '"'; }
+                switch (t.status) {
+                    case 'offered':     barSub = formatBytes(total) + ' • waiting for accept…'; break;
+                    case 'connecting':  barSub = formatBytes(total) + ' • connecting…'; break;
+                    case 'transferring': barSub = formatBytes(done) + ' / ' + formatBytes(total) + (t.speed > 0 ? ' • ' + formatSpeed(t.speed) : ''); break;
+                    case 'done':        barSub = formatBytes(total) + ' • complete'; barStatus = 'success'; break;
+                    case 'declined':    barSub = 'Declined'; barStatus = 'error'; break;
+                    case 'cancelled':   barSub = 'Cancelled'; barStatus = 'cancelled'; break;
+                    case 'failed':      barSub = 'Failed: ' + (t.error || 'error'); barStatus = 'error'; break;
+                }
+                showFtChatBar(peer, t.id, { icon: barIcon, title: barTitle, sub: barSub, progress: pctVal, status: barStatus });
+            });
+        }
+
+        // ==================== FILE TRANSFER: SENDER ====================
+        function handleFilePick(e, recipient) {
+            const file = e.target.files && e.target.files[0];
+            e.target.value = '';
+            if (!file) return;
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert('Not connected to server');
+                return;
+            }
+            if (!recipient) {
+                alert('No recipient selected');
+                return;
+            }
+            if (file.size === 0) {
+                alert('Cannot send empty file');
+                return;
+            }
+            if (file.size > 500 * 1024 * 1024) {
+                alert('File too large (max 500MB)');
+                return;
+            }
+
+            const transferId = makeTransferId();
+
+            const transfer = {
+                id: transferId,
+                direction: 'send',
+                peer: recipient,
+                filename: file.name,
+                filesize: file.size,
+                mime: file.type || 'application/octet-stream',
+                file: file,
+                status: 'offered',
+                bytesSent: 0,
+                bytesReceived: 0,
+                startTime: null,
+                lastTickTime: null,
+                lastTickBytes: 0,
+                speed: 0,
+                pc: null,
+                dc: null,
+                pendingIce: [],
+                domId: 'ft_' + transferId
+            };
+
+            ftTransfers.set(transferId, transfer);
+            createFtProgressWindow(transfer);
+            updateFtProgressWindow(transfer);
+
+            // Inline chat bar
+            showFtChatBar(recipient, transferId, {
+                icon: '📤',
+                title: 'Sending "' + file.name + '"',
+                sub: formatBytes(file.size) + ' • waiting for accept…',
+                progress: 0
+            });
+
+            playFtStartSound();
+
+            ws.send(JSON.stringify({
+                type: 'ft_offer',
+                transferId: transferId,
+                from: currentUser.username,
+                fromDisplay: currentUser.displayName,
+                to: recipient,
+                filename: file.name,
+                filesize: file.size,
+                mime: transfer.mime
+            }));
+        }
+
+        function handleFtOffer(data) {
+            if (!data || !data.transferId) return;
+
+            if (ftIncomingOffer) {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'ft_decline',
+                        transferId: data.transferId,
+                        from: currentUser.username,
+                        to: data.from
+                    }));
+                }
+                return;
+            }
+
+            ftIncomingOffer = {
+                transferId: data.transferId,
+                from: data.from,
+                fromDisplay: data.fromDisplay || data.from,
+                filename: data.filename || 'file.bin',
+                filesize: data.filesize || 0,
+                mime: data.mime || 'application/octet-stream'
+            };
+
+            document.getElementById('ftOfferFrom').textContent =
+                (data.fromDisplay || data.from) + ' wants to transfer a file!';
+            document.getElementById('ftOfferFilename').textContent = ftIncomingOffer.filename;
+            document.getElementById('ftOfferFilesize').textContent = formatBytes(ftIncomingOffer.filesize);
+            document.getElementById('ftOfferWindow').classList.remove('hidden');
+
+            playFtStartSound();
+        }
+
+        function acceptIncomingTransfer() {
+            if (!ftIncomingOffer) return;
+            const offer = ftIncomingOffer;
+            ftIncomingOffer = null;
+            document.getElementById('ftOfferWindow').classList.add('hidden');
+
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                playFtFailSound();
+                return;
+            }
+
+            ws.send(JSON.stringify({
+                type: 'ft_accept',
+                transferId: offer.transferId,
+                from: currentUser.username,
+                to: offer.from
+            }));
+
+            const transfer = {
+                id: offer.transferId,
+                direction: 'receive',
+                peer: offer.from,
+                peerDisplay: offer.fromDisplay,
+                filename: offer.filename,
+                filesize: offer.filesize,
+                mime: offer.mime,
+                status: 'connecting',
+                bytesSent: 0,
+                bytesReceived: 0,
+                startTime: null,
+                lastTickTime: null,
+                lastTickBytes: 0,
+                speed: 0,
+                pc: null,
+                dc: null,
+                pendingIce: [],
+                chunks: [],
+                receivedBytes: 0,
+                domId: 'ft_' + offer.transferId
+            };
+
+            ftTransfers.set(offer.transferId, transfer);
+            createFtProgressWindow(transfer);
+            updateFtProgressWindow(transfer);
+
+            // Inline chat bar for the receiver
+            showFtChatBar(offer.from, offer.transferId, {
+                icon: '📥',
+                title: 'Receiving "' + offer.filename + '"',
+                sub: formatBytes(offer.filesize) + ' • connecting…',
+                progress: 0
+            });
+
+            // Receiver does NOT create an offer — sender will.
+            setupFtReceiver(transfer);
+        }
+
+        function declineIncomingTransfer() {
+            if (!ftIncomingOffer) return;
+            const offer = ftIncomingOffer;
+            ftIncomingOffer = null;
+            document.getElementById('ftOfferWindow').classList.add('hidden');
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'ft_decline',
+                    transferId: offer.transferId,
+                    from: currentUser.username,
+                    to: offer.from
+                }));
+            }
+
+            playFtFailSound();
+
+            showFtChatBar(offer.from, null, {
+                icon: '❌',
+                title: '"' + offer.filename + '"',
+                sub: 'You declined',
+                hideProgress: true,
+                status: 'cancelled'
+            });
+        }
+
+        function handleFtAccept(data) {
+            const transfer = ftTransfers.get(data.transferId);
+            if (!transfer || transfer.direction !== 'send') return;
+
+            transfer.status = 'connecting';
+            updateFtProgressWindow(transfer);
+            setupFtSender(transfer);
+        }
+
+        function handleFtDecline(data) {
+            const transfer = ftTransfers.get(data.transferId);
+            if (!transfer) return;
+
+            transfer.status = 'declined';
+            updateFtProgressWindow(transfer);
+            playFtFailSound();
+
+            if (transfer.direction === 'send') {
+                showFtChatBar(transfer.peer, transfer.id, {
+                    icon: '❌',
+                    title: '"' + transfer.filename + '"',
+                    sub: 'Declined',
+                    hideProgress: true,
+                    status: 'error'
+                });
+            }
+
+            setTimeout(() => {
+                removeFtTransfer(transfer.id);
+            }, 2500);
+        }
+
+        function handleFtCancel(data) {
+            const transfer = ftTransfers.get(data.transferId);
+            if (!transfer) return;
+
+            transfer.status = 'cancelled';
+            updateFtProgressWindow(transfer);
+            playFtFailSound();
+
+            if (transfer.pc) {
+                try { transfer.pc.close(); } catch (e) {}
+            }
+            transfer.pc = null;
+
+            if (transfer.direction === 'send') {
+                showFtChatBar(transfer.peer, transfer.id, {
+                    icon: '❌',
+                    title: '"' + transfer.filename + '"',
+                    sub: 'Cancelled',
+                    hideProgress: true,
+                    status: 'cancelled'
+                });
+            } else {
+                showFtChatBar(transfer.peer, transfer.id, {
+                    icon: '❌',
+                    title: '"' + transfer.filename + '"',
+                    sub: 'Sender cancelled',
+                    hideProgress: true,
+                    status: 'cancelled'
+                });
+            }
+
+            setTimeout(() => {
+                removeFtTransfer(transfer.id);
+            }, 2500);
+        }
+
+        function handleFtSignal(data) {
+            const transfer = ftTransfers.get(data.transferId);
+            if (!transfer) return;
+            if (!transfer.pc) {
+                transfer.pendingSignals = transfer.pendingSignals || [];
+                transfer.pendingSignals.push(data.signal);
+                return;
+            }
+            processFtSignal(transfer, data.signal);
+        }
+
+        async function processFtSignal(transfer, signal) {
+            try {
+                if (signal.type === 'offer' || signal.type === 'answer') {
+                    // Guard against out-of-order / duplicate signals
+                    if (transfer.pc.signalingState === 'have-local-offer' && signal.type === 'offer') {
+                        console.warn('FT: Ignoring incoming offer — we already have a local offer');
+                        return;
+                    }
+                    if (transfer.pc.signalingState === 'have-remote-offer' && signal.type === 'offer') {
+                        console.warn('FT: Ignoring incoming offer — already processing a remote offer');
+                        return;
+                    }
+                    if (transfer.pc.signalingState === 'stable' && signal.type === 'answer') {
+                        console.warn('FT: Ignoring incoming answer — connection is already stable');
+                        return;
+                    }
+                    if (transfer.pc.signalingState !== 'have-local-offer' && signal.type === 'answer') {
+                        console.warn('FT: Ignoring incoming answer — no local offer to answer');
+                        return;
+                    }
+
+                    await transfer.pc.setRemoteDescription(signal);
+                    for (const c of (transfer.pendingIce || [])) {
+                        try { await transfer.pc.addIceCandidate(c); } catch (e) {}
+                    }
+                    transfer.pendingIce = [];
+
+                    if (signal.type === 'offer') {
+                        const answer = await transfer.pc.createAnswer();
+                        await transfer.pc.setLocalDescription(answer);
+                        sendFtSignal(transfer, { type: 'answer', sdp: answer.sdp });
+                    }
+                } else if (signal.type === 'candidate' && signal.candidate) {
+                    if (transfer.pc.remoteDescription) {
+                        await transfer.pc.addIceCandidate(signal.candidate);
+                    } else {
+                        transfer.pendingIce = transfer.pendingIce || [];
+                        transfer.pendingIce.push(signal.candidate);
+                    }
+                }
+            } catch (e) {
+                console.error('FT signal error:', e);
+                failFtTransfer(transfer, 'Connection error: ' + e.message);
+            }
+        }
+
+        function sendFtSignal(transfer, signal) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'ft_signal',
+                    transferId: transfer.id,
+                    from: currentUser.username,
+                    to: transfer.peer,
+                    signal: signal
+                }));
+            }
+        }
+
+        async function setupFtSender(transfer) {
+            try {
+                transfer.pc = new RTCPeerConnection(rtcConfiguration);
+
+                transfer.pc.onicecandidate = (e) => {
+                    if (e.candidate) {
+                        sendFtSignal(transfer, { type: 'candidate', candidate: e.candidate });
+                    }
+                };
+
+                transfer.pc.oniceconnectionstatechange = () => {
+                    const iceState = transfer.pc.iceConnectionState;
+                    if (iceState !== 'failed') return;
+                    if (transfer.direction === 'send') {
+                        if (transfer.bytesSent >= transfer.filesize) { finishSend(transfer); return; }
+                    } else if (transfer.direction === 'receive') {
+                        if (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd) { finishReceive(transfer); return; }
+                    }
+                    if (transfer.status !== 'done' && transfer.status !== 'cancelled' &&
+                        transfer.status !== 'declined' && transfer.status !== 'failed') {
+                        failFtTransfer(transfer, 'Connection failed');
+                    }
+                };
+
+                const dc = transfer.pc.createDataChannel('file', {
+                    ordered: true
+                });
+                transfer.dc = dc;
+                wireDataChannel(transfer, dc, 'send');
+
+                const offer = await transfer.pc.createOffer();
+                await transfer.pc.setLocalDescription(offer);
+                sendFtSignal(transfer, { type: 'offer', sdp: offer.sdp });
+            } catch (e) {
+                console.error('setupFtSender error:', e);
+                failFtTransfer(transfer, 'Setup failed: ' + e.message);
+            }
+        }
+
+        // Receiver: create PC, wait for sender's offer, wait for data channel.
+        // Receiver does NOT create an offer (sender is the offerer).
+        async function setupFtReceiver(transfer) {
+            try {
+                transfer.pc = new RTCPeerConnection(rtcConfiguration);
+
+                transfer.pc.onicecandidate = (e) => {
+                    if (e.candidate) {
+                        sendFtSignal(transfer, { type: 'candidate', candidate: e.candidate });
+                    }
+                };
+
+                transfer.pc.oniceconnectionstatechange = () => {
+                    const iceState = transfer.pc.iceConnectionState;
+                    if (iceState !== 'failed') return;
+                    if (transfer.direction === 'send') {
+                        if (transfer.bytesSent >= transfer.filesize) { finishSend(transfer); return; }
+                    } else if (transfer.direction === 'receive') {
+                        if (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd) { finishReceive(transfer); return; }
+                    }
+                    if (transfer.status !== 'done' && transfer.status !== 'cancelled' &&
+                        transfer.status !== 'declined' && transfer.status !== 'failed') {
+                        failFtTransfer(transfer, 'Connection failed');
+                    }
+                };
+
+                transfer.pc.ondatachannel = (event) => {
+                    const dc = event.channel;
+                    transfer.dc = dc;
+                    wireDataChannel(transfer, dc, 'receive');
+                };
+
+                // Process any signals that arrived before the PC was ready
+                if (transfer.pendingSignals) {
+                    for (const sig of transfer.pendingSignals) {
+                        await processFtSignal(transfer, sig);
+                    }
+                    transfer.pendingSignals = [];
+                }
+            } catch (e) {
+                console.error('setupFtReceiver error:', e);
+                failFtTransfer(transfer, 'Setup failed: ' + e.message);
+            }
+        }
+
+        function wireDataChannel(transfer, dc, side) {
+            dc.binaryType = 'arraybuffer';
+
+            dc.onopen = () => {
+                transfer.status = 'transferring';
+                transfer.startTime = Date.now();
+                transfer.lastTickTime = Date.now();
+                transfer.lastTickBytes = 0;
+                updateFtProgressWindow(transfer);
+
+                if (side === 'send') {
+                    startSendingChunks(transfer);
+                } else {
+                    transfer.receivedBytes = 0;
+                    transfer.chunks = [];
+                }
+            };
+
+            dc.onmessage = (event) => {
+                if (side !== 'receive') return;
+                const data = event.data;
+
+                if (typeof data === 'string') {
+                    try {
+                        const msg = JSON.parse(data);
+                        if (msg.type === 'file-end') {
+                            transfer.gotFileEnd = true;
+                            finishReceive(transfer);
+                        }
+                    } catch (e) {}
+                    return;
+                }
+
+                const chunk = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+                transfer.chunks.push(chunk);
+                transfer.receivedBytes += chunk.byteLength;
+
+                if (transfer.receivedBytes - (transfer.lastAckBytes || 0) > 256 * 1024) {
+                    transfer.lastAckBytes = transfer.receivedBytes;
+                    try {
+                        dc.send(JSON.stringify({ type: 'progress', received: transfer.receivedBytes }));
+                    } catch (e) {}
+                }
+
+                const now = Date.now();
+                if (now - transfer.lastTickTime >= 500) {
+                    const dt = (now - transfer.lastTickTime) / 1000;
+                    const db = transfer.receivedBytes - transfer.lastTickBytes;
+                    transfer.speed = db / dt;
+                    transfer.lastTickTime = now;
+                    transfer.lastTickBytes = transfer.receivedBytes;
+                }
+                updateFtProgressWindow(transfer);
+            };
+
+            dc.onclose = () => {
+                if (transfer.status !== 'transferring') return;
+
+                if (transfer.direction === 'receive') {
+                    if (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd) {
+                        finishReceive(transfer);
+                    } else {
+                        failFtTransfer(transfer, 'Connection closed prematurely');
+                    }
+                } else if (transfer.direction === 'send') {
+                    if (transfer.bytesSent >= transfer.filesize) {
+                        finishSend(transfer);
+                    } else {
+                        failFtTransfer(transfer, 'Connection closed prematurely');
+                    }
+                }
+            };
+
+            dc.onerror = (e) => {
+                // Suppress teardown noise: if we already moved all the bytes,
+                // this channel is done and any error is just DTLS teardown.
+                if (transfer.sendingDone) return;
+                if (transfer.direction === 'send' && transfer.bytesSent >= transfer.filesize) return;
+                if (transfer.direction === 'receive' &&
+                    (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd)) return;
+
+                if (transfer.status === 'done' ||
+                    transfer.status === 'cancelled' ||
+                    transfer.status === 'declined' ||
+                    transfer.status === 'failed') {
+                    return;
+                }
+
+                // Chrome's teardown error is an empty "Restricted {}" object
+                // with no .name/.message. Probe every angle.
+                const err = e && e.error;
+                if (err) {
+                    const probe = String(err) + ' ' +
+                                  (err.name || '') + ' ' +
+                                  (err.message || '') + ' ' +
+                                  ((err.constructor && err.constructor.name) || '');
+                    if (probe.indexOf('Restricted') !== -1) return;
+                }
+
+                console.error('DC error:', e);
+                failFtTransfer(transfer, 'Data channel error');
+            };
+        }
+
+        async function startSendingChunks(transfer) {
+            try {
+                const file = transfer.file;
+                let offset = 0;
+                const dc = transfer.dc;
+
+                const pump = async () => {
+                    while (offset < file.size) {
+                        while (dc.bufferedAmount > FT_BUFFER_THRESHOLD) {
+                            await new Promise(r => setTimeout(r, 20));
+                            if (transfer.status === 'cancelled' || transfer.status === 'failed') return;
+                        }
+
+                        const slice = file.slice(offset, offset + FT_CHUNK_SIZE);
+                        const buf = await slice.arrayBuffer();
+                        try {
+                            dc.send(buf);
+                        } catch (e) {
+                            failFtTransfer(transfer, 'Send failed: ' + e.message);
+                            return;
+                        }
+                        offset += buf.byteLength;
+                        transfer.bytesSent = offset;
+
+                        const now = Date.now();
+                        if (now - transfer.lastTickTime >= 500) {
+                            const dt = (now - transfer.lastTickTime) / 1000;
+                            const db = transfer.bytesSent - transfer.lastTickBytes;
+                            transfer.speed = db / dt;
+                            transfer.lastTickTime = now;
+                            transfer.lastTickBytes = transfer.bytesSent;
+                            updateFtProgressWindow(transfer);
+                        }
+                    }
+
+                    try {
+                        dc.send(JSON.stringify({ type: 'file-end' }));
+                    } catch (e) {}
+
+                    // We're done sending. Mark it and detach the error handler
+                    // so Chrome's DTLS teardown "Restricted" event can't reach us.
+                    transfer.sendingDone = true;
+                    try { dc.onerror = null; } catch (e) {}
+
+                    updateFtProgressWindow(transfer);
+                    setTimeout(() => {
+                        if (transfer.status === 'transferring') {
+                            finishSend(transfer);
+                        }
+                    }, 800);
+                };
+
+                pump();
+            } catch (e) {
+                console.error('startSendingChunks error:', e);
+                failFtTransfer(transfer, 'Send error: ' + e.message);
+            }
+        }
+
+        function finishSend(transfer) {
+            // Silence the data channel before we tear it down — Chrome
+            // fires a benign "Restricted" error on DTLS teardown.
+            if (transfer.dc) {
+                transfer.dc.onerror = null;
+                transfer.dc.onclose = null;
+                transfer.dc.onmessage = null;
+            }
+            transfer.status = 'done';
+            transfer.bytesSent = transfer.filesize;
+            updateFtProgressWindow(transfer);
+            playFtSuccessSound();
+
+            showFtChatBar(transfer.peer, transfer.id, {
+                icon: '✅',
+                title: '"' + transfer.filename + '"',
+                sub: 'Sent • ' + formatBytes(transfer.filesize),
+                hideProgress: true,
+                status: 'success'
+            });
+
+            if (transfer.pc) {
+                try { transfer.pc.close(); } catch (e) {}
+                transfer.pc = null;
+            }
+
+            setTimeout(() => removeFtTransfer(transfer.id), 4000);
+        }
+
+        function finishReceive(transfer) {
+            if (transfer.status === 'done') return;
+            if (transfer.dc) {
+                transfer.dc.onerror = null;
+                transfer.dc.onclose = null;
+                transfer.dc.onmessage = null;
+            }
+            transfer.status = 'done';
+            updateFtProgressWindow(transfer);
+            playFtSuccessSound();
+
+            try {
+                const blob = new Blob(transfer.chunks, { type: transfer.mime || 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = transfer.filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+                showFtChatBar(transfer.peer, transfer.id, {
+                    icon: '✅',
+                    title: '"' + transfer.filename + '"',
+                    sub: 'Received • ' + formatBytes(transfer.filesize),
+                    hideProgress: true,
+                    status: 'success'
+                });
+            } catch (e) {
+                console.error('Download trigger failed:', e);
+            }
+
+            if (transfer.pc) {
+                try { transfer.pc.close(); } catch (e) {}
+                transfer.pc = null;
+            }
+
+            setTimeout(() => removeFtTransfer(transfer.id), 4000);
+        }
+
+        function failFtTransfer(transfer, reason) {
+            if (transfer.status === 'done' || transfer.status === 'failed') return;
+            if (transfer.dc) {
+                transfer.dc.onerror = null;
+                transfer.dc.onclose = null;
+            }
+            transfer.status = 'failed';
+            transfer.error = reason;
+            updateFtProgressWindow(transfer);
+            playFtFailSound();
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'ft_cancel',
+                    transferId: transfer.id,
+                    from: currentUser.username,
+                    to: transfer.peer
+                }));
+            }
+
+            if (transfer.pc) {
+                try { transfer.pc.close(); } catch (e) {}
+                transfer.pc = null;
+            }
+
+            showFtChatBar(transfer.peer, transfer.id, {
+                icon: '❌',
+                title: '"' + transfer.filename + '"',
+                sub: 'Failed: ' + (reason || 'error'),
+                hideProgress: true,
+                status: 'error'
+            });
+
+            setTimeout(() => removeFtTransfer(transfer.id), 3000);
+        }
+
+        function cancelFtTransfer(transferId) {
+            const transfer = ftTransfers.get(transferId);
+            if (!transfer) return;
+            if (transfer.status === 'done' || transfer.status === 'failed' || transfer.status === 'cancelled') return;
+
+            if (transfer.dc) {
+                transfer.dc.onerror = null;
+                transfer.dc.onclose = null;
+            }
+            transfer.status = 'cancelled';
+            updateFtProgressWindow(transfer);
+            playFtFailSound();
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'ft_cancel',
+                    transferId: transfer.id,
+                    from: currentUser.username,
+                    to: transfer.peer
+                }));
+            }
+
+            if (transfer.pc) {
+                try { transfer.pc.close(); } catch (e) {}
+                transfer.pc = null;
+            }
+
+            showFtChatBar(transfer.peer, transfer.id, {
+                icon: '❌',
+                title: '"' + transfer.filename + '"',
+                sub: 'Cancelled',
+                hideProgress: true,
+                status: 'cancelled'
+            });
+
+            setTimeout(() => removeFtTransfer(transfer.id), 2500);
+        }
+
+        function removeFtTransfer(transferId) {
+            const transfer = ftTransfers.get(transferId);
+            if (!transfer) return;
+            const el = document.getElementById(transfer.domId);
+            if (el) el.remove();
+            ftTransfers.delete(transferId);
+        }
+
+        // ==================== FILE TRANSFER UI ====================
+        function createFtProgressWindow(transfer) {
+            const stack = document.getElementById('ftTransfersStack');
+            const win = document.createElement('div');
+            win.className = 'xp-window ft-window';
+            win.id = transfer.domId;
+
+            const isSend = transfer.direction === 'send';
+            const title = isSend ? '📤 Sending File' : '📥 Receiving File';
+            const peerLabel = isSend ? ('To: ' + transfer.peer) : ('From: ' + (transfer.peerDisplay || transfer.peer));
+
+            win.innerHTML = \`
+                <div class="xp-titlebar">
+                    <span>\${title}</span>
+                    <div class="xp-titlebar-controls">
+                        <div class="xp-button" onclick="cancelFtTransfer('\${transfer.id}')">×</div>
+                    </div>
+                </div>
+                <div class="xp-content">
+                    <div class="ft-filename" title="\${escapeHtml(transfer.filename)}">\${escapeHtml(transfer.filename)}</div>
+                    <div class="ft-filesize">\${formatBytes(transfer.filesize)} • \${peerLabel}</div>
+                    <div class="ft-progress-bar">
+                        <div class="ft-progress-fill" id="\${transfer.domId}_fill"></div>
+                        <div class="ft-progress-segments">
+                            <div></div><div></div><div></div><div></div><div></div>
+                            <div></div><div></div><div></div><div></div><div></div>
+                        </div>
+                    </div>
+                    <div class="ft-info-row">
+                        <span id="\${transfer.domId}_status">\${ftStatusLabel(transfer)}</span>
+                        <span id="\${transfer.domId}_pct">0%</span>
+                    </div>
+                    <div class="ft-stats">
+                        <span id="\${transfer.domId}_speed">0 B/s</span>
+                        <span id="\${transfer.domId}_eta">ETA: --:--</span>
+                    </div>
+                    <div style="text-align: center; margin-top: 10px;">
+                        <button class="ft-cancel-btn" onclick="cancelFtTransfer('\${transfer.id}')">Cancel</button>
+                    </div>
+                </div>
+            \`;
+            stack.appendChild(win);
+        }
+
+        function ftStatusLabel(transfer) {
+            switch (transfer.status) {
+                case 'offered': return 'Waiting for acceptance...';
+                case 'connecting': return 'Connecting...';
+                case 'transferring': return transfer.direction === 'send' ? 'Sending...' : 'Receiving...';
+                case 'done': return 'Complete';
+                case 'declined': return 'Declined';
+                case 'cancelled': return 'Cancelled';
+                case 'failed': return 'Failed: ' + (transfer.error || 'error');
+                default: return transfer.status;
+            }
+        }
+
+        function updateFtProgressWindow(transfer) {
+            const fill = document.getElementById(transfer.domId + '_fill');
+            const status = document.getElementById(transfer.domId + '_status');
+            const pct = document.getElementById(transfer.domId + '_pct');
+            const speed = document.getElementById(transfer.domId + '_speed');
+            const eta = document.getElementById(transfer.domId + '_eta');
+            if (!fill) return;
+
+            const done = transfer.direction === 'send' ? transfer.bytesSent : transfer.receivedBytes;
+            const total = transfer.filesize || 1;
+            const pctVal = Math.min(100, (done / total) * 100);
+
+            fill.style.width = pctVal.toFixed(2) + '%';
+            if (pct) pct.textContent = pctVal.toFixed(0) + '%';
+            if (status) status.textContent = ftStatusLabel(transfer);
+            if (speed) speed.textContent = transfer.status === 'transferring' ? formatSpeed(transfer.speed) : '';
+
+            if (eta) {
+                if (transfer.status === 'transferring' && transfer.speed > 0) {
+                    const remaining = (total - done) / transfer.speed;
+                    eta.textContent = 'ETA: ' + formatEta(remaining);
+                } else {
+                    eta.textContent = '';
+                }
+            }
+
+            // Also update the inline chat bar
+            let barIcon, barTitle, barSub, barStatus;
+            if (transfer.direction === 'send') {
+                barIcon = '📤';
+                barTitle = 'Sending "' + transfer.filename + '"';
+            } else {
+                barIcon = '📥';
+                barTitle = 'Receiving "' + transfer.filename + '"';
+            }
+            switch (transfer.status) {
+                case 'offered':     barSub = formatBytes(total) + ' • waiting for accept…'; break;
+                case 'connecting':  barSub = formatBytes(total) + ' • connecting…'; break;
+                case 'transferring':
+                    barSub = formatBytes(done) + ' / ' + formatBytes(total) +
+                             (transfer.speed > 0 ? ' • ' + formatSpeed(transfer.speed) : '');
+                    break;
+                case 'done':        barSub = formatBytes(total) + ' • complete'; barStatus = 'success'; break;
+                case 'declined':    barSub = 'Declined'; barStatus = 'error'; break;
+                case 'cancelled':   barSub = 'Cancelled'; barStatus = 'cancelled'; break;
+                case 'failed':      barSub = 'Failed: ' + (transfer.error || 'error'); barStatus = 'error'; break;
+            }
+            showFtChatBar(transfer.peer, transfer.id, {
+                icon: barIcon,
+                title: barTitle,
+                sub: barSub,
+                progress: pctVal,
+                status: barStatus
+            });
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[c]);
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             loadTheme();
             document.getElementById('loginUsername').focus();
@@ -2878,6 +4153,70 @@ wss.on('connection', (ws) => {
                     }));
                 }
                 
+            // ==================== FILE TRANSFER RELAY ====================
+            } else if (data.type === 'ft_offer') {
+                const targetUser = users.get(data.to);
+                if (targetUser && targetUser.ws.readyState === WebSocket.OPEN) {
+                    targetUser.ws.send(JSON.stringify({
+                        type: 'ft_offer',
+                        transferId: data.transferId,
+                        from: data.from,
+                        fromDisplay: data.fromDisplay,
+                        filename: data.filename,
+                        filesize: data.filesize,
+                        mime: data.mime
+                    }));
+                    console.log('📁 FT offer relayed:', data.filename, 'from', data.from, 'to', data.to);
+                } else {
+                    ws.send(JSON.stringify({
+                        type: 'ft_cancel',
+                        transferId: data.transferId,
+                        from: data.to,
+                        reason: 'offline'
+                    }));
+                }
+
+            } else if (data.type === 'ft_accept') {
+                const targetUser = users.get(data.to);
+                if (targetUser && targetUser.ws.readyState === WebSocket.OPEN) {
+                    targetUser.ws.send(JSON.stringify({
+                        type: 'ft_accept',
+                        transferId: data.transferId,
+                        from: data.from
+                    }));
+                }
+
+            } else if (data.type === 'ft_decline') {
+                const targetUser = users.get(data.to);
+                if (targetUser && targetUser.ws.readyState === WebSocket.OPEN) {
+                    targetUser.ws.send(JSON.stringify({
+                        type: 'ft_decline',
+                        transferId: data.transferId,
+                        from: data.from
+                    }));
+                }
+
+            } else if (data.type === 'ft_cancel') {
+                const targetUser = users.get(data.to);
+                if (targetUser && targetUser.ws.readyState === WebSocket.OPEN) {
+                    targetUser.ws.send(JSON.stringify({
+                        type: 'ft_cancel',
+                        transferId: data.transferId,
+                        from: data.from
+                    }));
+                }
+
+            } else if (data.type === 'ft_signal') {
+                const targetUser = users.get(data.to);
+                if (targetUser && targetUser.ws.readyState === WebSocket.OPEN) {
+                    targetUser.ws.send(JSON.stringify({
+                        type: 'ft_signal',
+                        transferId: data.transferId,
+                        from: data.from,
+                        signal: data.signal
+                    }));
+                }
+
             } else if (data.type === 'get_contacts') {
                 console.log('📱 Getting contacts for:', data.username);
                 
@@ -3684,8 +5023,9 @@ app.get('/mobile', (req, res) => {
                 font-size: 12px;
                 flex-shrink: 0;
             }
-            .chat-header .call-contact-btn {
-                margin-left: auto;
+            .chat-header .call-contact-btn,
+            .chat-header .file-contact-btn {
+                margin-left: 4px;
                 background: #00A300;
                 border: 1px solid var(--border-light);
                 color: var(--text-light);
@@ -3694,7 +5034,11 @@ app.get('/mobile', (req, res) => {
                 cursor: pointer;
                 font-family: 'Tahoma', 'Arial', sans-serif;
             }
-            .chat-header .call-contact-btn:active {
+            .chat-header .file-contact-btn {
+                background: #C07000;
+            }
+            .chat-header .call-contact-btn:active,
+            .chat-header .file-contact-btn:active {
                 border-color: var(--border-dark);
             }
             .back-btn {
@@ -3800,7 +5144,7 @@ app.get('/mobile', (req, res) => {
                 min-width: 0;
             }
             
-            .send-button, .image-button {
+            .send-button, .image-button, .file-mobile-button {
                 height: 40px;
                 min-width: 44px;
                 border: 2px solid;
@@ -3821,7 +5165,10 @@ app.get('/mobile', (req, res) => {
             .image-button {
                 background: var(--accent);
             }
-            .send-button:active, .image-button:active {
+            .file-mobile-button {
+                background: #C07000;
+            }
+            .send-button:active, .image-button:active, .file-mobile-button:active {
                 border-top-color: var(--border-dark);
                 border-left-color: var(--border-dark);
                 border-right-color: var(--border-light);
@@ -4242,12 +5589,104 @@ app.get('/mobile', (req, res) => {
                 opacity: 0;
                 pointer-events: none;
             }
+
+            /* ===== Mobile File Transfer ===== */
+            .ft-progress-bar {
+                width: 100%;
+                height: 16px;
+                background: var(--window-bg);
+                border: 2px solid;
+                border-top-color: var(--border-dark);
+                border-left-color: var(--border-dark);
+                border-right-color: var(--border-light);
+                border-bottom-color: var(--border-light);
+                position: relative;
+                overflow: hidden;
+                margin: 8px 0;
+            }
+            .ft-progress-fill {
+                height: 100%;
+                background: linear-gradient(90deg, #0A246A, #6B8DC3);
+                width: 0%;
+                transition: width 0.15s linear;
+            }
+            .ft-filename-mobile {
+                font-weight: bold;
+                font-size: 13px;
+                word-break: break-all;
+                margin: 6px 0;
+                color: var(--text-primary);
+            }
+            .ft-filesize-mobile {
+                font-size: 11px;
+                color: var(--text-secondary);
+                margin-bottom: 8px;
+            }
+            .ft-stats-mobile {
+                display: flex;
+                justify-content: space-between;
+                font-size: 11px;
+                color: var(--text-secondary);
+                margin-top: 4px;
+            }
+            .ft-status-mobile {
+                text-align: center;
+                font-size: 12px;
+                margin: 6px 0;
+                color: var(--text-primary);
+            }
+            .ft-icon-mobile {
+                font-size: 40px;
+                text-align: center;
+                margin: 8px 0;
+            }
+
+            /* ===== Mobile inline FT chat bar ===== */
+            .ft-chat-bar {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 10px;
+                margin: 8px 0;
+                background: var(--button-bg);
+                border: 1px solid var(--border-dark);
+                border-left: 4px solid var(--titlebar-start);
+                font-size: 11px;
+                color: var(--text-primary);
+                clear: both;
+                width: 100%;
+                box-sizing: border-box;
+                float: none;
+                max-width: 100%;
+            }
+            .ft-chat-bar .ft-bar-icon { font-size: 16px; flex-shrink: 0; }
+            .ft-chat-bar .ft-bar-text { flex: 1; min-width: 0; word-break: break-word; }
+            .ft-chat-bar .ft-bar-text strong { display: block; font-weight: bold; margin-bottom: 2px; font-size: 12px; }
+            .ft-chat-bar .ft-bar-text small { color: var(--text-secondary); font-size: 11px; }
+            .ft-chat-bar .ft-bar-progress {
+                width: 100%; height: 5px; background: rgba(0,0,0,0.1);
+                border: 1px solid var(--border-dark); margin-top: 4px; overflow: hidden;
+            }
+            .ft-chat-bar .ft-bar-progress-fill {
+                height: 100%;
+                background: linear-gradient(90deg, #0A246A, #6B8DC3);
+                width: 0%; transition: width 0.2s linear;
+            }
+            .ft-chat-bar.success { border-left-color: #4CAF50; }
+            .ft-chat-bar.success .ft-bar-progress-fill { background: #4CAF50; }
+            .ft-chat-bar.error { border-left-color: #E53935; }
+            .ft-chat-bar.error .ft-bar-progress-fill { background: #E53935; }
+            .ft-chat-bar.cancelled { border-left-color: #999999; }
+            .ft-chat-bar .ft-bar-close {
+                flex-shrink: 0; cursor: pointer; color: var(--text-secondary);
+                font-weight: bold; padding: 2px 6px; user-select: none; font-size: 14px;
+            }
         </style>
     </head>
     <body>
         <div class="global-banner">
             <marquee behavior="scroll" direction="left" scrollamount="6">
-                🎉 UPDATE 1.4: THE "SOUND BLASTER" UPDATE HAS COME OUT! 🎉 CHECK OUT /ANALYTICS FOR MORE INFO! 📊 STATUS SELECTOR • VOICE CALLS • PERSISTENT MESSAGES • MOBILE SYNC • AND MORE! 🚀
+                🎉 UPDATE 1.5: THE "P2P FILE TRANSFER" UPDATE IS HERE! 🎉 SEND FILES DIRECTLY TO FRIENDS • PEER-TO-PEER • NO SERVER STORAGE! 📁
             </marquee>
         </div>
         
@@ -4379,6 +5818,7 @@ app.get('/mobile', (req, res) => {
                     <div id="chatHeader" class="chat-header hidden">
                         <button class="back-btn" onclick="leaveChat()">←</button>
                         <span id="chatHeaderTitle">Chat</span>
+                        <button class="file-contact-btn" onclick="selectMobileFile()" title="Send File">📎</button>
                         <button class="call-contact-btn" onclick="startMobileCall()" title="Call contact">📞</button>
                     </div>
                     <div class="chat-messages" id="mobileMessages">
@@ -4402,6 +5842,7 @@ app.get('/mobile', (req, res) => {
         </div>
         
         <input type="file" id="imageInput" accept="image/*" style="display: none;">
+        <input type="file" id="mobileFileInput" style="display: none;">
 
         <!-- ===== Audio elements for mobile ===== -->
         <audio id="mLoginSound" preload="auto"><source src="/sounds/logon.mp3" type="audio/mpeg"></audio>
@@ -4413,6 +5854,9 @@ app.get('/mobile', (req, res) => {
         <audio id="mCallEndSound" preload="auto"><source src="/sounds/call_end.mp3" type="audio/mpeg"></audio>
         <audio id="mCallAcceptSound" preload="auto"><source src="/sounds/call_accept.mp3" type="audio/mpeg"></audio>
         <audio id="mCallErrorSound" preload="auto"><source src="/sounds/call_error.mp3" type="audio/mpeg"></audio>
+        <audio id="mFtStartSound" preload="auto"><source src="/sounds/ft-start.mp3" type="audio/mpeg"></audio>
+        <audio id="mFtSuccessSound" preload="auto"><source src="/sounds/ft-success.mp3" type="audio/mpeg"></audio>
+        <audio id="mFtFailSound" preload="auto"><source src="/sounds/ft-fail.mp3" type="audio/mpeg"></audio>
 
         <!-- ===== Incoming call window ===== -->
         <div id="mobileIncomingCallOverlay" class="xp-window-overlay">
@@ -4459,6 +5903,51 @@ app.get('/mobile', (req, res) => {
                 </div>
             </div>
         </div>
+
+        <!-- ===== Incoming file transfer offer ===== -->
+        <div id="mobileFtOfferOverlay" class="xp-window-overlay">
+            <div class="call-window">
+                <div class="xp-titlebar">
+                    <span>📁 Incoming File</span>
+                    <div class="xp-button" onclick="declineIncomingTransfer()">×</div>
+                </div>
+                <div class="call-body">
+                    <div class="ft-icon-mobile">📄</div>
+                    <div class="ft-status-mobile" id="mobileFtOfferFrom">Someone wants to send you a file!</div>
+                    <div class="ft-filename-mobile" id="mobileFtOfferFilename">file.bin</div>
+                    <div class="ft-filesize-mobile" id="mobileFtOfferFilesize">0 B</div>
+                    <div class="call-actions">
+                        <button class="xp-button-large btn-answer" onclick="acceptIncomingTransfer()">Accept</button>
+                        <button class="xp-button-large btn-decline" onclick="declineIncomingTransfer()">Decline</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== File transfer progress ===== -->
+        <div id="mobileFtProgressOverlay" class="xp-window-overlay">
+            <div class="call-window">
+                <div class="xp-titlebar">
+                    <span id="mobileFtTitle">📁 File Transfer</span>
+                    <div class="xp-button" onclick="cancelCurrentFt()">×</div>
+                </div>
+                <div class="call-body">
+                    <div class="ft-filename-mobile" id="mobileFtFilename">file.bin</div>
+                    <div class="ft-filesize-mobile" id="mobileFtPeer">0 B</div>
+                    <div class="ft-progress-bar">
+                        <div class="ft-progress-fill" id="mobileFtFill"></div>
+                    </div>
+                    <div class="ft-status-mobile" id="mobileFtStatus">Waiting...</div>
+                    <div class="ft-stats-mobile">
+                        <span id="mobileFtSpeed">0 B/s</span>
+                        <span id="mobileFtEta">ETA: --:--</span>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <button class="xp-button-large btn-end" onclick="cancelCurrentFt()">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
         
         <div class="footer-note">Fan project. Not affiliated with Microsoft.</div>
 
@@ -4486,6 +5975,13 @@ app.get('/mobile', (req, res) => {
             let mobileMicGranted = false;
             let mobilePendingIce = [];
 
+            // File transfer state
+            const FT_CHUNK_SIZE = 16 * 1024;
+            const FT_BUFFER_THRESHOLD = 1024 * 1024;
+            const mFtTransfers = new Map();
+            let mFtIncomingOffer = null;
+            let mFtActiveId = null;
+
             const STATUS_LABELS = {
                 online: 'Online',
                 busy: 'Busy',
@@ -4494,7 +5990,6 @@ app.get('/mobile', (req, res) => {
                 offline: 'Appear Offline'
             };
 
-            // ===== Mobile sound helpers =====
             function mPlaySound(id, loop = false) {
                 const el = document.getElementById(id);
                 if (!el) return;
@@ -4530,6 +6025,9 @@ app.get('/mobile', (req, res) => {
                 mStopSound('mCallSound');
                 mStopSound('mDialingSound');
             }
+            function playMobileFtStartSound() { mPlaySound('mFtStartSound'); }
+            function playMobileFtSuccessSound() { mPlaySound('mFtSuccessSound'); }
+            function playMobileFtFailSound() { mPlaySound('mFtFailSound'); }
 
             function updateSelfStatusUI() {
                 const dot = document.getElementById('mobileSelfStatusDot');
@@ -4825,6 +6323,7 @@ app.get('/mobile', (req, res) => {
                                 if (msg.imageData) displayImage(msg, msg.from === mobileUser.username);
                                 else displayMessage(msg, msg.from === mobileUser.username);
                             });
+                            reattachMobileFtBars(data.chatId);
                         }
                         break;
                     case 'user_join':
@@ -4903,6 +6402,22 @@ app.get('/mobile', (req, res) => {
 
                     case 'ice_candidate':
                         handleMobileICECandidate(data.candidate);
+                        break;
+
+                    case 'ft_offer':
+                        handleMobileFtOffer(data);
+                        break;
+                    case 'ft_accept':
+                        handleMobileFtAccept(data);
+                        break;
+                    case 'ft_decline':
+                        handleMobileFtDecline(data);
+                        break;
+                    case 'ft_cancel':
+                        handleMobileFtCancel(data);
+                        break;
+                    case 'ft_signal':
+                        handleMobileFtSignal(data);
                         break;
                 }
             }
@@ -5011,6 +6526,12 @@ app.get('/mobile', (req, res) => {
                 document.getElementById('imageInput').click();
             }
 
+            function selectMobileFile() {
+                if (!currentChat) { showToast('Select a chat first!', true); return; }
+                if (!mobileWs || mobileWs.readyState !== WebSocket.OPEN) { showToast('Not connected to server', true); return; }
+                document.getElementById('mobileFileInput').click();
+            }
+
             document.getElementById('imageInput').addEventListener('change', function(e) {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -5041,6 +6562,17 @@ app.get('/mobile', (req, res) => {
                 e.target.value = '';
             });
 
+            document.getElementById('mobileFileInput').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                e.target.value = '';
+                if (!file) return;
+                if (!currentChat) { showToast('Select a chat first!', true); return; }
+                if (!mobileWs || mobileWs.readyState !== WebSocket.OPEN) { showToast('Not connected', true); return; }
+                if (file.size === 0) { showToast('Cannot send empty file', true); return; }
+                if (file.size > 500 * 1024 * 1024) { showToast('File too large (max 500MB)', true); return; }
+                sendMobileFile(currentChat, file);
+            });
+
             function sendMobileMessage() {
                 const input = document.getElementById('mobileMessageInput');
                 const message = input.value.trim();
@@ -5063,7 +6595,7 @@ app.get('/mobile', (req, res) => {
             function displayMessage(data, isSelf = false) {
                 const msgId = data.id;
                 if (msgId != null) {
-                    if (renderedMessageIds.has(msgId)) { console.log('Skipping duplicate message', msgId); return; }
+                    if (renderedMessageIds.has(msgId)) { return; }
                     renderedMessageIds.add(msgId);
                 }
                 const messagesDiv = document.getElementById('mobileMessages');
@@ -5084,7 +6616,7 @@ app.get('/mobile', (req, res) => {
             function displayImage(data, isSelf = false) {
                 const msgId = data.id;
                 if (msgId != null) {
-                    if (renderedMessageIds.has(msgId)) { console.log('Skipping duplicate image', msgId); return; }
+                    if (renderedMessageIds.has(msgId)) { return; }
                     renderedMessageIds.add(msgId);
                 }
                 const messagesDiv = document.getElementById('mobileMessages');
@@ -5142,7 +6674,6 @@ app.get('/mobile', (req, res) => {
                 showToast('Logged out');
             }
 
-            // ===== Mobile Call Functions =====
             function startMobileCall() {
                 if (!currentChat) {
                     showToast('Open a chat first', true);
@@ -5508,6 +7039,743 @@ app.get('/mobile', (req, res) => {
                 
                 document.getElementById('mobileAudioControls').style.display = 'none';
                 hideMobileCallError();
+            }
+
+            // ==================== MOBILE FILE TRANSFER ====================
+            function mFormatBytes(bytes) {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return (bytes / Math.pow(k, i)).toFixed(i === 0 ? 0 : 1) + ' ' + sizes[i];
+            }
+            function mFormatSpeed(bps) {
+                if (!bps || bps <= 0) return '0 B/s';
+                return mFormatBytes(bps) + '/s';
+            }
+            function mFormatEta(sec) {
+                if (!isFinite(sec) || sec <= 0) return '--:--';
+                const m = Math.floor(sec / 60);
+                const s = Math.floor(sec % 60);
+                return m.toString().padStart(2, '0') + ':' + s.toString().padStart(2, '0');
+            }
+            function makeMobileTransferId() {
+                return 'ft_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+            }
+
+            // ===== Mobile inline FT chat bar =====
+            function showMobileFtChatBar(peer, transferId, opts) {
+                if (!peer) return;
+                if (currentChat !== peer) return;
+                opts = opts || {};
+
+                const container = document.getElementById('mobileMessages');
+                if (!container) return;
+
+                const barId = 'mftbar_' + (transferId || (Date.now() + '_' + Math.random().toString(36).substr(2, 5)));
+                let bar = document.getElementById(barId);
+
+                if (!bar) {
+                    bar = document.createElement('div');
+                    bar.id = barId;
+                    bar.className = 'ft-chat-bar';
+                    bar.innerHTML = \`
+                        <div class="ft-bar-icon">📎</div>
+                        <div class="ft-bar-text">
+                            <strong class="ft-bar-title"></strong>
+                            <small class="ft-bar-sub"></small>
+                            <div class="ft-bar-progress"><div class="ft-bar-progress-fill"></div></div>
+                        </div>
+                        <div class="ft-bar-close" title="Dismiss">×</div>
+                    \`;
+                    bar.querySelector('.ft-bar-close').onclick = () => bar.remove();
+                    container.appendChild(bar);
+                }
+
+                const titleEl = bar.querySelector('.ft-bar-title');
+                const subEl = bar.querySelector('.ft-bar-sub');
+                const fillEl = bar.querySelector('.ft-bar-progress-fill');
+                const progressWrap = bar.querySelector('.ft-bar-progress');
+
+                if (opts.title) titleEl.textContent = opts.title;
+                if (opts.sub) subEl.textContent = opts.sub;
+
+                if (typeof opts.progress === 'number') {
+                    progressWrap.style.display = '';
+                    fillEl.style.width = Math.max(0, Math.min(100, opts.progress)).toFixed(1) + '%';
+                } else if (opts.hideProgress) {
+                    progressWrap.style.display = 'none';
+                }
+
+                bar.classList.remove('success', 'error', 'cancelled');
+                if (opts.status === 'success') bar.classList.add('success');
+                else if (opts.status === 'error') bar.classList.add('error');
+                else if (opts.status === 'cancelled') bar.classList.add('cancelled');
+
+                if (opts.icon) bar.querySelector('.ft-bar-icon').textContent = opts.icon;
+
+                container.scrollTop = container.scrollHeight;
+            }
+
+            function reattachMobileFtBars(peer) {
+                mFtTransfers.forEach(t => {
+                    if (t.peer !== peer) return;
+                    const done = t.direction === 'send' ? t.bytesSent : t.receivedBytes;
+                    const total = t.filesize || 1;
+                    const pctVal = Math.min(100, (done / total) * 100);
+                    let barIcon, barTitle, barSub, barStatus;
+                    if (t.direction === 'send') { barIcon = '📤'; barTitle = 'Sending "' + t.filename + '"'; }
+                    else { barIcon = '📥'; barTitle = 'Receiving "' + t.filename + '"'; }
+                    switch (t.status) {
+                        case 'offered':     barSub = mFormatBytes(total) + ' • waiting…'; break;
+                        case 'connecting':  barSub = mFormatBytes(total) + ' • connecting…'; break;
+                        case 'transferring': barSub = mFormatBytes(done) + ' / ' + mFormatBytes(total) + (t.speed > 0 ? ' • ' + mFormatSpeed(t.speed) : ''); break;
+                        case 'done':        barSub = mFormatBytes(total) + ' • complete'; barStatus = 'success'; break;
+                        case 'declined':    barSub = 'Declined'; barStatus = 'error'; break;
+                        case 'cancelled':   barSub = 'Cancelled'; barStatus = 'cancelled'; break;
+                        case 'failed':      barSub = 'Failed: ' + (t.error || 'error'); barStatus = 'error'; break;
+                    }
+                    showMobileFtChatBar(peer, t.id, { icon: barIcon, title: barTitle, sub: barSub, progress: pctVal, status: barStatus });
+                });
+            }
+
+            function sendMobileFile(recipient, file) {
+                const transferId = makeMobileTransferId();
+                const transfer = {
+                    id: transferId,
+                    direction: 'send',
+                    peer: recipient,
+                    filename: file.name,
+                    filesize: file.size,
+                    mime: file.type || 'application/octet-stream',
+                    file: file,
+                    status: 'offered',
+                    bytesSent: 0,
+                    bytesReceived: 0,
+                    startTime: null,
+                    lastTickTime: null,
+                    lastTickBytes: 0,
+                    speed: 0,
+                    pc: null,
+                    dc: null,
+                    pendingIce: []
+                };
+                mFtTransfers.set(transferId, transfer);
+                showMobileFtProgress(transfer);
+                playMobileFtStartSound();
+
+                showMobileFtChatBar(recipient, transferId, {
+                    icon: '📤',
+                    title: 'Sending "' + file.name + '"',
+                    sub: mFormatBytes(file.size) + ' • waiting for accept…',
+                    progress: 0
+                });
+
+                mobileWs.send(JSON.stringify({
+                    type: 'ft_offer',
+                    transferId: transferId,
+                    from: mobileUser.username,
+                    fromDisplay: mobileUser.displayName,
+                    to: recipient,
+                    filename: file.name,
+                    filesize: file.size,
+                    mime: transfer.mime
+                }));
+                console.log('📤 FT: [mobile] sent ft_offer', {
+                    transferId: transferId,
+                    to: recipient,
+                    filename: file.name,
+                    size: file.size
+                });
+            }
+
+            function handleMobileFtOffer(data) {
+                if (mFtIncomingOffer) {
+                    if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+                        mobileWs.send(JSON.stringify({
+                            type: 'ft_decline',
+                            transferId: data.transferId,
+                            from: mobileUser.username,
+                            to: data.from
+                        }));
+                    }
+                    return;
+                }
+                mFtIncomingOffer = {
+                    transferId: data.transferId,
+                    from: data.from,
+                    fromDisplay: data.fromDisplay || data.from,
+                    filename: data.filename || 'file.bin',
+                    filesize: data.filesize || 0,
+                    mime: data.mime || 'application/octet-stream'
+                };
+                document.getElementById('mobileFtOfferFrom').textContent =
+                    (data.fromDisplay || data.from) + ' wants to send you a file!';
+                document.getElementById('mobileFtOfferFilename').textContent = mFtIncomingOffer.filename;
+                document.getElementById('mobileFtOfferFilesize').textContent = mFormatBytes(mFtIncomingOffer.filesize);
+                document.getElementById('mobileFtOfferOverlay').classList.add('active');
+                playMobileFtStartSound();
+            }
+
+            function acceptIncomingTransfer() {
+                if (!mFtIncomingOffer) return;
+                const offer = mFtIncomingOffer;
+                mFtIncomingOffer = null;
+                document.getElementById('mobileFtOfferOverlay').classList.remove('active');
+
+                if (!mobileWs || mobileWs.readyState !== WebSocket.OPEN) {
+                    playMobileFtFailSound();
+                    return;
+                }
+
+                mobileWs.send(JSON.stringify({
+                    type: 'ft_accept',
+                    transferId: offer.transferId,
+                    from: mobileUser.username,
+                    to: offer.from
+                }));
+
+                const transfer = {
+                    id: offer.transferId,
+                    direction: 'receive',
+                    peer: offer.from,
+                    peerDisplay: offer.fromDisplay,
+                    filename: offer.filename,
+                    filesize: offer.filesize,
+                    mime: offer.mime,
+                    status: 'connecting',
+                    bytesSent: 0,
+                    bytesReceived: 0,
+                    startTime: null,
+                    lastTickTime: null,
+                    lastTickBytes: 0,
+                    speed: 0,
+                    pc: null,
+                    dc: null,
+                    pendingIce: [],
+                    chunks: [],
+                    receivedBytes: 0
+                };
+                mFtTransfers.set(offer.transferId, transfer);
+                showMobileFtProgress(transfer);
+
+                showMobileFtChatBar(offer.from, offer.transferId, {
+                    icon: '📥',
+                    title: 'Receiving "' + offer.filename + '"',
+                    sub: mFormatBytes(offer.filesize) + ' • connecting…',
+                    progress: 0
+                });
+
+                setupMobileFtReceiver(transfer);
+            }
+
+            function declineIncomingTransfer() {
+                if (!mFtIncomingOffer) return;
+                const offer = mFtIncomingOffer;
+                mFtIncomingOffer = null;
+                document.getElementById('mobileFtOfferOverlay').classList.remove('active');
+
+                if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+                    mobileWs.send(JSON.stringify({
+                        type: 'ft_decline',
+                        transferId: offer.transferId,
+                        from: mobileUser.username,
+                        to: offer.from
+                    }));
+                }
+                playMobileFtFailSound();
+
+                showMobileFtChatBar(offer.from, null, {
+                    icon: '❌',
+                    title: '"' + offer.filename + '"',
+                    sub: 'You declined',
+                    hideProgress: true,
+                    status: 'cancelled'
+                });
+            }
+
+            function handleMobileFtAccept(data) {
+                const transfer = mFtTransfers.get(data.transferId);
+                if (!transfer || transfer.direction !== 'send') return;
+                transfer.status = 'connecting';
+                updateMobileFtProgress(transfer);
+                setupMobileFtSender(transfer);
+            }
+
+            function handleMobileFtDecline(data) {
+                const transfer = mFtTransfers.get(data.transferId);
+                if (!transfer) return;
+                transfer.status = 'declined';
+                updateMobileFtProgress(transfer);
+                playMobileFtFailSound();
+                showMobileFtChatBar(transfer.peer, transfer.id, {
+                    icon: '❌',
+                    title: '"' + transfer.filename + '"',
+                    sub: 'Declined',
+                    hideProgress: true,
+                    status: 'error'
+                });
+                setTimeout(() => removeMobileFtTransfer(transfer.id), 2500);
+            }
+
+            function handleMobileFtCancel(data) {
+                const transfer = mFtTransfers.get(data.transferId);
+                if (!transfer) return;
+                transfer.status = 'cancelled';
+                updateMobileFtProgress(transfer);
+                playMobileFtFailSound();
+                if (transfer.pc) { try { transfer.pc.close(); } catch(e){} transfer.pc = null; }
+                showMobileFtChatBar(transfer.peer, transfer.id, {
+                    icon: '❌',
+                    title: '"' + transfer.filename + '"',
+                    sub: transfer.direction === 'send' ? 'Cancelled' : 'Sender cancelled',
+                    hideProgress: true,
+                    status: 'cancelled'
+                });
+                setTimeout(() => removeMobileFtTransfer(transfer.id), 2500);
+            }
+
+            function handleMobileFtSignal(data) {
+                const transfer = mFtTransfers.get(data.transferId);
+                if (!transfer) return;
+                if (!transfer.pc) {
+                    transfer.pendingSignals = transfer.pendingSignals || [];
+                    transfer.pendingSignals.push(data.signal);
+                    return;
+                }
+                processMobileFtSignal(transfer, data.signal);
+            }
+
+            async function processMobileFtSignal(transfer, signal) {
+                try {
+                    if (signal.type === 'offer' || signal.type === 'answer') {
+                        if (transfer.pc.signalingState === 'have-local-offer' && signal.type === 'offer') {
+                            console.warn('Mobile FT: Ignoring incoming offer — we already have a local offer');
+                            return;
+                        }
+                        if (transfer.pc.signalingState === 'have-remote-offer' && signal.type === 'offer') {
+                            console.warn('Mobile FT: Ignoring incoming offer — already processing a remote offer');
+                            return;
+                        }
+                        if (transfer.pc.signalingState === 'stable' && signal.type === 'answer') {
+                            console.warn('Mobile FT: Ignoring incoming answer — connection is already stable');
+                            return;
+                        }
+                        if (transfer.pc.signalingState !== 'have-local-offer' && signal.type === 'answer') {
+                            console.warn('Mobile FT: Ignoring incoming answer — no local offer to answer');
+                            return;
+                        }
+
+                        await transfer.pc.setRemoteDescription(signal);
+                        for (const c of (transfer.pendingIce || [])) {
+                            try { await transfer.pc.addIceCandidate(c); } catch (e) {}
+                        }
+                        transfer.pendingIce = [];
+                        if (signal.type === 'offer') {
+                            const answer = await transfer.pc.createAnswer();
+                            await transfer.pc.setLocalDescription(answer);
+                            sendMobileFtSignal(transfer, { type: 'answer', sdp: answer.sdp });
+                        }
+                    } else if (signal.type === 'candidate' && signal.candidate) {
+                        if (transfer.pc.remoteDescription) {
+                            await transfer.pc.addIceCandidate(signal.candidate);
+                        } else {
+                            transfer.pendingIce = transfer.pendingIce || [];
+                            transfer.pendingIce.push(signal.candidate);
+                        }
+                    }
+                } catch (e) {
+                    failMobileFtTransfer(transfer, 'Signal error: ' + e.message);
+                }
+            }
+
+            function sendMobileFtSignal(transfer, signal) {
+                if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+                    mobileWs.send(JSON.stringify({
+                        type: 'ft_signal',
+                        transferId: transfer.id,
+                        from: mobileUser.username,
+                        to: transfer.peer,
+                        signal: signal
+                    }));
+                }
+            }
+
+            async function setupMobileFtSender(transfer) {
+                try {
+                    transfer.pc = new RTCPeerConnection({ iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' }
+                    ]});
+                    transfer.pc.onicecandidate = (e) => {
+                        if (e.candidate) sendMobileFtSignal(transfer, { type: 'candidate', candidate: e.candidate });
+                    };
+                    transfer.pc.oniceconnectionstatechange = () => {
+                        const iceState = transfer.pc.iceConnectionState;
+                        if (iceState !== 'failed') return;
+                        if (transfer.direction === 'send') {
+                            if (transfer.bytesSent >= transfer.filesize) { finishMobileSend(transfer); return; }
+                        } else if (transfer.direction === 'receive') {
+                            if (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd) { finishMobileReceive(transfer); return; }
+                        }
+                        if (transfer.status !== 'done' && transfer.status !== 'cancelled' &&
+                            transfer.status !== 'declined' && transfer.status !== 'failed') {
+                            failMobileFtTransfer(transfer, 'Connection failed');
+                        }
+                    };
+                    const dc = transfer.pc.createDataChannel('file', { ordered: true });
+                    transfer.dc = dc;
+                    wireMobileDataChannel(transfer, dc, 'send');
+                    const offer = await transfer.pc.createOffer();
+                    await transfer.pc.setLocalDescription(offer);
+                    sendMobileFtSignal(transfer, { type: 'offer', sdp: offer.sdp });
+                } catch (e) {
+                    failMobileFtTransfer(transfer, 'Setup failed: ' + e.message);
+                }
+            }
+
+            async function setupMobileFtReceiver(transfer) {
+                try {
+                    transfer.pc = new RTCPeerConnection({ iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' }
+                    ]});
+                    transfer.pc.onicecandidate = (e) => {
+                        if (e.candidate) sendMobileFtSignal(transfer, { type: 'candidate', candidate: e.candidate });
+                    };
+                    transfer.pc.oniceconnectionstatechange = () => {
+                        const iceState = transfer.pc.iceConnectionState;
+                        if (iceState !== 'failed') return;
+                        if (transfer.direction === 'send') {
+                            if (transfer.bytesSent >= transfer.filesize) { finishMobileSend(transfer); return; }
+                        } else if (transfer.direction === 'receive') {
+                            if (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd) { finishMobileReceive(transfer); return; }
+                        }
+                        if (transfer.status !== 'done' && transfer.status !== 'cancelled' &&
+                            transfer.status !== 'declined' && transfer.status !== 'failed') {
+                            failMobileFtTransfer(transfer, 'Connection failed');
+                        }
+                    };
+                    transfer.pc.ondatachannel = (event) => {
+                        const dc = event.channel;
+                        transfer.dc = dc;
+                        wireMobileDataChannel(transfer, dc, 'receive');
+                    };
+                    if (transfer.pendingSignals) {
+                        for (const sig of transfer.pendingSignals) {
+                            await processMobileFtSignal(transfer, sig);
+                        }
+                        transfer.pendingSignals = [];
+                    }
+                } catch (e) {
+                    failMobileFtTransfer(transfer, 'Setup failed: ' + e.message);
+                }
+            }
+
+            function wireMobileDataChannel(transfer, dc, side) {
+                dc.binaryType = 'arraybuffer';
+                dc.onopen = () => {
+                    transfer.status = 'transferring';
+                    transfer.startTime = Date.now();
+                    transfer.lastTickTime = Date.now();
+                    transfer.lastTickBytes = 0;
+                    updateMobileFtProgress(transfer);
+                    if (side === 'send') {
+                        startMobileSendingChunks(transfer);
+                    } else {
+                        transfer.receivedBytes = 0;
+                        transfer.chunks = [];
+                    }
+                };
+                dc.onmessage = (event) => {
+                    if (side !== 'receive') return;
+                    const data = event.data;
+                    if (typeof data === 'string') {
+                        try {
+                            const msg = JSON.parse(data);
+                            if (msg.type === 'file-end') {
+                                transfer.gotFileEnd = true;
+                                finishMobileReceive(transfer);
+                            }
+                        } catch (e) {}
+                        return;
+                    }
+                    const chunk = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+                    transfer.chunks.push(chunk);
+                    transfer.receivedBytes += chunk.byteLength;
+                    const now = Date.now();
+                    if (now - transfer.lastTickTime >= 500) {
+                        const dt = (now - transfer.lastTickTime) / 1000;
+                        const db = transfer.receivedBytes - transfer.lastTickBytes;
+                        transfer.speed = db / dt;
+                        transfer.lastTickTime = now;
+                        transfer.lastTickBytes = transfer.receivedBytes;
+                    }
+                    updateMobileFtProgress(transfer);
+                };
+                dc.onclose = () => {
+                    if (transfer.status !== 'transferring') return;
+                    if (transfer.direction === 'receive') {
+                        if (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd) {
+                            finishMobileReceive(transfer);
+                        } else {
+                            failMobileFtTransfer(transfer, 'Connection closed');
+                        }
+                    } else if (transfer.direction === 'send') {
+                        if (transfer.bytesSent >= transfer.filesize) {
+                            finishMobileSend(transfer);
+                        } else {
+                            failMobileFtTransfer(transfer, 'Connection closed');
+                        }
+                    }
+                };
+                dc.onerror = (e) => {
+                    if (transfer.sendingDone) return;
+                    if (transfer.direction === 'send' && transfer.bytesSent >= transfer.filesize) return;
+                    if (transfer.direction === 'receive' &&
+                        (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd)) return;
+
+                    if (transfer.status === 'done' ||
+                        transfer.status === 'cancelled' ||
+                        transfer.status === 'declined' ||
+                        transfer.status === 'failed') {
+                        return;
+                    }
+
+                    const err = e && e.error;
+                    if (err) {
+                        const probe = String(err) + ' ' +
+                                      (err.name || '') + ' ' +
+                                      (err.message || '') + ' ' +
+                                      ((err.constructor && err.constructor.name) || '');
+                        if (probe.indexOf('Restricted') !== -1) return;
+                    }
+
+                    console.error('Mobile DC error:', e);
+                    failMobileFtTransfer(transfer, 'Data channel error');
+                };
+            }
+
+            async function startMobileSendingChunks(transfer) {
+                try {
+                    const file = transfer.file;
+                    let offset = 0;
+                    const dc = transfer.dc;
+                    while (offset < file.size) {
+                        while (dc.bufferedAmount > FT_BUFFER_THRESHOLD) {
+                            await new Promise(r => setTimeout(r, 20));
+                            if (transfer.status === 'cancelled' || transfer.status === 'failed') return;
+                        }
+                        const slice = file.slice(offset, offset + FT_CHUNK_SIZE);
+                        const buf = await slice.arrayBuffer();
+                        try { dc.send(buf); } catch (e) {
+                            failMobileFtTransfer(transfer, 'Send failed: ' + e.message);
+                            return;
+                        }
+                        offset += buf.byteLength;
+                        transfer.bytesSent = offset;
+                        const now = Date.now();
+                        if (now - transfer.lastTickTime >= 500) {
+                            const dt = (now - transfer.lastTickTime) / 1000;
+                            const db = transfer.bytesSent - transfer.lastTickBytes;
+                            transfer.speed = db / dt;
+                            transfer.lastTickTime = now;
+                            transfer.lastTickBytes = transfer.bytesSent;
+                            updateMobileFtProgress(transfer);
+                        }
+                    }
+                    try { dc.send(JSON.stringify({ type: 'file-end' })); } catch (e) {}
+                    transfer.sendingDone = true;
+                    try { dc.onerror = null; } catch (e) {}
+                    updateMobileFtProgress(transfer);
+                    setTimeout(() => {
+                        if (transfer.status === 'transferring') finishMobileSend(transfer);
+                    }, 800);
+                } catch (e) {
+                    failMobileFtTransfer(transfer, 'Send error: ' + e.message);
+                }
+            }
+
+            function finishMobileSend(transfer) {
+                if (transfer.dc) {
+                    transfer.dc.onerror = null;
+                    transfer.dc.onclose = null;
+                    transfer.dc.onmessage = null;
+                }
+                transfer.status = 'done';
+                transfer.bytesSent = transfer.filesize;
+                updateMobileFtProgress(transfer);
+                playMobileFtSuccessSound();
+                showMobileFtChatBar(transfer.peer, transfer.id, {
+                    icon: '✅',
+                    title: '"' + transfer.filename + '"',
+                    sub: 'Sent • ' + mFormatBytes(transfer.filesize),
+                    hideProgress: true,
+                    status: 'success'
+                });
+                setTimeout(() => removeMobileFtTransfer(transfer.id), 4000);
+            }
+
+            function finishMobileReceive(transfer) {
+                if (transfer.status === 'done') return;
+                if (transfer.dc) {
+                    transfer.dc.onerror = null;
+                    transfer.dc.onclose = null;
+                    transfer.dc.onmessage = null;
+                }
+                transfer.status = 'done';
+                updateMobileFtProgress(transfer);
+                playMobileFtSuccessSound();
+                try {
+                    const blob = new Blob(transfer.chunks, { type: transfer.mime || 'application/octet-stream' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = transfer.filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 10000);
+                } catch (e) {}
+                showMobileFtChatBar(transfer.peer, transfer.id, {
+                    icon: '✅',
+                    title: '"' + transfer.filename + '"',
+                    sub: 'Received • ' + mFormatBytes(transfer.filesize),
+                    hideProgress: true,
+                    status: 'success'
+                });
+                setTimeout(() => removeMobileFtTransfer(transfer.id), 4000);
+            }
+
+            function failMobileFtTransfer(transfer, reason) {
+                if (transfer.status === 'done' || transfer.status === 'failed') return;
+                transfer.status = 'failed';
+                transfer.error = reason;
+                updateMobileFtProgress(transfer);
+                playMobileFtFailSound();
+                if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+                    mobileWs.send(JSON.stringify({
+                        type: 'ft_cancel',
+                        transferId: transfer.id,
+                        from: mobileUser.username,
+                        to: transfer.peer
+                    }));
+                }
+                if (transfer.pc) { try { transfer.pc.close(); } catch(e){} transfer.pc = null; }
+                showMobileFtChatBar(transfer.peer, transfer.id, {
+                    icon: '❌',
+                    title: '"' + transfer.filename + '"',
+                    sub: 'Failed: ' + (reason || 'error'),
+                    hideProgress: true,
+                    status: 'error'
+                });
+                setTimeout(() => removeMobileFtTransfer(transfer.id), 3000);
+            }
+
+            function cancelCurrentFt() {
+                if (mFtActiveId) {
+                    const transfer = mFtTransfers.get(mFtActiveId);
+                    if (transfer && transfer.status !== 'done' && transfer.status !== 'failed' && transfer.status !== 'cancelled') {
+                        transfer.status = 'cancelled';
+                        updateMobileFtProgress(transfer);
+                        playMobileFtFailSound();
+                        if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+                            mobileWs.send(JSON.stringify({
+                                type: 'ft_cancel',
+                                transferId: transfer.id,
+                                from: mobileUser.username,
+                                to: transfer.peer
+                            }));
+                        }
+                        if (transfer.pc) { try { transfer.pc.close(); } catch(e){} transfer.pc = null; }
+                        showMobileFtChatBar(transfer.peer, transfer.id, {
+                            icon: '❌',
+                            title: '"' + transfer.filename + '"',
+                            sub: 'Cancelled',
+                            hideProgress: true,
+                            status: 'cancelled'
+                        });
+                    }
+                }
+                document.getElementById('mobileFtProgressOverlay').classList.remove('active');
+                mFtActiveId = null;
+            }
+
+            function removeMobileFtTransfer(id) {
+                const transfer = mFtTransfers.get(id);
+                if (!transfer) return;
+                mFtTransfers.delete(id);
+                if (mFtActiveId === id) {
+                    document.getElementById('mobileFtProgressOverlay').classList.remove('active');
+                    mFtActiveId = null;
+                }
+            }
+
+            function showMobileFtProgress(transfer) {
+                mFtActiveId = transfer.id;
+                document.getElementById('mobileFtTitle').textContent =
+                    transfer.direction === 'send' ? '📤 Sending File' : '📥 Receiving File';
+                document.getElementById('mobileFtFilename').textContent = transfer.filename;
+                document.getElementById('mobileFtPeer').textContent =
+                    mFormatBytes(transfer.filesize) +
+                    (transfer.direction === 'send' ? ' → ' + transfer.peer : ' ← ' + (transfer.peerDisplay || transfer.peer));
+                document.getElementById('mobileFtProgressOverlay').classList.add('active');
+                updateMobileFtProgress(transfer);
+            }
+
+            function updateMobileFtProgress(transfer) {
+                if (mFtActiveId !== transfer.id) {
+                    // Still try to update the chat bar
+                    updateMobileFtChatBarOnly(transfer);
+                    return;
+                }
+                const fill = document.getElementById('mobileFtFill');
+                const status = document.getElementById('mobileFtStatus');
+                const speed = document.getElementById('mobileFtSpeed');
+                const eta = document.getElementById('mobileFtEta');
+                const done = transfer.direction === 'send' ? transfer.bytesSent : transfer.receivedBytes;
+                const total = transfer.filesize || 1;
+                const pctVal = Math.min(100, (done / total) * 100);
+                if (fill) fill.style.width = pctVal.toFixed(2) + '%';
+                if (status) {
+                    switch (transfer.status) {
+                        case 'offered': status.textContent = 'Waiting for acceptance...'; break;
+                        case 'connecting': status.textContent = 'Connecting...'; break;
+                        case 'transferring': status.textContent = (transfer.direction === 'send' ? 'Sending... ' : 'Receiving... ') + pctVal.toFixed(0) + '%'; break;
+                        case 'done': status.textContent = 'Complete'; break;
+                        case 'declined': status.textContent = 'Declined'; break;
+                        case 'cancelled': status.textContent = 'Cancelled'; break;
+                        case 'failed': status.textContent = 'Failed: ' + (transfer.error || 'error'); break;
+                    }
+                }
+                if (speed) speed.textContent = transfer.status === 'transferring' ? mFormatSpeed(transfer.speed) : '';
+                if (eta) {
+                    if (transfer.status === 'transferring' && transfer.speed > 0) {
+                        eta.textContent = 'ETA: ' + mFormatEta((total - done) / transfer.speed);
+                    } else {
+                        eta.textContent = '';
+                    }
+                }
+                updateMobileFtChatBarOnly(transfer);
+            }
+
+            function updateMobileFtChatBarOnly(transfer) {
+                const done = transfer.direction === 'send' ? transfer.bytesSent : transfer.receivedBytes;
+                const total = transfer.filesize || 1;
+                const pctVal = Math.min(100, (done / total) * 100);
+                let barIcon, barTitle, barSub, barStatus;
+                if (transfer.direction === 'send') { barIcon = '📤'; barTitle = 'Sending "' + transfer.filename + '"'; }
+                else { barIcon = '📥'; barTitle = 'Receiving "' + transfer.filename + '"'; }
+                switch (transfer.status) {
+                    case 'offered':     barSub = mFormatBytes(total) + ' • waiting…'; break;
+                    case 'connecting':  barSub = mFormatBytes(total) + ' • connecting…'; break;
+                    case 'transferring': barSub = mFormatBytes(done) + ' / ' + mFormatBytes(total) + (transfer.speed > 0 ? ' • ' + mFormatSpeed(transfer.speed) : ''); break;
+                    case 'done':        barSub = mFormatBytes(total) + ' • complete'; barStatus = 'success'; break;
+                    case 'declined':    barSub = 'Declined'; barStatus = 'error'; break;
+                    case 'cancelled':   barSub = 'Cancelled'; barStatus = 'cancelled'; break;
+                    case 'failed':      barSub = 'Failed: ' + (transfer.error || 'error'); barStatus = 'error'; break;
+                }
+                showMobileFtChatBar(transfer.peer, transfer.id, { icon: barIcon, title: barTitle, sub: barSub, progress: pctVal, status: barStatus });
             }
 
             document.addEventListener('DOMContentLoaded', function() {
@@ -5897,7 +8165,7 @@ app.get('/analytics', (req, res) => {
         
         <div class="global-banner">
             <marquee behavior="scroll" direction="left" scrollamount="6">
-                🎉 UPDATE 1.4: THE "SOUND BLASTER" UPDATE HAS COME OUT! 🎉 CHECK OUT /ANALYTICS FOR MORE INFO! 📊 NOW FEATURING: WORKING VOICE CALLS • STATUS SELECTOR • PLUG-AND-PLAY MICROPHONES • SERVER-SIDE ACCOUNTS • PERSISTENT MESSAGES • MUSIC SHARING • MOBILE SYNC • RETRO MODE • DEV TERMINAL • AND MORE! 🚀
+                🎉 UPDATE 1.5: THE "P2P FILE TRANSFER" UPDATE IS HERE! 🎉 SEND FILES DIRECTLY TO FRIENDS • PEER-TO-PEER • NO SERVER STORAGE! 📁
             </marquee>
         </div>
         
@@ -5939,9 +8207,19 @@ ${'█'.repeat(Math.min(40, totalGroups))} ${totalGroups} active groups
                 </div>
                 
                 <div class="whats-new-banner">
-                    <div class="whats-new-header">✨ WHAT'S NEW IN UPDATE 1.4 — THE "SOUND BLASTER" UPDATE ✨</div>
+                    <div class="whats-new-header">✨ WHAT'S NEW IN UPDATE 1.5 — THE "P2P FILE TRANSFER" UPDATE ✨</div>
                     
                     <div class="feature-grid">
+                        <div class="feature-card">
+                            <div class="feature-card-title"><span>📁</span> P2P File Transfer</div>
+                            <div class="feature-card-body">
+                                • Send files directly via WebRTC<br>
+                                • Peer-to-peer, no server storage<br>
+                                • Accept / decline popup like classic Skype<br>
+                                • Progress bar with speed & ETA
+                            </div>
+                        </div>
+                        
                         <div class="feature-card">
                             <div class="feature-card-title"><span>📞</span> Working VoIP Calls</div>
                             <div class="feature-card-body">
@@ -5961,38 +8239,11 @@ ${'█'.repeat(Math.min(40, totalGroups))} ${totalGroups} active groups
                         </div>
                         
                         <div class="feature-card">
-                            <div class="feature-card-title"><span>🎤</span> Plug-and-Play Mics</div>
-                            <div class="feature-card-body">
-                                • Automatic microphone detection<br>
-                                • Permission prompt in call window<br>
-                                • Echo cancellation built in
-                            </div>
-                        </div>
-                        
-                        <div class="feature-card">
-                            <div class="feature-card-title"><span>👤</span> Real Accounts</div>
-                            <div class="feature-card-body">
-                                • Same login on desktop & mobile<br>
-                                • Server-side user storage<br>
-                                • Accounts survive restarts
-                            </div>
-                        </div>
-                        
-                        <div class="feature-card">
                             <div class="feature-card-title"><span>💾</span> Persistent Messages</div>
                             <div class="feature-card-body">
                                 • Chat history saved to disk<br>
                                 • Survives server restarts<br>
                                 • Synced across all your devices
-                            </div>
-                        </div>
-                        
-                        <div class="feature-card">
-                            <div class="feature-card-title"><span>🎶</span> Music Sharing</div>
-                            <div class="feature-card-body">
-                                • Access at <strong>/music</strong><br>
-                                • Upload your own tracks<br>
-                                • Like, follow, and playlists
                             </div>
                         </div>
                         
@@ -6008,9 +8259,9 @@ ${'█'.repeat(Math.min(40, totalGroups))} ${totalGroups} active groups
                         <div class="feature-card">
                             <div class="feature-card-title"><span>🐛</span> Bug Fixes</div>
                             <div class="feature-card-body">
-                                • callTarget null bug squashed<br>
-                                • ICE candidate queueing<br>
-                                • Duplicate message renders fixed
+                                • Duplicate message renders fixed<br>
+                                • ICE candidate queueing improved<br>
+                                • Backpressure handling on transfers
                             </div>
                         </div>
                     </div>
@@ -7301,7 +9552,7 @@ app.get('/music', (req, res) => {
     <body>
         <div class="global-banner">
             <marquee behavior="scroll" direction="left" scrollamount="6" style="color: #0A246A; font-weight: bold; font-size: 14px;">
-                🎉 UPDATE 1.4: THE "SOUND BLASTER" UPDATE HAS COME OUT! 🎉 CHECK OUT /ANALYTICS FOR MORE INFO! 📊
+                🎉 UPDATE 1.5: THE "P2P FILE TRANSFER" UPDATE IS HERE! 🎉 SEND FILES DIRECTLY TO FRIENDS! 📁
             </marquee>
         </div>
         
@@ -8436,2304 +10687,6 @@ app.get('/scr', (req, res) => {
         <video src="/images/scr.mp4" autoplay loop playsinline></video>
     </body>
     </html>
-    `);
-});
-
-// Standalone App version for EXE
-app.get('/app', (req, res) => {
-    console.log("📱 Serving standalone app version for EXE");
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Skype Classic</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Tahoma', 'Arial', sans-serif;
-            font-size: 11px;
-        }
-        
-        :root {
-            --bg-primary: #6C00A0;
-            --window-bg: #ECE9D8;
-            --titlebar-start: #0A246A;
-            --titlebar-end: #6B8DC3;
-            --border-light: #FFFFFF;
-            --border-dark: #808080;
-            --text-primary: #000000;
-            --text-light: #FFFFFF;
-            --button-bg: #ECE9D8;
-            --contact-hover: #6C00A0;
-            --text-secondary: #666666;
-            --status-online: #4CAF50;
-            --status-busy: #E53935;
-            --status-away: #FFB300;
-            --status-offline: #999999;
-        }
-        
-        .dark-theme {
-            --bg-primary: #1a1a1a;
-            --window-bg: #2d2d2d;
-            --titlebar-start: #2b2b2b;
-            --titlebar-end: #4a4a4a;
-            --border-light: #4a4a4a;
-            --border-dark: #1a1a1a;
-            --text-primary: #e0e0e0;
-            --text-light: #ffffff;
-            --button-bg: #3d3d3d;
-            --contact-hover: #4a4a4a;
-            --text-secondary: #b0b0b0;
-        }
-        
-        body {
-            background: var(--bg-primary);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-            margin: 0;
-            color: var(--text-primary);
-        }
-        
-        .app-titlebar {
-            background: linear-gradient(90deg, var(--titlebar-start), var(--titlebar-end));
-            color: var(--text-light);
-            padding: 6px 12px;
-            font-size: 12px;
-            font-weight: bold;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            user-select: none;
-            -webkit-app-region: drag;
-            cursor: default;
-        }
-        
-        .app-titlebar-buttons {
-            display: flex;
-            gap: 4px;
-            -webkit-app-region: no-drag;
-        }
-        
-        .window-btn {
-            width: 24px;
-            height: 20px;
-            border: 1px solid;
-            border-top-color: var(--border-light);
-            border-left-color: var(--border-light);
-            border-right-color: var(--border-dark);
-            border-bottom-color: var(--border-dark);
-            background: var(--button-bg);
-            font-size: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: var(--text-primary);
-        }
-        
-        .window-btn:hover {
-            background: var(--contact-hover);
-            color: var(--text-light);
-        }
-        
-        .close-btn:hover {
-            background: #E81123;
-            color: white;
-        }
-        
-        .xp-window {
-            width: 750px;
-            background: var(--window-bg);
-            border: 2px solid;
-            border-top-color: var(--border-light);
-            border-left-color: var(--border-light);
-            border-right-color: var(--border-dark);
-            border-bottom-color: var(--border-dark);
-            box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-        
-        .chat-window {
-            width: 750px;
-            height: 550px;
-        }
-        
-        .xp-titlebar {
-            background: linear-gradient(90deg, var(--titlebar-start), var(--titlebar-end));
-            color: var(--text-light);
-            padding: 4px 8px;
-            font-size: 11px;
-            font-weight: bold;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 20px;
-        }
-        
-        .xp-titlebar-controls {
-            display: flex;
-            gap: 1px;
-        }
-        
-        .xp-button {
-            width: 16px;
-            height: 14px;
-            border: 1px solid;
-            border-top-color: var(--border-light);
-            border-left-color: var(--border-light);
-            border-right-color: var(--border-dark);
-            border-bottom-color: var(--border-dark);
-            background: var(--button-bg);
-            font-size: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            line-height: 1;
-            color: var(--text-primary);
-        }
-        
-        .xp-content {
-            padding: 15px;
-            background: var(--window-bg);
-        }
-        
-        .xp-fieldset {
-            border: 1px solid var(--border-dark);
-            padding: 15px;
-            margin-bottom: 15px;
-            background: var(--window-bg);
-            position: relative;
-        }
-        
-        .xp-legend {
-            background: var(--window-bg);
-            padding: 2px 8px;
-            font-size: 11px;
-            font-weight: bold;
-            position: absolute;
-            top: -8px;
-            left: 8px;
-            color: var(--text-primary);
-        }
-        
-        .xp-input {
-            width: 100%;
-            padding: 4px;
-            border: 1px solid var(--border-dark);
-            background: var(--window-bg);
-            font-size: 11px;
-            margin-bottom: 10px;
-            height: 22px;
-            color: var(--text-primary);
-        }
-        
-        .xp-button-large {
-            background: var(--button-bg);
-            border: 2px solid;
-            border-top-color: var(--border-light);
-            border-left-color: var(--border-light);
-            border-right-color: var(--border-dark);
-            border-bottom-color: var(--border-dark);
-            padding: 5px 20px;
-            font-size: 11px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-right: 10px;
-            color: var(--text-primary);
-        }
-        
-        .xp-button-large:hover {
-            background: var(--contact-hover);
-            color: var(--text-light);
-        }
-        
-        .xp-tabs {
-            display: flex;
-            margin-bottom: 15px;
-        }
-        
-        .xp-tab {
-            padding: 4px 12px;
-            background: var(--button-bg);
-            border: 1px solid var(--border-dark);
-            border-bottom: none;
-            font-size: 11px;
-            cursor: pointer;
-            margin-right: 2px;
-            color: var(--text-primary);
-        }
-        
-        .xp-tab.active {
-            background: var(--window-bg);
-            font-weight: bold;
-        }
-        
-        .xp-status-bar {
-            background: var(--window-bg);
-            border-top: 1px solid var(--border-dark);
-            padding: 4px 8px;
-            font-size: 10px;
-            color: var(--text-primary);
-            height: 20px;
-        }
-        
-        .chat-layout {
-            display: flex;
-            gap: 15px;
-            height: 450px;
-        }
-        
-        .contacts-panel {
-            width: 200px;
-            border-right: 1px solid var(--border-dark);
-            overflow-y: auto;
-            padding-right: 5px;
-        }
-        
-        .chat-panel {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-        }
-        
-        .contact-tab {
-            padding: 8px 10px;
-            cursor: pointer;
-            border-bottom: 1px solid var(--border-dark);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.2s;
-        }
-        
-        .contact-tab:hover {
-            background: var(--contact-hover);
-            color: var(--text-light);
-        }
-        
-        .contact-tab.active {
-            background: var(--titlebar-start);
-            color: var(--text-light);
-        }
-        
-        .contact-avatar-small {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--titlebar-start), var(--titlebar-end));
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 14px;
-        }
-        
-        .contact-info-small {
-            flex: 1;
-            min-width: 0;
-        }
-        
-        .contact-name-small {
-            font-weight: 600;
-            font-size: 12px;
-            margin-bottom: 2px;
-        }
-        
-        .contact-status-small {
-            font-size: 10px;
-            display: flex;
-            align-items: center;
-            gap: 3px;
-        }
-        
-        .status-online-small { color: var(--status-online); }
-        .status-offline-small { color: var(--status-offline); }
-        .status-busy-small { color: var(--status-busy); }
-        .status-away-small { color: var(--status-away); }
-        
-        .chat-container {
-            display: none;
-            flex-direction: column;
-            height: 100%;
-        }
-        
-        .chat-container.active {
-            display: flex;
-        }
-        
-        .chat-header {
-            padding: 8px 12px;
-            background: var(--titlebar-start);
-            color: var(--text-light);
-            border-radius: 4px;
-            margin-bottom: 10px;
-            font-weight: bold;
-        }
-        
-        .chat-messages-area {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
-            background: var(--window-bg);
-            border: 1px solid var(--border-dark);
-            margin-bottom: 10px;
-            min-height: 300px;
-        }
-        
-        .message {
-            margin-bottom: 12px;
-            clear: both;
-        }
-        
-        .message-self {
-            text-align: right;
-        }
-        
-        .message-other {
-            text-align: left;
-        }
-        
-        .message-bubble {
-            display: inline-block;
-            padding: 8px 12px;
-            border-radius: 8px;
-            max-width: 70%;
-            word-wrap: break-word;
-        }
-        
-        .message-self .message-bubble {
-            background: var(--titlebar-start);
-            color: var(--text-light);
-        }
-        
-        .message-other .message-bubble {
-            background: var(--button-bg);
-            color: var(--text-primary);
-            border: 1px solid var(--border-dark);
-        }
-        
-        .message-image {
-            max-width: 200px;
-            max-height: 200px;
-            border-radius: 8px;
-            cursor: pointer;
-            border: 2px solid var(--titlebar-start);
-        }
-        
-        .message-time {
-            font-size: 9px;
-            color: var(--text-secondary);
-            margin-top: 4px;
-        }
-        
-        .message-input-area {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
-        }
-        
-        .message-input {
-            flex: 1;
-            padding: 8px;
-            border: 1px solid var(--border-dark);
-            background: var(--window-bg);
-            color: var(--text-primary);
-            border-radius: 4px;
-        }
-        
-        .send-button, .call-button, .image-button {
-            padding: 8px 15px;
-            background: var(--titlebar-start);
-            color: var(--text-light);
-            border: none;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-        
-        .send-button:hover, .call-button:hover, .image-button:hover {
-            background: var(--titlebar-end);
-        }
-        
-        .call-button {
-            background: #00A300;
-        }
-        
-        .image-button {
-            background: #6C00A0;
-        }
-        
-        .hidden {
-            display: none;
-        }
-        
-        .empty-contacts {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--text-secondary);
-            font-style: italic;
-        }
-        
-        .video-container {
-            margin: 10px 0;
-            text-align: center;
-        }
-        
-        .video-preview {
-            width: 200px;
-            height: 150px;
-            background: #000;
-            border: 2px solid var(--border-dark);
-            margin: 0 auto;
-        }
-        
-        .audio-controls {
-            margin: 10px 0;
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-        
-        .mute-button {
-            padding: 3px 8px;
-            background: var(--button-bg);
-            border: 1px solid var(--border-dark);
-            cursor: pointer;
-            font-size: 10px;
-            color: var(--text-primary);
-        }
-        
-        .call-error {
-            color: #FF0000;
-            font-size: 10px;
-            margin: 10px 0;
-            text-align: center;
-        }
-        
-        .permission-prompt {
-            background: var(--window-bg);
-            border: 2px solid var(--border-dark);
-            padding: 15px;
-            margin: 10px 0;
-            text-align: center;
-            color: var(--text-primary);
-        }
-        
-        .permission-button {
-            background: #00A300;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            cursor: pointer;
-            margin: 5px;
-        }
-        
-        .sound-control {
-            position: absolute;
-            top: 30px;
-            right: 10px;
-            background: var(--window-bg);
-            padding: 5px;
-            border-radius: 3px;
-            font-size: 10px;
-            z-index: 9998;
-            border: 1px solid var(--border-dark);
-            color: var(--text-primary);
-        }
-        
-        .theme-switcher {
-            position: absolute;
-            top: 30px;
-            left: 10px;
-            z-index: 9999;
-            background: var(--window-bg);
-            border: 2px solid;
-            border-top-color: var(--border-light);
-            border-left-color: var(--border-light);
-            border-right-color: var(--border-dark);
-            border-bottom-color: var(--border-dark);
-            padding: 3px;
-            border-radius: 3px;
-        }
-        
-        .theme-btn {
-            background: var(--button-bg);
-            border: 2px solid;
-            border-top-color: var(--border-light);
-            border-left-color: var(--border-light);
-            border-right-color: var(--border-dark);
-            border-bottom-color: var(--border-dark);
-            padding: 3px 8px;
-            font-size: 10px;
-            font-weight: bold;
-            cursor: pointer;
-            color: var(--text-primary);
-            margin: 0;
-        }
-        
-        .theme-btn:hover {
-            background: var(--contact-hover);
-            color: var(--text-light);
-        }
-        
-        #groupMemberList {
-            background: var(--window-bg);
-            color: var(--text-primary);
-        }
-        
-        #imageModal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.9);
-            z-index: 10000;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        #imageModal.active {
-            display: flex;
-        }
-        
-        #modalImage {
-            max-width: 90%;
-            max-height: 90%;
-        }
-        
-        .modal-close {
-            position: absolute;
-            top: 20px;
-            right: 30px;
-            color: white;
-            font-size: 40px;
-            cursor: pointer;
-        }
-
-        .self-status {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            cursor: pointer;
-            padding: 1px 4px;
-            border-radius: 2px;
-            position: relative;
-        }
-        .self-status:hover {
-            background: rgba(255,255,255,0.15);
-        }
-        .self-status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            flex-shrink: 0;
-            box-shadow: 0 0 4px rgba(0,0,0,0.3);
-        }
-        .self-status-dot.online { background: #4CAF50; }
-        .self-status-dot.busy { background: #E53935; }
-        .self-status-dot.away { background: #FFB300; }
-        .self-status-dot.invisible { background: #999999; }
-        .self-status-dot.offline { background: #999999; }
-        .status-dropdown {
-            position: absolute;
-            top: 18px;
-            left: 0;
-            min-width: 140px;
-            background: var(--window-bg);
-            border: 2px solid;
-            border-top-color: var(--border-light);
-            border-left-color: var(--border-light);
-            border-right-color: var(--border-dark);
-            border-bottom-color: var(--border-dark);
-            box-shadow: 2px 2px 6px rgba(0,0,0,0.4);
-            z-index: 99999;
-            padding: 2px;
-            display: none;
-        }
-        .status-dropdown.open { display: block; }
-        .status-option {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 10px;
-            cursor: pointer;
-            color: var(--text-primary);
-            font-size: 11px;
-            user-select: none;
-        }
-        .status-option:hover {
-            background: var(--titlebar-start);
-            color: var(--text-light);
-        }
-        .status-option .dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            flex-shrink: 0;
-            box-shadow: 0 0 4px rgba(0,0,0,0.3);
-        }
-        .status-option .dot.online { background: #4CAF50; }
-        .status-option .dot.busy { background: #E53935; }
-        .status-option .dot.away { background: #FFB300; }
-        .status-option .dot.invisible { background: #999999; }
-        .status-option .dot.offline { background: #999999; }
-    </style>
-</head>
-<body>
-    <div class="app-titlebar">
-        <span>📞 Skype Classic</span>
-        <div class="app-titlebar-buttons">
-            <button class="window-btn" onclick="minimizeWindow()">─</button>
-            <button class="window-btn" onclick="maximizeWindow()">□</button>
-            <button class="window-btn close-btn" onclick="closeWindow()">×</button>
-        </div>
-    </div>
-    
-    <div class="theme-switcher">
-        <button id="themeToggle" class="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
-    </div>
-    
-    <div class="sound-control">
-        <label>
-            <input type="checkbox" id="soundToggle" checked> Sounds
-        </label>
-    </div>
-
-    <audio id="logoutSound" preload="auto"><source src="/sounds/logoff.mp3" type="audio/mpeg"></audio>
-    <audio id="messageSound" preload="auto"><source src="/sounds/messagereceived.mp3" type="audio/mpeg"></audio>
-    <audio id="loginSound" preload="auto"><source src="/sounds/logon.mp3" type="audio/mpeg"></audio>
-    <audio id="sendSound" preload="auto"><source src="/sounds/messagesent.mp3" type="audio/mpeg"></audio>
-    <audio id="callSound" preload="auto" loop><source src="/sounds/call_incoming.mp3" type="audio/mpeg"></audio>
-    <audio id="dialingSound" preload="auto" loop><source src="/sounds/dialing.mp3" type="audio/mpeg"></audio>
-    <audio id="callEndSound" preload="auto"><source src="/sounds/call_end.mp3" type="audio/mpeg"></audio>
-    <audio id="callAcceptSound" preload="auto"><source src="/sounds/call_accept.mp3" type="audio/mpeg"></audio>
-    <audio id="callErrorSound" preload="auto"><source src="/sounds/call_error.mp3" type="audio/mpeg"></audio>
-
-    <div id="loginWindow" class="xp-window">
-        <div class="xp-titlebar">
-            <span>📞 Skype Classic</span>
-            <div class="xp-titlebar-controls">
-                <div class="xp-button">_</div>
-                <div class="xp-button">□</div>
-                <div class="xp-button">×</div>
-            </div>
-        </div>
-        <div class="xp-content">
-            <div class="xp-tabs">
-                <div class="xp-tab active" onclick="showTab('login')">Login</div>
-                <div class="xp-tab" onclick="showTab('register')">Create Account</div>
-            </div>
-            <div id="loginTab">
-                <div class="xp-fieldset">
-                    <legend class="xp-legend">Account Information</legend>
-                    <input type="text" class="xp-input" id="loginUsername" placeholder="Username" value="test">
-                    <input type="password" class="xp-input" id="loginPassword" placeholder="Password" value="test">
-                </div>
-                <div style="text-align: center;">
-                    <button class="xp-button-large" onclick="login()">Sign In</button>
-                    <button class="xp-button-large" onclick="showTab('register')">Create Account</button>
-                </div>
-            </div>
-            <div id="registerTab" class="hidden">
-                <div class="xp-fieldset">
-                    <legend class="xp-legend">New Account</legend>
-                    <input type="text" class="xp-input" id="regUsername" placeholder="Username">
-                    <input type="password" class="xp-input" id="regPassword" placeholder="Password">
-                    <input type="email" class="xp-input" id="regEmail" placeholder="Email">
-                    <input type="text" class="xp-input" id="regDisplayName" placeholder="Display Name">
-                </div>
-                <div style="text-align: center;">
-                    <button class="xp-button-large" onclick="register()">Create Account</button>
-                    <button class="xp-button-large" onclick="showTab('login')">Back to Login</button>
-                </div>
-            </div>
-        </div>
-        <div class="xp-status-bar">
-            <span id="statusMessage">Ready to connect to Skype Classic...</span>
-        </div>
-    </div>
-
-    <div id="chatWindow" class="xp-window chat-window hidden">
-        <div class="xp-titlebar">
-            <span style="display: flex; align-items: center; gap: 8px;">
-                📞 Skype Classic -
-                <span class="self-status" id="selfStatus" onclick="toggleStatusDropdown(event)">
-                    <span class="self-status-dot online" id="selfStatusDot"></span>
-                    <span id="selfStatusText">Online</span>
-                    <span id="currentUser">User</span>
-                    <span style="font-size: 8px; opacity: 0.8;">▼</span>
-                </span>
-                <div class="status-dropdown" id="statusDropdown" onclick="event.stopPropagation()">
-                    <div class="status-option" onclick="setStatus('online')">
-                        <span class="dot online"></span><span>Online</span>
-                    </div>
-                    <div class="status-option" onclick="setStatus('busy')">
-                        <span class="dot busy"></span><span>Busy</span>
-                    </div>
-                    <div class="status-option" onclick="setStatus('away')">
-                        <span class="dot away"></span><span>Away</span>
-                    </div>
-                    <div class="status-option" onclick="setStatus('invisible')">
-                        <span class="dot invisible"></span><span>Invisible</span>
-                    </div>
-                    <div class="status-option" onclick="setStatus('offline')">
-                        <span class="dot offline"></span><span>Appear Offline</span>
-                    </div>
-                </div>
-            </span>
-            <div class="xp-titlebar-controls">
-                <div class="xp-button">_</div>
-                <div class="xp-button">□</div>
-                <div class="xp-button" onclick="logout()">×</div>
-            </div>
-        </div>
-        <div class="xp-content">
-            <div class="chat-layout">
-                <div class="contacts-panel">
-                    <div class="xp-fieldset" style="margin-bottom: 10px;">
-                        <legend class="xp-legend">Contacts</legend>
-                        <div id="contactsPanel" class="contact-list" style="height: 300px;">
-                            <div class="empty-contacts">No contacts yet<br><small>Add friends to start chatting!</small></div>
-                        </div>
-                    </div>
-                    <div style="text-align: center;">
-                        <button class="xp-button-large" onclick="showAddContact()" style="width: 100%; margin-bottom: 5px;">Add Contact</button>
-                        <button class="xp-button-large" onclick="showCreateGroup()" style="width: 100%;">Create Group Chat</button>
-                    </div>
-                </div>
-                
-                <div class="chat-panel">
-                    <div class="xp-fieldset" style="height: 100%; display: flex; flex-direction: column;">
-                        <legend class="xp-legend">Chat <span id="currentChatWith"></span></legend>
-                        <div id="chatArea" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="xp-status-bar">
-                <span id="chatStatus">Ready to chat...</span>
-            </div>
-        </div>
-    </div>
-
-    <div id="incomingCallWindow" class="xp-window hidden" style="width: 300px; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;">
-        <div class="xp-titlebar">
-            <span>📞 Incoming Call...</span>
-            <div class="xp-titlebar-controls">
-                <div class="xp-button" onclick="declineIncomingCall()">×</div>
-            </div>
-        </div>
-        <div class="xp-content">
-            <div style="text-align: center; padding: 20px;">
-                <div id="incomingCallFrom">Call from <span id="callerName">User</span></div>
-                <div style="margin: 20px 0; font-size: 24px;">📞</div>
-                <div style="display: flex; gap: 10px; justify-content: center;">
-                    <button class="xp-button-large" style="background: #00A300;" onclick="acceptIncomingCall()">Answer</button>
-                    <button class="xp-button-large" style="background: #FF0000;" onclick="declineIncomingCall()">Decline</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="callWindow" class="xp-window hidden" style="width: 350px; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;">
-        <div class="xp-titlebar">
-            <span>📞 Active Call</span>
-            <div class="xp-titlebar-controls">
-                <div class="xp-button" onclick="endCall()">×</div>
-            </div>
-        </div>
-        <div class="xp-content">
-            <div style="text-align: center; padding: 15px;">
-                <div id="callStatus">In call with <span id="callTarget">User</span></div>
-                <div class="video-container">
-                    <video id="localVideo" autoplay muted class="video-preview"></video>
-                    <audio id="remoteAudio" autoplay></audio>
-                </div>
-                <div id="permissionPrompt" class="permission-prompt hidden">
-                    <p><strong>Microphone Access Required</strong></p>
-                    <p>Click "Allow Microphone" to enable voice calls</p>
-                    <button class="permission-button" onclick="requestMicrophonePermission()">Allow Microphone</button>
-                </div>
-                <div id="callError" class="call-error hidden"></div>
-                <div id="audioControls" class="audio-controls hidden">
-                    <button class="mute-button" onclick="toggleMute()" id="muteButton">Mute</button>
-                    <button class="mute-button" onclick="toggleDeafen()" id="deafenButton">Deafen</button>
-                </div>
-                <div style="margin: 15px 0;">
-                    <button class="xp-button-large" style="background: #FF0000;" onclick="endCall()">End Call</button>
-                </div>
-                <div id="callTimer" style="font-size: 10px; color: #666;">00:00</div>
-            </div>
-        </div>
-    </div>
-
-    <div id="createGroupWindow" class="xp-window hidden" style="width: 350px; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;">
-        <div class="xp-titlebar">
-            <span>👥 Create Group Chat</span>
-            <div class="xp-titlebar-controls">
-                <div class="xp-button" onclick="closeCreateGroup()">×</div>
-            </div>
-        </div>
-        <div class="xp-content">
-            <div style="padding: 15px;">
-                <div style="margin-bottom: 10px;">
-                    <label style="display: block; margin-bottom: 5px;">Group Name:</label>
-                    <input type="text" id="groupNameInput" class="xp-input" style="width: 100%;" placeholder="e.g., Math Study Group">
-                </div>
-                <div style="margin: 15px 0; border-top: 1px solid var(--border-dark); padding-top: 10px;">
-                    <label style="display: block; margin-bottom: 10px; font-weight: bold;">Select Members:</label>
-                    <div id="groupMemberList" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-dark); padding: 10px; background: var(--window-bg);">
-                        <div style="color: var(--text-primary); font-style: italic;">Loading contacts...</div>
-                    </div>
-                </div>
-                <div style="text-align: right; margin-top: 15px;">
-                    <button class="xp-button-large" onclick="createGroup()" style="margin-right: 10px;">Create Group</button>
-                    <button class="xp-button-large" onclick="closeCreateGroup()">Cancel</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="analyticsPopup" class="xp-window hidden" style="width: 300px; position: fixed; bottom: 20px; right: 20px; z-index: 1001;">
-        <div class="xp-titlebar">
-            <span>📊 Analytics</span>
-            <div class="xp-titlebar-controls">
-                <div class="xp-button" onclick="closeAnalyticsPopup()">×</div>
-            </div>
-        </div>
-        <div class="xp-content">
-            <div style="padding: 15px; text-align: center;">
-                <div style="font-size: 48px; margin: 10px 0;">ℹ️</div>
-                <p style="margin: 10px 0;">Go to the analytics page?</p>
-                <div style="display: flex; justify-content: center; gap: 10px; margin-top: 15px;">
-                    <button class="xp-button" onclick="openAnalytics()">Yes</button>
-                    <button class="xp-button" onclick="closeAnalyticsPopup()">No</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div id="imageModal" onclick="closeImageModal()">
-        <span class="modal-close">&times;</span>
-        <img id="modalImage">
-    </div>
-
-    <script>
-        function minimizeWindow() {
-            if (window.electronAPI) window.electronAPI.minimize();
-        }
-        
-        function maximizeWindow() {
-            if (window.electronAPI) window.electronAPI.maximize();
-        }
-        
-        function closeWindow() {
-            if (window.electronAPI) window.electronAPI.close();
-        }
-        
-        let currentUser = null;
-        let ws = null;
-        let currentChat = null;
-        let messageCounter = 0;
-        let isInCall = false;
-        let callStartTime = null;
-        let callTimerInterval = null;
-        let currentCallWith = null;
-        let incomingCallFrom = null;
-        let userContacts = [];
-        let userGroups = [];
-        let chatMessages = {};
-        let myStatus = 'online';
-        
-        let localStream = null;
-        let remoteStream = null;
-        let peerConnection = null;
-        let isMuted = false;
-        let isDeafened = false;
-        let microphonePermissionGranted = false;
-        let connectionInProgress = false;
-        let pendingIceCandidates = [];
-
-        const STATUS_LABELS = {
-            online: 'Online',
-            busy: 'Busy',
-            away: 'Away',
-            invisible: 'Invisible',
-            offline: 'Appear Offline'
-        };
-
-        function updateSelfStatusUI() {
-            const dot = document.getElementById('selfStatusDot');
-            const txt = document.getElementById('selfStatusText');
-            if (!dot || !txt) return;
-            dot.className = 'self-status-dot ' + myStatus;
-            txt.textContent = STATUS_LABELS[myStatus] || 'Online';
-        }
-
-        function toggleStatusDropdown(e) {
-            if (e) e.stopPropagation();
-            const dd = document.getElementById('statusDropdown');
-            if (!dd) return;
-            dd.classList.toggle('open');
-        }
-
-        function closeStatusDropdown() {
-            const dd = document.getElementById('statusDropdown');
-            if (dd) dd.classList.remove('open');
-        }
-
-        function setStatus(status) {
-            if (!STATUS_LABELS[status]) return;
-            myStatus = status;
-            updateSelfStatusUI();
-            closeStatusDropdown();
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'status_change',
-                    status: status
-                }));
-            }
-            const cs = document.getElementById('chatStatus');
-            if (cs) cs.textContent = 'Status: ' + STATUS_LABELS[status];
-        }
-
-        document.addEventListener('click', function(e) {
-            const dd = document.getElementById('statusDropdown');
-            const picker = document.getElementById('selfStatus');
-            if (!dd || !picker) return;
-            if (!picker.contains(e.target)) {
-                dd.classList.remove('open');
-            }
-        });
-
-        function toggleTheme() {
-            const body = document.body;
-            const button = document.getElementById('themeToggle');
-            
-            if (body.classList.contains('dark-theme')) {
-                body.classList.remove('dark-theme');
-                button.innerHTML = '🌙 Dark';
-                localStorage.setItem('skypeTheme', 'light');
-            } else {
-                body.classList.add('dark-theme');
-                button.innerHTML = '☀️ Light';
-                localStorage.setItem('skypeTheme', 'dark');
-            }
-        }
-        
-        function loadTheme() {
-            const savedTheme = localStorage.getItem('skypeTheme');
-            const body = document.body;
-            const button = document.getElementById('themeToggle');
-            
-            if (savedTheme === 'dark') {
-                body.classList.add('dark-theme');
-                if (button) button.innerHTML = '☀️ Light';
-            } else {
-                body.classList.remove('dark-theme');
-                if (button) button.innerHTML = '🌙 Dark';
-            }
-        }
-
-        function syncMessagesToServer() {
-            if (!ws || ws.readyState !== WebSocket.OPEN) return;
-            if (!currentUser) return;
-            
-            Object.keys(chatMessages).forEach(chatId => {
-                const messages = chatMessages[chatId];
-                if (messages && messages.length > 0) {
-                    ws.send(JSON.stringify({
-                        type: 'sync_messages',
-                        chatId: chatId,
-                        messages: messages.slice(-100)
-                    }));
-                }
-            });
-        }
-
-        function saveMessagesToLocalStorage() {
-            localStorage.setItem('chatMessages_' + currentUser.username, JSON.stringify(chatMessages));
-        }
-        
-        function loadMessagesFromLocalStorage() {
-            const saved = localStorage.getItem('chatMessages_' + currentUser.username);
-            if (saved) {
-                chatMessages = JSON.parse(saved);
-            } else {
-                chatMessages = {};
-            }
-            
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                userContacts.forEach(contact => {
-                    ws.send(JSON.stringify({
-                        type: 'get_message_history',
-                        chatId: contact.username
-                    }));
-                });
-            }
-        }
-        
-        function addMessageToChat(contact, messageData) {
-            if (!chatMessages[contact]) {
-                chatMessages[contact] = [];
-            }
-            
-            const exists = chatMessages[contact].some(m => m.id === messageData.id);
-            if (!exists) {
-                chatMessages[contact].push(messageData);
-                saveMessagesToLocalStorage();
-                return true;
-            }
-            return false;
-        }
-        
-        function renderMessagesForChat(contact) {
-            const messagesDiv = document.getElementById('messages_' + contact);
-            if (!messagesDiv) return;
-            
-            messagesDiv.innerHTML = '';
-            
-            const contactMessages = chatMessages[contact] || [];
-            
-            contactMessages.forEach(msg => {
-                const isSelf = msg.from === currentUser.username;
-                const messageDiv = document.createElement('div');
-                messageDiv.className = 'message ' + (isSelf ? 'message-self' : 'message-other');
-                
-                const time = new Date(msg.timestamp).toLocaleTimeString();
-                const displayName = msg.fromDisplay || msg.from;
-                
-                if (msg.imageData) {
-                    messageDiv.innerHTML = \`
-                        <div class="message-bubble" style="background: none; padding: 5px;">
-                            <img src="\${msg.imageData}" class="message-image" onclick="openImageModal('\${msg.imageData}')">
-                            <div class="message-time">\${time}</div>
-                        </div>
-                    \`;
-                } else {
-                    messageDiv.innerHTML = \`
-                        <div class="message-bubble">
-                            <strong>\${displayName}:</strong> \${msg.message}
-                            <div class="message-time">\${time}</div>
-                        </div>
-                    \`;
-                }
-                
-                messagesDiv.appendChild(messageDiv);
-            });
-            
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-        
-        function openImageModal(imageSrc) {
-            const modal = document.getElementById('imageModal');
-            const modalImg = document.getElementById('modalImage');
-            modalImg.src = imageSrc;
-            modal.classList.add('active');
-        }
-        
-        function closeImageModal() {
-            const modal = document.getElementById('imageModal');
-            modal.classList.remove('active');
-        }
-
-        function loadContacts() {
-            const savedContacts = localStorage.getItem('userContacts_' + currentUser.username);
-            if (savedContacts) {
-                userContacts = JSON.parse(savedContacts);
-                updateContactList();
-            }
-            
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'get_contacts',
-                    username: currentUser.username
-                }));
-            }
-        }        
-        function updateContactList() {
-            const contactsPanel = document.getElementById('contactsPanel');
-            const chatArea = document.getElementById('chatArea');
-            
-            if (!contactsPanel) return;
-            
-            contactsPanel.innerHTML = '';
-            
-            if (userContacts.length === 0 && userGroups.length === 0) {
-                contactsPanel.innerHTML = '<div class="empty-contacts">No contacts yet<br><small>Add friends to start chatting!</small></div>';
-                return;
-            }
-            
-            userContacts.forEach(contact => {
-                const contactTab = document.createElement('div');
-                contactTab.className = 'contact-tab' + (currentChat === contact.username ? ' active' : '');
-                contactTab.setAttribute('data-contact', contact.username);
-                
-                const st = contact.status || 'offline';
-                const stClass = 'status-' + st + '-small';
-                const stLabel = st.charAt(0).toUpperCase() + st.slice(1);
-                
-                contactTab.innerHTML = \`
-                    <div class="contact-avatar-small">\${contact.displayName.charAt(0).toUpperCase()}</div>
-                    <div class="contact-info-small">
-                        <div class="contact-name-small">\${contact.displayName}</div>
-                        <div class="contact-status-small \${stClass}">
-                            <span>●</span> \${stLabel}
-                        </div>
-                    </div>
-                \`;
-                contactTab.onclick = () => switchChat(contact.username, contact.displayName);
-                contactsPanel.appendChild(contactTab);
-                
-                if (!document.getElementById('chatContainer_' + contact.username)) {
-                    const chatContainer = document.createElement('div');
-                    chatContainer.id = 'chatContainer_' + contact.username;
-                    chatContainer.className = 'chat-container';
-                    chatContainer.innerHTML = \`
-                        <div class="chat-header">
-                            Chat with \${contact.displayName}
-                        </div>
-                        <div id="messages_\${contact.username}" class="chat-messages-area"></div>
-                        <div class="message-input-area">
-                            <input type="text" id="messageInput_\${contact.username}" class="message-input" placeholder="Type a message..." onkeypress="handleMessageKeypress(event, '\${contact.username}')">
-                            <button class="send-button" onclick="sendMessageTo('\${contact.username}')">Send</button>
-                            <button class="call-button" onclick="startCallTo('\${contact.username}')">📞</button>
-                            <input type="file" id="imageInput_\${contact.username}" accept="image/*" style="display: none">
-                            <button class="image-button" onclick="document.getElementById('imageInput_\${contact.username}').click()" title="Send Image">🖼️</button>
-                        </div>
-                    \`;
-                    chatArea.appendChild(chatContainer);
-                    
-                    document.getElementById('imageInput_' + contact.username).addEventListener('change', (e) => {
-                        handleImageUpload(e, contact.username);
-                    });
-                }
-                
-                if (chatMessages[contact.username]) {
-                    renderMessagesForChat(contact.username);
-                }
-            });
-        }
-        
-        function switchChat(username, displayName) {
-            currentChat = username;
-            document.getElementById('currentChatWith').textContent = 'with ' + displayName;
-
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'get_message_history',
-                    chatId: username
-                }));
-            }
-            
-            document.querySelectorAll('.chat-container').forEach(container => {
-                container.classList.remove('active');
-            });
-            const activeContainer = document.getElementById('chatContainer_' + username);
-            if (activeContainer) {
-                activeContainer.classList.add('active');
-            }
-            
-            document.querySelectorAll('.contact-tab').forEach(tab => {
-                tab.classList.remove('active');
-                if (tab.getAttribute('data-contact') === username) {
-                    tab.classList.add('active');
-                }
-            });
-            
-            renderMessagesForChat(username);
-            
-            setTimeout(() => {
-                const input = document.getElementById('messageInput_' + username);
-                if (input) input.focus();
-            }, 100);
-        }
-        
-        function sendMessageTo(recipient) {
-            const input = document.getElementById('messageInput_' + recipient);
-            const message = input.value.trim();
-            
-            if (message && recipient) {
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    const messageId = Date.now();
-                    const messageData = {
-                        id: messageId,
-                        from: currentUser.username,
-                        fromDisplay: currentUser.displayName,
-                        to: recipient,
-                        message: message,
-                        timestamp: new Date().toISOString()
-                    };
-                    
-                    ws.send(JSON.stringify({
-                        type: 'message',
-                        data: messageData
-                    }));
-                    
-                    addMessageToChat(recipient, messageData);
-                    
-                    if (currentChat === recipient) {
-                        renderMessagesForChat(recipient);
-                    }
-                    
-                    playSendSound();
-                    input.value = '';
-                }
-            }
-        }
-        
-        function handleMessageKeypress(event, recipient) {
-            if (event.key === 'Enter') {
-                sendMessageTo(recipient);
-            }
-        }
-        
-        function handleImageUpload(e, recipient) {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            if (!file.type.startsWith('image/')) {
-                alert('Please select an image file');
-                return;
-            }
-            
-            if (file.size > 5 * 1024 * 1024) {
-                alert('Image too large! Max 5MB');
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                if (ws && ws.readyState === WebSocket.OPEN && recipient) {
-                    const messageData = {
-                        id: Date.now(),
-                        from: currentUser.username,
-                        fromDisplay: currentUser.displayName,
-                        to: recipient,
-                        imageData: event.target.result,
-                        fileName: file.name,
-                        isImage: true,
-                        timestamp: new Date().toISOString()
-                    };
-                    
-                    ws.send(JSON.stringify({
-                        type: 'image_share',
-                        ...messageData
-                    }));
-                    
-                    addMessageToChat(recipient, messageData);
-                    
-                    if (currentChat === recipient) {
-                        renderMessagesForChat(recipient);
-                    }
-                }
-            };
-            reader.readAsDataURL(file);
-            
-            e.target.value = '';
-        }
-        
-        function startCallTo(recipient) {
-            currentCallWith = recipient;
-            startCall();
-        }
-        
-        function updateContactListWithOnlineUsers(onlineUsers) {
-            userContacts.forEach(contact => {
-                const onlineUser = onlineUsers.find(u => u.username === contact.username);
-                if (onlineUser) {
-                    contact.status = onlineUser.status || 'online';
-                } else {
-                    contact.status = 'offline';
-                }
-            });
-            updateContactList();
-        }
-        
-        function showAddContact() {
-            const username = prompt('Enter username to add:');
-            if (username && username.trim()) {
-                const displayName = prompt('Enter display name (optional):') || username;
-                addContactAutoSync(username, displayName);
-            }
-        }
-        
-        function addContactAutoSync(username, displayName) {
-            if (!userContacts.find(c => c.username === username)) {
-                userContacts.push({
-                    username: username,
-                    displayName: displayName,
-                    status: 'offline'
-                });
-                
-                localStorage.setItem('userContacts_' + currentUser.username, JSON.stringify(userContacts));
-                updateContactList();
-            }
-            
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'sync_contacts',
-                    username: currentUser.username,
-                    contacts: userContacts
-                }));
-                ws.send(JSON.stringify({
-                    type: 'contact_add',
-                    from: currentUser.username,
-                    fromDisplay: currentUser.displayName,
-                    targetUsername: username,
-                    targetDisplayName: displayName
-                }));
-            }
-        }
-        
-        function showCreateGroup() {
-            const memberList = document.getElementById('groupMemberList');
-            memberList.innerHTML = '';
-            
-            if (userContacts.length === 0) {
-                memberList.innerHTML = '<div style="color: var(--text-primary); font-style: italic;">No contacts yet. Add contacts first!</div>';
-            } else {
-                userContacts.forEach(contact => {
-                    const memberItem = document.createElement('div');
-                    memberItem.style.marginBottom = '5px';
-                    memberItem.innerHTML = 
-                        '<input type="checkbox" id="member_' + contact.username + '" checked>' +
-                        '<label for="member_' + contact.username + '" style="margin-left: 5px; color: var(--text-primary);">' +
-                            contact.displayName + ' (' + contact.username + ')' +
-                        '</label>';
-                    memberList.appendChild(memberItem);
-                });
-            }
-            
-            document.getElementById('groupNameInput').value = '';
-            document.getElementById('createGroupWindow').classList.remove('hidden');
-        }
-        
-        function closeCreateGroup() {
-            document.getElementById('createGroupWindow').classList.add('hidden');
-        }
-        
-        function createGroup() {
-            const groupName = document.getElementById('groupNameInput').value.trim();
-            if (!groupName) {
-                alert('Please enter a group name');
-                return;
-            }
-            
-            const selectedMembers = [currentUser.username];
-            const checkboxes = document.querySelectorAll('#groupMemberList input[type="checkbox"]');
-            
-            checkboxes.forEach(checkbox => {
-                if (checkbox.checked) {
-                    const username = checkbox.id.replace('member_', '');
-                    selectedMembers.push(username);
-                }
-            });
-            
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'create_group',
-                    groupName: groupName,
-                    creator: currentUser.username,
-                    members: selectedMembers
-                }));
-                
-                closeCreateGroup();
-            }
-        }
-        
-        function addSystemMessage(message) {
-            console.log('System:', message);
-        }
-        
-        function showTab(tabName) {
-            document.getElementById('loginTab').classList.add('hidden');
-            document.getElementById('registerTab').classList.add('hidden');
-            document.getElementById(tabName + 'Tab').classList.remove('hidden');
-            
-            document.querySelectorAll('.xp-tab').forEach(tab => {
-                tab.classList.remove('active');
-                if (tab.textContent.toLowerCase().includes(tabName)) {
-                    tab.classList.add('active');
-                }
-            });
-        }
-
-        async function login() {
-            const username = document.getElementById('loginUsername').value.trim();
-            const password = document.getElementById('loginPassword').value;
-            const status = document.getElementById('statusMessage');
-            
-            if (!username || !password) {
-                status.textContent = 'Please enter username and password';
-                return;
-            }
-            
-            status.textContent = 'Logging in...';
-            
-            try {
-                const res = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                const result = await res.json();
-                
-                if (result.success) {
-                    currentUser = {
-                        username: username,
-                        id: Date.now(),
-                        displayName: result.displayName || username
-                    };
-                    myStatus = 'online';
-                    status.textContent = 'Login successful!';
-                    playLoginSound();
-                    showChatWindow();
-                    connectWebSocket();
-                } else {
-                    status.textContent = result.error || 'Invalid username or password';
-                }
-            } catch (e) {
-                console.error('Login error:', e);
-                status.textContent = 'Login failed. Check server connection.';
-            }
-        }
-        
-        async function register() {
-            const username = document.getElementById('regUsername').value.trim();
-            const password = document.getElementById('regPassword').value;
-            const email = document.getElementById('regEmail').value;
-            const displayName = document.getElementById('regDisplayName').value || username;
-            const status = document.getElementById('statusMessage');
-            
-            if (!username || !password) {
-                status.textContent = 'Please fill in username and password';
-                return;
-            }
-            
-            status.textContent = 'Creating account...';
-            
-            try {
-                const res = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password, displayName, email })
-                });
-                const result = await res.json();
-                
-                if (result.success) {
-                    status.textContent = 'Account created! Please login.';
-                    showTab('login');
-                    
-                    document.getElementById('regUsername').value = '';
-                    document.getElementById('regPassword').value = '';
-                    document.getElementById('regEmail').value = '';
-                    document.getElementById('regDisplayName').value = '';
-                } else {
-                    status.textContent = result.error || 'Registration failed';
-                }
-            } catch (e) {
-                console.error('Register error:', e);
-                status.textContent = 'Registration failed. Check server connection.';
-            }
-        }
-        
-        function showChatWindow() {
-            document.getElementById('loginWindow').classList.add('hidden');
-            document.getElementById('chatWindow').classList.remove('hidden');
-            document.getElementById('currentUser').textContent = currentUser.displayName;
-            updateSelfStatusUI();
-            
-            loadMessagesFromLocalStorage();
-            loadContacts();
-        }
-        
-        function connectWebSocket() {
-            if (connectionInProgress) return;
-            connectionInProgress = true;
-            
-            const host = window.location.hostname;
-            const port = window.location.port || (window.location.protocol === 'https:' ? 443 : 80);
-            const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-            
-            ws = new WebSocket(protocol + host + ':' + port);
-            
-            ws.onopen = () => {
-                connectionInProgress = false;
-                document.getElementById('chatStatus').textContent = 'Connected to Skype Classic';
-                
-                const savedContacts = JSON.parse(localStorage.getItem('userContacts_' + currentUser.username) || '[]');
-                
-                ws.send(JSON.stringify({
-                    type: 'join',
-                    username: currentUser.username,
-                    userId: currentUser.id,
-                    displayName: currentUser.displayName,
-                    contacts: savedContacts,
-                    status: myStatus
-                }));
-            };
-            
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                handleWebSocketMessage(data);
-            };
-            
-            ws.onclose = () => {
-                connectionInProgress = false;
-                document.getElementById('chatStatus').textContent = 'Disconnected from server';
-            };
-        }
-        
-        function handleWebSocketMessage(data) {
-            try {
-            switch(data.type) {
-                case 'user_join':
-                case 'user_leave':
-                    updateContactListWithOnlineUsers(data.users);
-                    break;
-
-                case 'message_history':
-                    if (data.messages) {
-                        const chatId = data.chatId;
-                        if (!chatMessages[chatId]) {
-                            chatMessages[chatId] = [];
-                        }
-                        data.messages.forEach(msg => {
-                            if (!chatMessages[chatId].find(m => m.id === msg.id)) {
-                                chatMessages[chatId].push(msg);
-                            }
-                        });
-                        saveMessagesToLocalStorage();
-                        if (currentChat === chatId) {
-                            renderMessagesForChat(chatId);
-                        }
-                    }
-                    break;
-                    
-                case 'messages_synced':
-                    console.log('Messages synced to server:', data.chatId);
-                    break;
-                    
-                case 'new_message':
-                    if (data.data.id > messageCounter) {
-                        const chatPartner = data.data.from === currentUser.username ? data.data.to : data.data.from;
-                        addMessageToChat(chatPartner, data.data);
-                        messageCounter = data.data.id;
-                        
-                        if (currentChat === chatPartner) {
-                            renderMessagesForChat(chatPartner);
-                        }
-                        
-                        if (data.data.from !== currentUser.username) {
-                            playMessageSound();
-                        }
-                    }
-                    break;
-                    
-                case 'image_receive':
-                    const sender = data.from;
-                    const messageData = {
-                        id: Date.now(),
-                        from: sender,
-                        fromDisplay: data.fromDisplay,
-                        to: currentUser.username,
-                        imageData: data.imageData,
-                        fileName: data.fileName,
-                        isImage: true,
-                        timestamp: data.timestamp
-                    };
-                    addMessageToChat(sender, messageData);
-                    
-                    if (currentChat === sender) {
-                        renderMessagesForChat(sender);
-                    }
-                    playMessageSound();
-                    break;
-                    
-                case 'call_request':
-                    if (isInCall) {
-                        ws.send(JSON.stringify({
-                            type: 'call_declined',
-                            from: currentUser.username,
-                            to: data.from
-                        }));
-                        return;
-                    }
-                    incomingCallFrom = data.from;
-                    document.getElementById('callerName').textContent = data.fromDisplay || data.from;
-                    document.getElementById('incomingCallWindow').classList.remove('hidden');
-                    playCallSound();
-                    window.currentCallId = data.callId || 'call_' + Date.now();
-                    break;
-                    
-                case 'call_accepted':
-                    stopCallSounds();
-                    playCallAcceptSound();
-                    if (data.callId) window.currentCallId = data.callId;
-                    document.getElementById('callWindow').classList.remove('hidden');
-                    const ctEl = document.getElementById('callTarget');
-                    if (ctEl) ctEl.textContent = data.fromDisplay || data.from;
-                    document.getElementById('callStatus').textContent = 'In call with ' + (data.fromDisplay || data.from);
-                    startCallTimer();
-                    isInCall = true;
-                    currentCallWith = data.from;
-                    setupWebRTC(true);
-                    break;
-                    
-                case 'call_declined':
-                    stopCallSounds();
-                    playCallEndSound();
-                    document.getElementById('callWindow').classList.add('hidden');
-                    document.getElementById('incomingCallWindow').classList.add('hidden');
-                    isInCall = false;
-                    currentCallWith = null;
-                    cleanupWebRTC();
-                    break;
-                    
-                case 'group_created':
-                    userGroups.push(data.group);
-                    updateContactList();
-                    break;
-                    
-                case 'chat_history':
-                    if (data.messages) {
-                        const chatId = data.chatId;
-                        data.messages.forEach(msg => {
-                            addMessageToChat(chatId, msg);
-                        });
-                        if (currentChat === chatId) {
-                            renderMessagesForChat(chatId);
-                        }
-                        if (data.messages.length > 0) {
-                            const sortedMessages = [...data.messages].sort((a, b) => a.id - b.id);
-                            messageCounter = Math.max(messageCounter, sortedMessages[sortedMessages.length - 1].id);
-                        }
-                    }
-                    break;
-                    
-                case 'call_end':
-                    if (isInCall) {
-                        stopCallSounds();
-                        playCallEndSound();
-                        document.getElementById('callWindow').classList.add('hidden');
-                        document.getElementById('incomingCallWindow').classList.add('hidden');
-                        
-                        if (callTimerInterval) {
-                            clearInterval(callTimerInterval);
-                            callTimerInterval = null;
-                        }
-                        
-                        isInCall = false;
-                        currentCallWith = null;
-                        callStartTime = null;
-                        cleanupWebRTC();
-                    }
-                    break;
-                    
-                case 'contact_list':
-                    if (data.contacts) {
-                        userContacts = data.contacts;
-                        localStorage.setItem('userContacts_' + currentUser.username, JSON.stringify(userContacts));
-                        updateContactList();
-                    }
-                    break;
-                    
-                case 'contact_add_result':
-                case 'contact_added':
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({
-                            type: 'get_contacts',
-                            username: currentUser.username
-                        }));
-                    }
-                    break;
-                    
-                case 'webrtc_offer':
-                    handleWebRTCOffer(data.offer, data.from);
-                    break;
-                    
-                case 'webrtc_answer':
-                    handleWebRTCAnswer(data.answer);
-                    break;
-                    
-                case 'ice_candidate':
-                    handleICECandidate(data.candidate);
-                    break;
-            }
-            } catch (err) {
-                console.error('❌ ERROR in handleWebSocketMessage for type ' + data.type + ':', err);
-                console.error('Raw data was:', JSON.stringify(data).substring(0, 500));
-            }
-        }
-        
-        function logout() {
-            playLogoutSound();
-            if (ws) ws.close();
-            document.getElementById('chatWindow').classList.add('hidden');
-            document.getElementById('loginWindow').classList.remove('hidden');
-            currentUser = null;
-            currentChat = null;
-            messageCounter = 0;
-            chatMessages = {};
-            myStatus = 'online';
-            document.getElementById('statusMessage').textContent = 'Logged out successfully';
-            cleanupWebRTC();
-        }
-        
-        function showAnalyticsPopup() {
-            document.getElementById('analyticsPopup').classList.remove('hidden');
-        }
-        
-        function closeAnalyticsPopup() {
-            document.getElementById('analyticsPopup').classList.add('hidden');
-            setTimeout(showAnalyticsPopup, 30 * 60 * 1000);
-        }
-        
-        function openAnalytics() {
-            window.open('/analytics', '_blank');
-            closeAnalyticsPopup();
-        }
-        
-        function playMessageSound() {
-            if (document.getElementById('soundToggle').checked) {
-                const sound = document.getElementById('messageSound');
-                sound.loop = false;
-                sound.currentTime = 0;
-                sound.play().catch(e => {});
-            }
-        }
-        
-        function playLoginSound() {
-            if (document.getElementById('soundToggle').checked) {
-                const sound = document.getElementById('loginSound');
-                sound.loop = false;
-                sound.currentTime = 0;
-                sound.play().catch(e => {});
-            }
-        }
-
-        function playLogoutSound() {
-            if (document.getElementById('soundToggle').checked) {
-                const sound = document.getElementById('logoutSound');
-                sound.loop = false;
-                sound.currentTime = 0;
-                sound.play().catch(e => {});
-            }
-        }
-        
-        function playSendSound() {
-            if (document.getElementById('soundToggle').checked) {
-                const sound = document.getElementById('sendSound');
-                sound.loop = false;
-                sound.currentTime = 0;
-                sound.play().catch(e => {});
-            }
-        }
-        
-        function playCallSound() {
-            if (document.getElementById('soundToggle').checked) {
-                const sound = document.getElementById('callSound');
-                sound.loop = true;
-                sound.currentTime = 0;
-                sound.play().catch(e => {});
-            }
-        }
-        
-        function playDialingSound() {
-            if (document.getElementById('soundToggle').checked) {
-                const sound = document.getElementById('dialingSound');
-                sound.loop = true;
-                sound.currentTime = 0;
-                sound.play().catch(e => {});
-            }
-        }
-        
-        function playCallEndSound() {
-            if (document.getElementById('soundToggle').checked) {
-                const sound = document.getElementById('callEndSound');
-                sound.loop = false;
-                sound.currentTime = 0;
-                sound.play().catch(e => {});
-                stopCallSounds();
-            }
-        }
-        
-        function playCallAcceptSound() {
-            if (document.getElementById('soundToggle').checked) {
-                const sound = document.getElementById('callAcceptSound');
-                sound.loop = false;
-                sound.currentTime = 0;
-                sound.play().catch(e => {});
-            }
-        }
-        
-        function playCallErrorSound() {
-            if (document.getElementById('soundToggle').checked) {
-                const sound = document.getElementById('callErrorSound');
-                sound.loop = false;
-                sound.currentTime = 0;
-                sound.play().catch(e => {});
-            }
-        }
-        
-        function stopCallSounds() {
-            const callSound = document.getElementById('callSound');
-            const dialingSound = document.getElementById('dialingSound');
-            
-            callSound.pause();
-            callSound.currentTime = 0;
-            callSound.loop = false;
-            
-            dialingSound.pause();
-            dialingSound.currentTime = 0;
-            dialingSound.loop = false;
-        }
-
-        function startCall() {
-            if (!currentChat) {
-                alert('Please select a contact to call first!');
-                return;
-            }
-            
-            if (isInCall) {
-                alert('You are already in a call!');
-                return;
-            }
-            
-            if (!microphonePermissionGranted) {
-                requestMicrophonePermission().then(() => {
-                    if (microphonePermissionGranted) {
-                        startCall();
-                    }
-                });
-                return;
-            }
-            
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                playDialingSound();
-                currentCallWith = currentChat;
-                
-                const callId = 'call_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-                window.currentCallId = callId;
-                
-                const ctEl = document.getElementById('callTarget');
-                if (ctEl) ctEl.textContent = currentChat;
-                document.getElementById('callWindow').classList.remove('hidden');
-                document.getElementById('callStatus').textContent = 'Calling ' + currentChat + '...';
-                document.getElementById('callTimer').textContent = 'Calling...';
-                
-                ws.send(JSON.stringify({
-                    type: 'call_request',
-                    callId: callId,
-                    from: currentUser.username,
-                    fromDisplay: currentUser.displayName,
-                    to: currentChat
-                }));
-                
-                setTimeout(() => {
-                    if (document.getElementById('callWindow') && 
-                        document.getElementById('callWindow').classList.contains('hidden') === false && 
-                        document.getElementById('callStatus').textContent.includes('Calling')) {
-                        endCall();
-                    }
-                }, 30000);
-            }
-        }
-        
-        function acceptIncomingCall() {
-            stopCallSounds();
-            playCallAcceptSound();
-            
-            const callPartner = incomingCallFrom;
-            if (callPartner) {
-                ws.send(JSON.stringify({
-                    type: 'call_accepted',
-                    callId: window.currentCallId,
-                    from: currentUser.username,
-                    fromDisplay: currentUser.displayName,
-                    to: callPartner
-                }));
-            }
-            
-            document.getElementById('incomingCallWindow').classList.add('hidden');
-            document.getElementById('callWindow').classList.remove('hidden');
-            const ctEl2 = document.getElementById('callTarget');
-            if (ctEl2) ctEl2.textContent = callPartner;
-            document.getElementById('callStatus').textContent = 'In call with ' + callPartner;
-            
-            startCallTimer();
-            isInCall = true;
-            currentCallWith = callPartner;
-            incomingCallFrom = null;
-            
-            if (!microphonePermissionGranted) {
-                requestMicrophonePermission().then(() => {
-                    setupWebRTC(false);
-                });
-            } else {
-                setupWebRTC(false);
-            }
-        }
-        
-        function declineIncomingCall() {
-            stopCallSounds();
-            playCallEndSound();
-            
-            document.getElementById('incomingCallWindow').classList.add('hidden');
-            
-            if (incomingCallFrom) {
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({
-                        type: 'call_declined',
-                        callId: window.currentCallId,
-                        from: currentUser.username,
-                        to: incomingCallFrom
-                    }));
-                }
-                incomingCallFrom = null;
-            }
-            
-            cleanupWebRTC();
-        }
-        
-        function endCall() {
-            stopCallSounds();
-            playCallEndSound();
-            
-            const callWindow = document.getElementById('callWindow');
-            const incomingCallWindow = document.getElementById('incomingCallWindow');
-            if (callWindow) callWindow.classList.add('hidden');
-            if (incomingCallWindow) incomingCallWindow.classList.add('hidden');
-            
-            if (callTimerInterval) {
-                clearInterval(callTimerInterval);
-                callTimerInterval = null;
-            }
-            
-            if (currentCallWith && ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'call_end',
-                    callId: window.currentCallId,
-                    from: currentUser.username,
-                    fromDisplay: currentUser.displayName,
-                    to: currentCallWith
-                }));
-            }
-            
-            cleanupWebRTC();
-            
-            isInCall = false;
-            currentCallWith = null;
-            callStartTime = null;
-            incomingCallFrom = null;
-        }
-        
-        function startCallTimer() {
-            callStartTime = new Date();
-            callTimerInterval = setInterval(() => {
-                const now = new Date();
-                const diff = Math.floor((now - callStartTime) / 1000);
-                const minutes = Math.floor(diff / 60);
-                const seconds = diff % 60;
-                document.getElementById('callTimer').textContent =
-                    minutes.toString().padStart(2, '0') + ':' + seconds.toString().padStart(2, '0');
-            }, 1000);
-        }
-        
-        async function requestMicrophonePermission() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: true,
-                    video: true
-                });
-                
-                microphonePermissionGranted = true;
-                stream.getTracks().forEach(track => track.stop());
-                hidePermissionPrompt();
-                return true;
-                
-            } catch (error) {
-                showCallError('Microphone access denied.');
-                playCallErrorSound();
-                microphonePermissionGranted = false;
-                return false;
-            }
-        }
-        
-        function showPermissionPrompt() {
-            const prompt = document.getElementById('permissionPrompt');
-            if (prompt) prompt.classList.remove('hidden');
-            const controls = document.getElementById('audioControls');
-            if (controls) controls.classList.add('hidden');
-        }
-        
-        function hidePermissionPrompt() {
-            const prompt = document.getElementById('permissionPrompt');
-            if (prompt) prompt.classList.add('hidden');
-            const controls = document.getElementById('audioControls');
-            if (controls) controls.classList.remove('hidden');
-        }
-        
-        async function setupWebRTC(isCaller) {
-            try {
-                if (!microphonePermissionGranted) {
-                    showPermissionPrompt();
-                    await requestMicrophonePermission();
-                }
-                
-                localStream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true,
-                        sampleRate: 48000,
-                        channelCount: 1
-                    },
-                    video: false
-                });
-                
-                const localVideo = document.getElementById('localVideo');
-                if (localVideo) {
-                    localVideo.srcObject = localStream;
-                    localVideo.muted = true;
-                    localVideo.play().catch(e => {});
-                }
-                
-                const config = {
-                    iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' }
-                    ],
-                    iceCandidatePoolSize: 10
-                };
-                
-                peerConnection = new RTCPeerConnection(config);
-                
-                localStream.getTracks().forEach(track => {
-                    peerConnection.addTrack(track, localStream);
-                });
-                
-                peerConnection.ontrack = (event) => {
-                    const remoteAudio = document.getElementById('remoteAudio');
-                    if (remoteAudio && event.streams[0]) {
-                        remoteAudio.srcObject = event.streams[0];
-                        remoteAudio.play().catch(e => {});
-                    }
-                };
-                
-                peerConnection.onicecandidate = (event) => {
-                    if (event.candidate) {
-                        ws.send(JSON.stringify({
-                            type: 'ice_candidate',
-                            to: currentCallWith,
-                            candidate: event.candidate
-                        }));
-                    }
-                };
-                
-                peerConnection.oniceconnectionstatechange = () => {
-                    switch (peerConnection.iceConnectionState) {
-                        case 'connected':
-                        case 'completed':
-                            hideCallError();
-                            break;
-                        case 'failed':
-                            showCallError('Connection failed.');
-                            playCallErrorSound();
-                            setTimeout(() => endCall(), 3000);
-                            break;
-                    }
-                };
-                
-                const controls = document.getElementById('audioControls');
-                if (controls) controls.classList.remove('hidden');
-                
-                if (isCaller) {
-                    const offer = await peerConnection.createOffer({
-                        offerToReceiveAudio: true,
-                        offerToReceiveVideo: false
-                    });
-                    await peerConnection.setLocalDescription(offer);
-                    
-                    ws.send(JSON.stringify({
-                        type: 'webrtc_offer',
-                        to: currentCallWith,
-                        offer: offer
-                    }));
-                }
-                
-            } catch (error) {
-                showCallError('Call setup failed: ' + error.message);
-                playCallErrorSound();
-                setTimeout(() => endCall(), 2000);
-            }
-        }
-        
-        async function handleWebRTCOffer(offer, from) {
-            try {
-                if (!peerConnection) {
-                    await setupWebRTC(false);
-                } else {
-                    console.log('Reusing existing peer connection');
-                }
-                
-                await peerConnection.setRemoteDescription(offer);
-                
-                const answer = await peerConnection.createAnswer();
-                await peerConnection.setLocalDescription(answer);
-                
-                ws.send(JSON.stringify({
-                    type: 'webrtc_answer',
-                    to: from,
-                    answer: answer
-                }));
-                
-                await flushPendingIceCandidates();
-                
-            } catch (error) {
-                showCallError('Failed to accept call.');
-                playCallErrorSound();
-                setTimeout(() => endCall(), 2000);
-            }
-        }
-        
-        async function handleWebRTCAnswer(answer) {
-            try {
-                if (!peerConnection) {
-                    console.log('No peer connection — cannot set answer');
-                    return;
-                }
-                await peerConnection.setRemoteDescription(answer);
-                await flushPendingIceCandidates();
-            } catch (error) {
-                showCallError('Call connection failed: ' + error.message);
-                playCallErrorSound();
-            }
-        }
-        
-        async function handleICECandidate(candidate) {
-            try {
-                if (peerConnection && peerConnection.remoteDescription) {
-                    await peerConnection.addIceCandidate(candidate);
-                } else {
-                    pendingIceCandidates.push(candidate);
-                }
-            } catch (error) {
-                console.error('Error adding ICE candidate:', error);
-            }
-        }
-
-        async function flushPendingIceCandidates() {
-            if (!peerConnection || !peerConnection.remoteDescription) return;
-            const candidates = pendingIceCandidates;
-            pendingIceCandidates = [];
-            for (const candidate of candidates) {
-                try {
-                    await peerConnection.addIceCandidate(candidate);
-                } catch (e) {
-                    console.log('Failed to add queued candidate:', e);
-                }
-            }
-        }
-        
-        function toggleMute() {
-            if (localStream) {
-                const audioTracks = localStream.getAudioTracks();
-                audioTracks.forEach(track => {
-                    track.enabled = !track.enabled;
-                });
-                isMuted = !isMuted;
-                const muteBtn = document.getElementById('muteButton');
-                if (muteBtn) muteBtn.textContent = isMuted ? 'Unmute' : 'Mute';
-            }
-        }
-        
-        function toggleDeafen() {
-            const remoteAudio = document.getElementById('remoteAudio');
-            if (remoteAudio) {
-                remoteAudio.muted = !remoteAudio.muted;
-                isDeafened = !isDeafened;
-                const deafenBtn = document.getElementById('deafenButton');
-                if (deafenBtn) deafenBtn.textContent = isDeafened ? 'Undeafen' : 'Deafen';
-            }
-        }
-        
-        function cleanupWebRTC() {
-            pendingIceCandidates = [];
-            
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
-                localStream = null;
-            }
-            
-            if (peerConnection) {
-                peerConnection.close();
-                peerConnection = null;
-            }
-            
-            const localVideo = document.getElementById('localVideo');
-            if (localVideo) {
-                localVideo.srcObject = null;
-                localVideo.pause();
-            }
-            
-            const remoteAudio = document.getElementById('remoteAudio');
-            if (remoteAudio) {
-                remoteAudio.srcObject = null;
-                remoteAudio.pause();
-            }
-            
-            isMuted = false;
-            isDeafened = false;
-            
-            const muteBtn = document.getElementById('muteButton');
-            if (muteBtn) muteBtn.textContent = 'Mute';
-            
-            const deafenBtn = document.getElementById('deafenBtn');
-            if (deafenBtn) deafenBtn.textContent = 'Deafen';
-            
-            hideCallError();
-            hidePermissionPrompt();
-        }
-        
-        function showCallError(message) {
-            const err = document.getElementById('callError');
-            if (err) {
-                err.textContent = message;
-                err.classList.remove('hidden');
-            }
-        }
-        
-        function hideCallError() {
-            const err = document.getElementById('callError');
-            if (err) err.classList.add('hidden');
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            loadTheme();
-            document.getElementById('loginUsername').focus();
-            
-            document.getElementById('imageModal').addEventListener('click', function(e) {
-                if (e.target === this) {
-                    closeImageModal();
-                }
-            });
-        });
-    </script>
-</body>
-</html>
     `);
 });
 
