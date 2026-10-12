@@ -1047,7 +1047,7 @@ app.get("/", (req, res) => {
     
     <div class="global-banner">
         <marquee behavior="scroll" direction="left" scrollamount="6">
-            🎉 UPDATE 1.5: THE "P2P FILE TRANSFER" UPDATE IS HERE! 🎉 SEND FILES DIRECTLY TO YOUR FRIENDS • PEER-TO-PEER • NO SERVER STORAGE • JUST LIKE CLASSIC SKYPE! 📁
+            🎉 UPDATE 1.4: THE "DIAL-UP MODEM" UPDATE HAS COME OUT! 🎉 CHECK OUT /ANALYTICS FOR MORE INFO! 📊 NOW FEATURING: WORKING VOICE CALLS • PLUG-AND-PLAY MICROPHONES • SERVER-SIDE ACCOUNTS • PERSISTENT MESSAGES • STATUS SELECTOR • MOBILE SYNC • P2P FILE SHARING • AND MORE! 🚀
         </marquee>
     </div>
     
@@ -3243,16 +3243,13 @@ app.get("/", (req, res) => {
                 };
 
                 transfer.pc.oniceconnectionstatechange = () => {
-                    const iceState = transfer.pc.iceConnectionState;
-                    if (iceState !== 'failed') return;
-                    if (transfer.direction === 'send') {
-                        if (transfer.bytesSent >= transfer.filesize) { finishSend(transfer); return; }
-                    } else if (transfer.direction === 'receive') {
-                        if (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd) { finishReceive(transfer); return; }
-                    }
-                    if (transfer.status !== 'done' && transfer.status !== 'cancelled' &&
-                        transfer.status !== 'declined' && transfer.status !== 'failed') {
-                        failFtTransfer(transfer, 'Connection failed');
+                    // 'closed' just means someone called pc.close() (normal end-of-transfer).
+                    // Only 'failed' indicates a real network problem.
+                    if (transfer.pc.iceConnectionState === 'failed') {
+                        if (transfer.status !== 'done' && transfer.status !== 'cancelled' &&
+                            transfer.status !== 'declined' && transfer.status !== 'failed') {
+                            failFtTransfer(transfer, 'Connection failed');
+                        }
                     }
                 };
 
@@ -3284,16 +3281,11 @@ app.get("/", (req, res) => {
                 };
 
                 transfer.pc.oniceconnectionstatechange = () => {
-                    const iceState = transfer.pc.iceConnectionState;
-                    if (iceState !== 'failed') return;
-                    if (transfer.direction === 'send') {
-                        if (transfer.bytesSent >= transfer.filesize) { finishSend(transfer); return; }
-                    } else if (transfer.direction === 'receive') {
-                        if (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd) { finishReceive(transfer); return; }
-                    }
-                    if (transfer.status !== 'done' && transfer.status !== 'cancelled' &&
-                        transfer.status !== 'declined' && transfer.status !== 'failed') {
-                        failFtTransfer(transfer, 'Connection failed');
+                    if (transfer.pc.iceConnectionState === 'failed' ||
+                        transfer.pc.iceConnectionState === 'closed') {
+                        if (transfer.status !== 'done' && transfer.status !== 'cancelled' && transfer.status !== 'declined') {
+                            failFtTransfer(transfer, 'Connection failed');
+                        }
                     }
                 };
 
@@ -3390,12 +3382,11 @@ app.get("/", (req, res) => {
             };
 
             dc.onerror = (e) => {
-                // Suppress teardown noise: if we already moved all the bytes,
-                // this channel is done and any error is just DTLS teardown.
-                if (transfer.sendingDone) return;
-                if (transfer.direction === 'send' && transfer.bytesSent >= transfer.filesize) return;
-                if (transfer.direction === 'receive' &&
-                    (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd)) return;
+                // Chrome fires a "Restricted" error on RTCDataChannel when the
+                // underlying DTLS transport is torn down after a successful
+                // transfer. It's benign — ignore it.
+                const errName = (e && e.error && (e.error.name || e.error.message || e.error)) || '';
+                if (errName === 'Restricted') return;
 
                 if (transfer.status === 'done' ||
                     transfer.status === 'cancelled' ||
@@ -3403,18 +3394,6 @@ app.get("/", (req, res) => {
                     transfer.status === 'failed') {
                     return;
                 }
-
-                // Chrome's teardown error is an empty "Restricted {}" object
-                // with no .name/.message. Probe every angle.
-                const err = e && e.error;
-                if (err) {
-                    const probe = String(err) + ' ' +
-                                  (err.name || '') + ' ' +
-                                  (err.message || '') + ' ' +
-                                  ((err.constructor && err.constructor.name) || '');
-                    if (probe.indexOf('Restricted') !== -1) return;
-                }
-
                 console.error('DC error:', e);
                 failFtTransfer(transfer, 'Data channel error');
             };
@@ -3459,11 +3438,6 @@ app.get("/", (req, res) => {
                         dc.send(JSON.stringify({ type: 'file-end' }));
                     } catch (e) {}
 
-                    // We're done sending. Mark it and detach the error handler
-                    // so Chrome's DTLS teardown "Restricted" event can't reach us.
-                    transfer.sendingDone = true;
-                    try { dc.onerror = null; } catch (e) {}
-
                     updateFtProgressWindow(transfer);
                     setTimeout(() => {
                         if (transfer.status === 'transferring') {
@@ -3480,6 +3454,7 @@ app.get("/", (req, res) => {
         }
 
         function finishSend(transfer) {
+            if (transfer.status === 'done') return;
             // Silence the data channel before we tear it down — Chrome
             // fires a benign "Restricted" error on DTLS teardown.
             if (transfer.dc) {
@@ -5686,7 +5661,7 @@ app.get('/mobile', (req, res) => {
     <body>
         <div class="global-banner">
             <marquee behavior="scroll" direction="left" scrollamount="6">
-                🎉 UPDATE 1.5: THE "P2P FILE TRANSFER" UPDATE IS HERE! 🎉 SEND FILES DIRECTLY TO FRIENDS • PEER-TO-PEER • NO SERVER STORAGE! 📁
+                🎉 UPDATE 1.4: THE "DIAL-UP MODEM" UPDATE HAS COME OUT! 🎉 CHECK OUT /ANALYTICS FOR MORE INFO! 📊 NOW FEATURING: WORKING VOICE CALLS • PLUG-AND-PLAY MICROPHONES • SERVER-SIDE ACCOUNTS • PERSISTENT MESSAGES • STATUS SELECTOR • MOBILE SYNC • P2P FILE SHARING • AND MORE! 🚀
             </marquee>
         </div>
         
@@ -7411,16 +7386,11 @@ app.get('/mobile', (req, res) => {
                         if (e.candidate) sendMobileFtSignal(transfer, { type: 'candidate', candidate: e.candidate });
                     };
                     transfer.pc.oniceconnectionstatechange = () => {
-                        const iceState = transfer.pc.iceConnectionState;
-                        if (iceState !== 'failed') return;
-                        if (transfer.direction === 'send') {
-                            if (transfer.bytesSent >= transfer.filesize) { finishMobileSend(transfer); return; }
-                        } else if (transfer.direction === 'receive') {
-                            if (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd) { finishMobileReceive(transfer); return; }
-                        }
-                        if (transfer.status !== 'done' && transfer.status !== 'cancelled' &&
-                            transfer.status !== 'declined' && transfer.status !== 'failed') {
-                            failMobileFtTransfer(transfer, 'Connection failed');
+                        if (transfer.pc.iceConnectionState === 'failed') {
+                            if (transfer.status !== 'done' && transfer.status !== 'cancelled' &&
+                                transfer.status !== 'declined' && transfer.status !== 'failed') {
+                                failMobileFtTransfer(transfer, 'Connection failed');
+                            }
                         }
                     };
                     const dc = transfer.pc.createDataChannel('file', { ordered: true });
@@ -7444,16 +7414,11 @@ app.get('/mobile', (req, res) => {
                         if (e.candidate) sendMobileFtSignal(transfer, { type: 'candidate', candidate: e.candidate });
                     };
                     transfer.pc.oniceconnectionstatechange = () => {
-                        const iceState = transfer.pc.iceConnectionState;
-                        if (iceState !== 'failed') return;
-                        if (transfer.direction === 'send') {
-                            if (transfer.bytesSent >= transfer.filesize) { finishMobileSend(transfer); return; }
-                        } else if (transfer.direction === 'receive') {
-                            if (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd) { finishMobileReceive(transfer); return; }
-                        }
-                        if (transfer.status !== 'done' && transfer.status !== 'cancelled' &&
-                            transfer.status !== 'declined' && transfer.status !== 'failed') {
-                            failMobileFtTransfer(transfer, 'Connection failed');
+                        if (transfer.pc.iceConnectionState === 'failed') {
+                            if (transfer.status !== 'done' && transfer.status !== 'cancelled' &&
+                                transfer.status !== 'declined' && transfer.status !== 'failed') {
+                                failMobileFtTransfer(transfer, 'Connection failed');
+                            }
                         }
                     };
                     transfer.pc.ondatachannel = (event) => {
@@ -7530,10 +7495,8 @@ app.get('/mobile', (req, res) => {
                     }
                 };
                 dc.onerror = (e) => {
-                    if (transfer.sendingDone) return;
-                    if (transfer.direction === 'send' && transfer.bytesSent >= transfer.filesize) return;
-                    if (transfer.direction === 'receive' &&
-                        (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd)) return;
+                    const errName = (e && e.error && (e.error.name || e.error.message || e.error)) || '';
+                    if (errName === 'Restricted') return;
 
                     if (transfer.status === 'done' ||
                         transfer.status === 'cancelled' ||
@@ -7541,16 +7504,6 @@ app.get('/mobile', (req, res) => {
                         transfer.status === 'failed') {
                         return;
                     }
-
-                    const err = e && e.error;
-                    if (err) {
-                        const probe = String(err) + ' ' +
-                                      (err.name || '') + ' ' +
-                                      (err.message || '') + ' ' +
-                                      ((err.constructor && err.constructor.name) || '');
-                        if (probe.indexOf('Restricted') !== -1) return;
-                    }
-
                     console.error('Mobile DC error:', e);
                     failMobileFtTransfer(transfer, 'Data channel error');
                 };
@@ -7585,8 +7538,6 @@ app.get('/mobile', (req, res) => {
                         }
                     }
                     try { dc.send(JSON.stringify({ type: 'file-end' })); } catch (e) {}
-                    transfer.sendingDone = true;
-                    try { dc.onerror = null; } catch (e) {}
                     updateMobileFtProgress(transfer);
                     setTimeout(() => {
                         if (transfer.status === 'transferring') finishMobileSend(transfer);
@@ -8165,7 +8116,7 @@ app.get('/analytics', (req, res) => {
         
         <div class="global-banner">
             <marquee behavior="scroll" direction="left" scrollamount="6">
-                🎉 UPDATE 1.5: THE "P2P FILE TRANSFER" UPDATE IS HERE! 🎉 SEND FILES DIRECTLY TO FRIENDS • PEER-TO-PEER • NO SERVER STORAGE! 📁
+                🎉 UPDATE 1.4: THE "DIAL-UP MODEM" UPDATE HAS COME OUT! 🎉 CHECK OUT /ANALYTICS FOR MORE INFO! 📊 NOW FEATURING: WORKING VOICE CALLS • PLUG-AND-PLAY MICROPHONES • SERVER-SIDE ACCOUNTS • PERSISTENT MESSAGES • STATUS SELECTOR • MOBILE SYNC • P2P FILE SHARING • AND MORE! 🚀
             </marquee>
         </div>
         
@@ -8207,7 +8158,7 @@ ${'█'.repeat(Math.min(40, totalGroups))} ${totalGroups} active groups
                 </div>
                 
                 <div class="whats-new-banner">
-                    <div class="whats-new-header">✨ WHAT'S NEW IN UPDATE 1.5 — THE "P2P FILE TRANSFER" UPDATE ✨</div>
+                    <div class="whats-new-header">✨ WHAT'S NEW IN UPDATE 1.4 — THE "DIAL-UP MODEM" UPDATE ✨</div>
                     
                     <div class="feature-grid">
                         <div class="feature-card">
@@ -8215,7 +8166,7 @@ ${'█'.repeat(Math.min(40, totalGroups))} ${totalGroups} active groups
                             <div class="feature-card-body">
                                 • Send files directly via WebRTC<br>
                                 • Peer-to-peer, no server storage<br>
-                                • Accept / decline popup like classic Skype<br>
+                                • Accept / decline popup<br>
                                 • Progress bar with speed & ETA
                             </div>
                         </div>
