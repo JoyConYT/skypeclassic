@@ -4475,3277 +4475,2392 @@ ioserver.on('connection', (socket) => {
 app.get('/mobile', (req, res) => {
     console.log('📱 Serving mobile version');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Skype Classic Mobile</title>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-        <style>
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-                font-family: 'Tahoma', 'Arial', sans-serif;
-                -webkit-tap-highlight-color: transparent;
-            }
-            
-            :root {
-                --bg-primary: #6C00A0;
-                --window-bg: #ECE9D8;
-                --titlebar-start: #0A246A;
-                --titlebar-end: #6B8DC3;
-                --border-light: #FFFFFF;
-                --border-dark: #808080;
-                --text-primary: #000000;
-                --text-light: #FFFFFF;
-                --button-bg: #ECE9D8;
-                --contact-hover: #6C00A0;
-                --banner-bg: linear-gradient(90deg, #FFD700, #FFA500);
-                --banner-text: #0A246A;
-                --bg-image: url('/images/bbg.jpg');
-                --text-secondary: #666666;
-                --status-online: #4CAF50;
-                --status-busy: #E53935;
-                --status-away: #FFB300;
-                --status-offline: #999999;
-                --accent: #6C00A0;
-            }
-            
-            .dark-theme {
-                --bg-primary: #1a1a1a;
-                --window-bg: #2d2d2d;
-                --titlebar-start: #2b2b2b;
-                --titlebar-end: #4a4a4a;
-                --border-light: #4a4a4a;
-                --border-dark: #1a1a1a;
-                --text-primary: #e0e0e0;
-                --text-light: #ffffff;
-                --button-bg: #3d3d3d;
-                --contact-hover: #4a4a4a;
-                --banner-bg: linear-gradient(90deg, #b8860b, #8b4513);
-                --banner-text: #ffd700;
-                --bg-image: url('/images/dbg.jpg');
-                --text-secondary: #b0b0b0;
-                --accent: #9b59b6;
-            }
-            
-            html, body {
-                height: 100%;
-            }
-            
-            body {
-                background: var(--bg-primary) var(--bg-image);
-                background-size: cover;
-                background-position: center;
-                background-repeat: no-repeat;
-                background-attachment: fixed;
-                color: var(--text-primary);
-                transition: background 0.5s ease, color 0.3s ease;
-                overflow: hidden;
-            }
-            
-            /* ===== Global banner ===== */
-            .global-banner {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                background: var(--banner-bg);
-                border-bottom: 3px solid var(--titlebar-start);
-                overflow: hidden;
-                padding: 6px 0;
-                z-index: 9999;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-            }
-            .global-banner marquee {
-                background: none;
-                color: var(--banner-text);
-                text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
-                font-size: 11px;
-            }
-            
-            /* ===== Theme switcher ===== */
-            .theme-switcher {
-                position: fixed;
-                top: 38px;
-                left: 8px;
-                z-index: 9999;
-                background: var(--window-bg);
-                border: 2px solid;
-                border-top-color: var(--border-light);
-                border-left-color: var(--border-light);
-                border-right-color: var(--border-dark);
-                border-bottom-color: var(--border-dark);
-                padding: 2px;
-                border-radius: 3px;
-            }
-            .theme-btn {
-                background: var(--button-bg);
-                border: 2px solid;
-                border-top-color: var(--border-light);
-                border-left-color: var(--border-light);
-                border-right-color: var(--border-dark);
-                border-bottom-color: var(--border-dark);
-                padding: 3px 8px;
-                font-size: 10px;
-                font-weight: bold;
-                cursor: pointer;
-                color: var(--text-primary);
-            }
-            .theme-btn:active {
-                background: var(--contact-hover);
-                color: var(--text-light);
-            }
-            
-            /* ===== Window chrome ===== */
-            .xp-window {
-                background: var(--window-bg);
-                border: 2px solid;
-                border-top-color: var(--border-light);
-                border-left-color: var(--border-light);
-                border-right-color: var(--border-dark);
-                border-bottom-color: var(--border-dark);
-                box-shadow: 2px 2px 6px rgba(0,0,0,0.4);
-            }
-            
-            .xp-titlebar {
-                background: linear-gradient(90deg, var(--titlebar-start), var(--titlebar-end));
-                color: var(--text-light);
-                padding: 5px 8px;
-                font-size: 11px;
-                font-weight: bold;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                min-height: 22px;
-            }
-            .xp-titlebar-title {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                min-width: 0;
-                flex: 1;
-            }
-            .xp-titlebar-controls {
-                display: flex;
-                gap: 2px;
-                flex-shrink: 0;
-            }
-            .xp-button {
-                width: 20px;
-                height: 18px;
-                border: 1px solid;
-                border-top-color: var(--border-light);
-                border-left-color: var(--border-light);
-                border-right-color: var(--border-dark);
-                border-bottom-color: var(--border-dark);
-                background: var(--button-bg);
-                font-size: 10px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                line-height: 1;
-                color: var(--text-primary);
-            }
-            .xp-button:active {
-                background: var(--contact-hover);
-                color: var(--text-light);
-            }
-            
-            .xp-status-bar {
-                background: var(--window-bg);
-                border-top: 1px solid var(--border-dark);
-                padding: 4px 8px;
-                font-size: 10px;
-                color: var(--text-primary);
-                min-height: 20px;
-                display: flex;
-                align-items: center;
-                flex-shrink: 0;
-            }
-            
-            /* ===== Auth screen ===== */
-            #authOverlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 20px;
-                padding-top: 70px;
-                z-index: 1000;
-                overflow-y: auto;
-            }
-            
-            .auth-window {
-                width: 100%;
-                max-width: 420px;
-            }
-            
-            .auth-tabs {
-                display: flex;
-                margin-bottom: 0;
-                padding: 8px 8px 0 8px;
-                background: var(--window-bg);
-            }
-            .auth-tab {
-                padding: 6px 14px;
-                background: var(--button-bg);
-                border: 1px solid var(--border-dark);
-                border-bottom: none;
-                font-size: 12px;
-                font-weight: bold;
-                cursor: pointer;
-                color: var(--text-primary);
-                margin-right: 2px;
-            }
-            .auth-tab.active {
-                background: var(--window-bg);
-            }
-            
-            .auth-body {
-                padding: 12px;
-                background: var(--window-bg);
-            }
-            
-            .auth-fieldset {
-                border: 1px solid var(--border-dark);
-                padding: 14px;
-                margin-bottom: 12px;
-                position: relative;
-                background: var(--window-bg);
-            }
-            .auth-legend {
-                background: var(--window-bg);
-                padding: 2px 8px;
-                font-size: 11px;
-                font-weight: bold;
-                position: absolute;
-                top: -8px;
-                left: 8px;
-                color: var(--text-primary);
-            }
-            
-            .xp-input {
-                width: 100%;
-                padding: 8px;
-                border: 2px solid;
-                border-top-color: var(--border-dark);
-                border-left-color: var(--border-dark);
-                border-right-color: var(--border-light);
-                border-bottom-color: var(--border-light);
-                background: var(--window-bg);
-                font-size: 14px;
-                margin-bottom: 10px;
-                color: var(--text-primary);
-                font-family: 'Tahoma', 'Arial', sans-serif;
-            }
-            .xp-input:focus {
-                outline: 1px dotted var(--titlebar-start);
-                outline-offset: -3px;
-            }
-            
-            .xp-button-large {
-                background: var(--button-bg);
-                border: 2px solid;
-                border-top-color: var(--border-light);
-                border-left-color: var(--border-light);
-                border-right-color: var(--border-dark);
-                border-bottom-color: var(--border-dark);
-                padding: 8px 20px;
-                font-size: 13px;
-                font-weight: bold;
-                cursor: pointer;
-                color: var(--text-primary);
-                font-family: 'Tahoma', 'Arial', sans-serif;
-            }
-            .xp-button-large:active {
-                border-top-color: var(--border-dark);
-                border-left-color: var(--border-dark);
-                border-right-color: var(--border-light);
-                border-bottom-color: var(--border-light);
-                background: var(--contact-hover);
-                color: var(--text-light);
-            }
-            
-            .auth-error {
-                background: #ffdddd;
-                color: #8B0000;
-                padding: 8px 10px;
-                border: 1px solid #8B0000;
-                margin-bottom: 10px;
-                font-size: 11px;
-                display: none;
-            }
-            .auth-error.show { display: block; }
-            
-            .auth-footer {
-                text-align: center;
-                padding: 10px;
-                color: var(--text-secondary);
-                font-size: 10px;
-                border-top: 1px solid var(--border-dark);
-                background: var(--window-bg);
-            }
-            .auth-footer a {
-                color: var(--titlebar-start);
-                text-decoration: underline;
-                font-weight: bold;
-            }
-            .dark-theme .auth-footer a { color: var(--accent); }
-            
-            /* ===== Main app ===== */
-            #mobileApp {
-                display: none;
-                flex-direction: column;
-                height: 100vh;
-                padding-top: 30px;
-                padding-bottom: 20px;
-            }
-            #mobileApp.active { display: flex; }
-            
-            .mobile-window {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-                margin: 8px;
-                min-height: 0;
-                overflow: hidden;
-            }
-            
-            .mobile-tabs {
-                display: flex;
-                background: var(--button-bg);
-                border-bottom: 1px solid var(--border-dark);
-                padding: 4px 4px 0 4px;
-                flex-shrink: 0;
-            }
-            .mobile-tab {
-                flex: 1;
-                padding: 10px 8px;
-                text-align: center;
-                background: var(--button-bg);
-                border: 1px solid var(--border-dark);
-                border-bottom: none;
-                color: var(--text-primary);
-                font-size: 12px;
-                font-weight: bold;
-                cursor: pointer;
-                font-family: 'Tahoma', 'Arial', sans-serif;
-                margin-right: 2px;
-            }
-            .mobile-tab.active {
-                background: var(--window-bg);
-                position: relative;
-                z-index: 2;
-            }
-            
-            .tab-content {
-                display: none;
-                flex: 1;
-                overflow-y: auto;
-                background: var(--window-bg);
-                min-height: 0;
-            }
-            .tab-content.active {
-                display: flex;
-                flex-direction: column;
-            }
-            #chatTab.active {
-                overflow: hidden;
-            }
-            
-            /* ===== Contacts ===== */
-            .contacts-header {
-                background: var(--button-bg);
-                border-bottom: 1px solid var(--border-dark);
-                padding: 10px;
-                flex-shrink: 0;
-            }
-            .contacts-header h3 {
-                margin-bottom: 8px;
-                font-size: 12px;
-                color: var(--text-primary);
-            }
-            .search-box {
-                width: 100%;
-                padding: 8px 10px;
-                border: 2px solid;
-                border-top-color: var(--border-dark);
-                border-left-color: var(--border-dark);
-                border-right-color: var(--border-light);
-                border-bottom-color: var(--border-light);
-                font-size: 13px;
-                background: var(--window-bg);
-                color: var(--text-primary);
-                font-family: 'Tahoma', 'Arial', sans-serif;
-            }
-            .search-box:focus {
-                outline: 1px dotted var(--titlebar-start);
-                outline-offset: -3px;
-            }
-            
-            .contact-list {
-                padding: 0;
-                background: var(--window-bg);
-            }
-            
-            .mobile-contact {
-                display: flex;
-                align-items: center;
-                padding: 12px;
-                background: var(--window-bg);
-                border-bottom: 1px solid var(--border-dark);
-                cursor: pointer;
-            }
-            .mobile-contact:active {
-                background: var(--contact-hover);
-                color: var(--text-light);
-            }
-            
-            .contact-avatar {
-                width: 42px;
-                height: 42px;
-                border-radius: 50%;
-                background: linear-gradient(135deg, var(--titlebar-start), var(--titlebar-end));
-                color: var(--text-light);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-weight: bold;
-                font-size: 18px;
-                margin-right: 12px;
-                flex-shrink: 0;
-                border: 1px solid var(--border-dark);
-            }
-            
-            .contact-info {
-                flex: 1;
-                min-width: 0;
-            }
-            .contact-name {
-                font-weight: 600;
-                font-size: 13px;
-                margin-bottom: 3px;
-                color: var(--text-primary);
-            }
-            .mobile-contact:active .contact-name,
-            .mobile-contact:active .contact-status {
-                color: var(--text-light);
-            }
-            .contact-status {
-                font-size: 11px;
-                display: flex;
-                align-items: center;
-                color: var(--text-secondary);
-            }
-            .status-dot {
-                width: 8px;
-                height: 8px;
-                border-radius: 50%;
-                margin-right: 6px;
-                flex-shrink: 0;
-            }
-            .online .status-dot { background: var(--status-online); box-shadow: 0 0 6px var(--status-online); }
-            .busy .status-dot { background: var(--status-busy); box-shadow: 0 0 6px var(--status-busy); }
-            .away .status-dot { background: var(--status-away); box-shadow: 0 0 6px var(--status-away); }
-            .offline .status-dot { background: var(--status-offline); }
-            
-            .add-contact-btn, .create-group-btn {
-                background: var(--button-bg);
-                color: var(--text-primary);
-                border: 2px solid;
-                border-top-color: var(--border-light);
-                border-left-color: var(--border-light);
-                border-right-color: var(--border-dark);
-                border-bottom-color: var(--border-dark);
-                padding: 10px 16px;
-                margin: 10px;
-                font-size: 13px;
-                font-weight: bold;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 8px;
-                cursor: pointer;
-                font-family: 'Tahoma', 'Arial', sans-serif;
-                width: calc(100% - 20px);
-            }
-            .add-contact-btn:active, .create-group-btn:active {
-                border-top-color: var(--border-dark);
-                border-left-color: var(--border-dark);
-                border-right-color: var(--border-light);
-                border-bottom-color: var(--border-light);
-                background: var(--contact-hover);
-                color: var(--text-light);
-            }
-            
-            /* ===== Chat ===== */
-            .chat-header {
-                background: var(--titlebar-start);
-                color: var(--text-light);
-                padding: 8px 12px;
-                font-weight: 600;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                font-size: 12px;
-                flex-shrink: 0;
-            }
-            .chat-header .call-contact-btn,
-            .chat-header .file-contact-btn {
-                margin-left: 4px;
-                background: #00A300;
-                border: 1px solid var(--border-light);
-                color: var(--text-light);
-                font-size: 14px;
-                padding: 3px 8px;
-                cursor: pointer;
-                font-family: 'Tahoma', 'Arial', sans-serif;
-            }
-            .chat-header .file-contact-btn {
-                background: #C07000;
-            }
-            .chat-header .call-contact-btn:active,
-            .chat-header .file-contact-btn:active {
-                border-color: var(--border-dark);
-            }
-            .back-btn {
-                background: var(--button-bg);
-                border: 1px solid;
-                border-top-color: var(--border-light);
-                border-left-color: var(--border-light);
-                border-right-color: var(--border-dark);
-                border-bottom-color: var(--border-dark);
-                color: var(--text-primary);
-                font-size: 14px;
-                cursor: pointer;
-                padding: 2px 8px;
-                font-weight: bold;
-                line-height: 1;
-            }
-            
-            .chat-messages {
-                flex: 1;
-                overflow-y: auto;
-                padding: 10px;
-                background: var(--window-bg);
-                min-height: 0;
-            }
-            
-            .message {
-                margin-bottom: 12px;
-                clear: both;
-            }
-            .message-other { float: left; max-width: 85%; }
-            .message-self { float: right; max-width: 85%; }
-            
-            .message-bubble {
-                padding: 8px 12px;
-                font-size: 13px;
-                line-height: 1.4;
-                word-wrap: break-word;
-                max-width: 100%;
-                border: 1px solid var(--border-dark);
-            }
-            .message-other .message-bubble {
-                background: var(--window-bg);
-                color: var(--text-primary);
-                border-top-color: var(--border-light);
-                border-left-color: var(--border-light);
-            }
-            .message-self .message-bubble {
-                background: var(--titlebar-start);
-                color: var(--text-light);
-                border-top-color: var(--titlebar-end);
-                border-left-color: var(--titlebar-end);
-                border-right-color: var(--titlebar-start);
-                border-bottom-color: var(--titlebar-start);
-            }
-            
-            .message-image {
-                max-width: 200px;
-                max-height: 200px;
-                cursor: pointer;
-                border: 2px solid var(--titlebar-start);
-            }
-            
-            .message-sender {
-                font-size: 10px;
-                font-weight: 600;
-                margin-bottom: 3px;
-                color: var(--text-secondary);
-                padding: 0 2px;
-            }
-            .message-time {
-                font-size: 10px;
-                color: var(--text-secondary);
-                margin-top: 3px;
-                text-align: right;
-                padding: 0 2px;
-            }
-            .message-self .message-time {
-                color: rgba(255,255,255,0.7);
-            }
-            
-            .chat-input-container {
-                background: var(--button-bg);
-                border-top: 1px solid var(--border-dark);
-                padding: 8px;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                flex-shrink: 0;
-            }
-            .chat-input {
-                flex: 1;
-                padding: 8px 10px;
-                border: 2px solid;
-                border-top-color: var(--border-dark);
-                border-left-color: var(--border-dark);
-                border-right-color: var(--border-light);
-                border-bottom-color: var(--border-light);
-                font-size: 14px;
-                outline: none;
-                background: var(--window-bg);
-                color: var(--text-primary);
-                font-family: 'Tahoma', 'Arial', sans-serif;
-                min-width: 0;
-            }
-            
-            .send-button, .image-button, .file-mobile-button {
-                height: 40px;
-                min-width: 44px;
-                border: 2px solid;
-                border-top-color: var(--border-light);
-                border-left-color: var(--border-light);
-                border-right-color: var(--border-dark);
-                border-bottom-color: var(--border-dark);
-                background: var(--titlebar-start);
-                color: var(--text-light);
-                font-size: 14px;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-family: 'Tahoma', 'Arial', sans-serif;
-                flex-shrink: 0;
-            }
-            .image-button {
-                background: var(--accent);
-            }
-            .file-mobile-button {
-                background: #C07000;
-            }
-            .send-button:active, .image-button:active, .file-mobile-button:active {
-                border-top-color: var(--border-dark);
-                border-left-color: var(--border-dark);
-                border-right-color: var(--border-light);
-                border-bottom-color: var(--border-light);
-                opacity: 0.85;
-            }
-            
-            /* ===== Empty state ===== */
-            .empty-state {
-                text-align: center;
-                padding: 40px 20px;
-                color: var(--text-secondary);
-            }
-            .empty-icon {
-                font-size: 48px;
-                margin-bottom: 15px;
-                opacity: 0.6;
-            }
-            .empty-title {
-                font-size: 14px;
-                margin-bottom: 6px;
-                color: var(--text-primary);
-                font-weight: bold;
-            }
-            .empty-text {
-                font-size: 12px;
-                color: var(--text-secondary);
-            }
-            
-            .hidden { display: none !important; }
-            
-            /* ===== Modal / status sheet / toast ===== */
-            .modal {
-                display: none;
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.85);
-                z-index: 10001;
-                justify-content: center;
-                align-items: center;
-            }
-            .modal.active { display: flex; }
-            .modal-content {
-                max-width: 90%;
-                max-height: 90%;
-                border: 2px solid var(--border-light);
-            }
-            .modal-close {
-                position: absolute;
-                top: 15px;
-                right: 20px;
-                color: var(--text-light);
-                font-size: 32px;
-                cursor: pointer;
-                font-weight: bold;
-            }
-            
-            .toast {
-                position: fixed;
-                bottom: 20px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: var(--window-bg);
-                color: var(--text-primary);
-                padding: 10px 18px;
-                border: 2px solid;
-                border-top-color: var(--border-light);
-                border-left-color: var(--border-light);
-                border-right-color: var(--border-dark);
-                border-bottom-color: var(--border-dark);
-                font-size: 12px;
-                font-weight: bold;
-                z-index: 10002;
-                display: none;
-                box-shadow: 2px 2px 8px rgba(0,0,0,0.4);
-                max-width: 90%;
-                text-align: center;
-            }
-            .toast.show { display: block; }
-            .toast.error {
-                background: #FFDDDD;
-                color: #8B0000;
-                border-color: #8B0000;
-            }
-            
-            .status-sheet-overlay {
-                display: none;
-                position: fixed;
-                top: 0; left: 0; right: 0; bottom: 0;
-                background: rgba(0,0,0,0.5);
-                z-index: 10100;
-                align-items: flex-end;
-                justify-content: center;
-            }
-            .status-sheet-overlay.active { display: flex; }
-            .status-sheet {
-                background: var(--window-bg);
-                width: 100%;
-                max-width: 500px;
-                border: 2px solid;
-                border-top-color: var(--border-light);
-                border-left-color: var(--border-light);
-                border-right-color: var(--border-dark);
-                border-bottom-color: var(--border-dark);
-                border-bottom: none;
-                padding: 0;
-                box-shadow: 0 -6px 20px rgba(0,0,0,0.4);
-                animation: slideUp 0.2s ease;
-            }
-            @keyframes slideUp {
-                from { transform: translateY(100%); }
-                to { transform: translateY(0); }
-            }
-            .status-sheet-title {
-                background: linear-gradient(90deg, var(--titlebar-start), var(--titlebar-end));
-                color: var(--text-light);
-                padding: 8px 12px;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            .status-sheet-body {
-                padding: 6px;
-            }
-            .status-sheet-option {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                padding: 12px 14px;
-                font-size: 14px;
-                color: var(--text-primary);
-                cursor: pointer;
-                border: 1px solid transparent;
-                background: none;
-                width: 100%;
-                text-align: left;
-                font-family: 'Tahoma', 'Arial', sans-serif;
-            }
-            .status-sheet-option:active {
-                background: var(--contact-hover);
-                color: var(--text-light);
-            }
-            .status-sheet-option .dot {
-                width: 12px;
-                height: 12px;
-                border-radius: 50%;
-                flex-shrink: 0;
-                border: 1px solid var(--border-dark);
-            }
-            .status-sheet-option .dot.online { background: #4CAF50; }
-            .status-sheet-option .dot.busy { background: #E53935; }
-            .status-sheet-option .dot.away { background: #FFB300; }
-            .status-sheet-option .dot.invisible { background: #999999; }
-            .status-sheet-option .dot.offline { background: #999999; }
-            .status-sheet-option .check {
-                margin-left: auto;
-                opacity: 0;
-                color: var(--titlebar-start);
-                font-weight: bold;
-            }
-            .dark-theme .status-sheet-option .check { color: var(--accent); }
-            .status-sheet-option.current .check { opacity: 1; }
-            .status-sheet-cancel {
-                text-align: center;
-                padding: 12px;
-                font-size: 14px;
-                color: var(--titlebar-start);
-                font-weight: bold;
-                cursor: pointer;
-                border-top: 1px solid var(--border-dark);
-                background: var(--button-bg);
-            }
-            .dark-theme .status-sheet-cancel { color: var(--accent); }
-            .status-sheet-cancel:active {
-                background: var(--contact-hover);
-                color: var(--text-light);
-            }
-            
-            /* ===== Titlebar user chip ===== */
-            .titlebar-user-chip {
-                background: rgba(255,255,255,0.18);
-                border: 1px solid rgba(255,255,255,0.3);
-                padding: 3px 8px;
-                display: flex;
-                align-items: center;
-                gap: 5px;
-                cursor: pointer;
-                font-size: 11px;
-                font-weight: bold;
-                color: var(--text-light);
-                max-width: 55%;
-                min-width: 0;
-            }
-            .titlebar-user-chip:active {
-                background: rgba(255,255,255,0.3);
-            }
-            .titlebar-user-name {
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-            .mobile-self-status-dot {
-                width: 9px;
-                height: 9px;
-                border-radius: 50%;
-                flex-shrink: 0;
-                border: 1px solid rgba(0,0,0,0.3);
-            }
-            .mobile-self-status-dot.online { background: #4CAF50; }
-            .mobile-self-status-dot.busy { background: #E53935; }
-            .mobile-self-status-dot.away { background: #FFB300; }
-            .mobile-self-status-dot.invisible { background: #999999; }
-            .mobile-self-status-dot.offline { background: #999999; }
-            
-            .logout-chip {
-                background: rgba(255,255,255,0.18);
-                border: 1px solid rgba(255,255,255,0.3);
-                color: var(--text-light);
-                padding: 3px 8px;
-                font-size: 11px;
-                font-weight: bold;
-                cursor: pointer;
-                font-family: 'Tahoma', 'Arial', sans-serif;
-                flex-shrink: 0;
-            }
-            .logout-chip:active {
-                background: rgba(255,255,255,0.3);
-            }
-            
-            .footer-note {
-                position: fixed;
-                bottom: 3px;
-                right: 5px;
-                font-size: 8px;
-                color: var(--text-secondary);
-                background: var(--window-bg);
-                padding: 1px 4px;
-                opacity: 0.7;
-                z-index: 9998;
-                border: 1px solid var(--border-dark);
-            }
-            
-            /* ===== Call UI ===== */
-            .xp-window-overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0,0,0,0.55);
-                z-index: 10500;
-                display: none;
-                align-items: center;
-                justify-content: center;
-                padding: 16px;
-            }
-            .xp-window-overlay.active {
-                display: flex;
-            }
-            
-            .call-window {
-                width: 100%;
-                max-width: 360px;
-                background: var(--window-bg);
-                border: 2px solid;
-                border-top-color: var(--border-light);
-                border-left-color: var(--border-light);
-                border-right-color: var(--border-dark);
-                border-bottom-color: var(--border-dark);
-                box-shadow: 2px 2px 8px rgba(0,0,0,0.5);
-            }
-            
-            .call-window .xp-titlebar {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 4px 8px;
-                font-size: 11px;
-                font-weight: bold;
-                color: var(--text-light);
-                background: linear-gradient(90deg, var(--titlebar-start), var(--titlebar-end));
-                min-height: 22px;
-            }
-            .call-window .xp-button {
-                width: 20px;
-                height: 18px;
-                border: 1px solid;
-                border-top-color: var(--border-light);
-                border-left-color: var(--border-light);
-                border-right-color: var(--border-dark);
-                border-bottom-color: var(--border-dark);
-                background: var(--button-bg);
-                color: var(--text-primary);
-                font-size: 10px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-            }
-            
-            .call-body {
-                padding: 14px;
-                background: var(--window-bg);
-            }
-            
-            .call-name {
-                text-align: center;
-                font-size: 14px;
-                font-weight: bold;
-                margin-bottom: 6px;
-                color: var(--text-primary);
-            }
-            .call-sub {
-                text-align: center;
-                font-size: 12px;
-                color: var(--text-secondary);
-                margin-bottom: 12px;
-            }
-            .call-icon {
-                text-align: center;
-                font-size: 42px;
-                margin: 6px 0 14px 0;
-            }
-            
-            .call-actions {
-                display: flex;
-                gap: 10px;
-                justify-content: center;
-                margin-top: 6px;
-            }
-            .call-actions .xp-button-large {
-                flex: 1;
-                padding: 12px 8px;
-                font-size: 14px;
-                text-align: center;
-            }
-            .btn-answer {
-                background: #00A300 !important;
-                color: #fff !important;
-            }
-            .btn-decline {
-                background: #C00000 !important;
-                color: #fff !important;
-            }
-            .btn-end {
-                background: #C00000 !important;
-                color: #fff !important;
-                width: 100%;
-                padding: 12px;
-                font-size: 14px;
-            }
-            
-            .call-status-line {
-                text-align: center;
-                font-size: 12px;
-                color: var(--text-primary);
-                margin-bottom: 8px;
-                font-weight: bold;
-            }
-            .call-timer {
-                text-align: center;
-                font-size: 20px;
-                font-family: 'Courier New', monospace;
-                color: var(--text-primary);
-                margin: 10px 0;
-                letter-spacing: 2px;
-            }
-            
-            .audio-controls-mobile {
-                display: flex;
-                gap: 8px;
-                justify-content: center;
-                margin: 10px 0;
-            }
-            .audio-controls-mobile button {
-                flex: 1;
-                padding: 10px 6px;
-                font-size: 13px;
-                font-weight: bold;
-                background: var(--button-bg);
-                border: 2px solid;
-                border-top-color: var(--border-light);
-                border-left-color: var(--border-light);
-                border-right-color: var(--border-dark);
-                border-bottom-color: var(--border-dark);
-                color: var(--text-primary);
-                font-family: 'Tahoma', 'Arial', sans-serif;
-                cursor: pointer;
-            }
-            .audio-controls-mobile button:active {
-                border-top-color: var(--border-dark);
-                border-left-color: var(--border-dark);
-                border-right-color: var(--border-light);
-                border-bottom-color: var(--border-light);
-            }
-            
-            .call-error-mobile {
-                background: #FFDDDD;
-                color: #8B0000;
-                border: 1px solid #8B0000;
-                padding: 8px 10px;
-                font-size: 11px;
-                margin: 8px 0;
-                display: none;
-                text-align: center;
-            }
-            .call-error-mobile.show {
-                display: block;
-            }
-            
-            .call-hidden-video {
-                position: absolute;
-                width: 1px;
-                height: 1px;
-                overflow: hidden;
-                opacity: 0;
-                pointer-events: none;
-            }
+    res.send(`<!DOCTYPE html>
+<html>
+<head>
+<title>Skype Classic</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<style>
+* { margin:0; padding:0; box-sizing:border-box;
+    font-family:-apple-system,'Helvetica Neue',Helvetica,Arial,sans-serif;
+    -webkit-tap-highlight-color:transparent;
+    -webkit-font-smoothing:antialiased; }
+html, body { height:100%; overflow:hidden; background:#000; }
+body { color:#1a1a1a; font-size:15px; display:flex; flex-direction:column; }
 
-            /* ===== Mobile File Transfer ===== */
-            .ft-progress-bar {
-                width: 100%;
-                height: 16px;
-                background: var(--window-bg);
-                border: 2px solid;
-                border-top-color: var(--border-dark);
-                border-left-color: var(--border-dark);
-                border-right-color: var(--border-light);
-                border-bottom-color: var(--border-light);
-                position: relative;
-                overflow: hidden;
-                margin: 8px 0;
-            }
-            .ft-progress-fill {
-                height: 100%;
-                background: linear-gradient(90deg, #0A246A, #6B8DC3);
-                width: 0%;
-                transition: width 0.15s linear;
-            }
-            .ft-filename-mobile {
-                font-weight: bold;
-                font-size: 13px;
-                word-break: break-all;
-                margin: 6px 0;
-                color: var(--text-primary);
-            }
-            .ft-filesize-mobile {
-                font-size: 11px;
-                color: var(--text-secondary);
-                margin-bottom: 8px;
-            }
-            .ft-stats-mobile {
-                display: flex;
-                justify-content: space-between;
-                font-size: 11px;
-                color: var(--text-secondary);
-                margin-top: 4px;
-            }
-            .ft-status-mobile {
-                text-align: center;
-                font-size: 12px;
-                margin: 6px 0;
-                color: var(--text-primary);
-            }
-            .ft-icon-mobile {
-                font-size: 40px;
-                text-align: center;
-                margin: 8px 0;
-            }
+/* ============ STATUS BAR ============ */
+.status-bar {
+    height:20px; background:#000; color:#fff;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 8px; font-size:11px; font-weight:600;
+    flex-shrink:0; letter-spacing:0.3px;
+}
+.sb-side { display:flex; align-items:center; gap:4px; min-width:70px; }
+.sb-right { justify-content:flex-end; }
+.sb-center { font-weight:600; font-size:12px; }
+.sb-battery {
+    display:inline-block; width:22px; height:10px;
+    border:1px solid #fff; border-radius:2px; position:relative;
+}
+.sb-battery::after {
+    content:''; position:absolute; left:1px; top:1px; bottom:1px;
+    width:70%; background:#4CAF50; border-radius:1px;
+}
+.sb-battery::before {
+    content:''; position:absolute; right:-3px; top:3px;
+    width:2px; height:4px; background:#fff;
+    border-radius:0 1px 1px 0;
+}
+.sb-dots { display:flex; gap:2px; align-items:center; }
+.sb-dots span {
+    width:5px; height:5px; border-radius:50%;
+    background:#fff; opacity:0.85;
+}
 
-            /* ===== Mobile inline FT chat bar ===== */
-            .ft-chat-bar {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                padding: 8px 10px;
-                margin: 8px 0;
-                background: var(--button-bg);
-                border: 1px solid var(--border-dark);
-                border-left: 4px solid var(--titlebar-start);
-                font-size: 11px;
-                color: var(--text-primary);
-                clear: both;
-                width: 100%;
-                box-sizing: border-box;
-                float: none;
-                max-width: 100%;
-            }
-            .ft-chat-bar .ft-bar-icon { font-size: 16px; flex-shrink: 0; }
-            .ft-chat-bar .ft-bar-text { flex: 1; min-width: 0; word-break: break-word; }
-            .ft-chat-bar .ft-bar-text strong { display: block; font-weight: bold; margin-bottom: 2px; font-size: 12px; }
-            .ft-chat-bar .ft-bar-text small { color: var(--text-secondary); font-size: 11px; }
-            .ft-chat-bar .ft-bar-progress {
-                width: 100%; height: 5px; background: rgba(0,0,0,0.1);
-                border: 1px solid var(--border-dark); margin-top: 4px; overflow: hidden;
-            }
-            .ft-chat-bar .ft-bar-progress-fill {
-                height: 100%;
-                background: linear-gradient(90deg, #0A246A, #6B8DC3);
-                width: 0%; transition: width 0.2s linear;
-            }
-            .ft-chat-bar.success { border-left-color: #4CAF50; }
-            .ft-chat-bar.success .ft-bar-progress-fill { background: #4CAF50; }
-            .ft-chat-bar.error { border-left-color: #E53935; }
-            .ft-chat-bar.error .ft-bar-progress-fill { background: #E53935; }
-            .ft-chat-bar.cancelled { border-left-color: #999999; }
-            .ft-chat-bar .ft-bar-close {
-                flex-shrink: 0; cursor: pointer; color: var(--text-secondary);
-                font-weight: bold; padding: 2px 6px; user-select: none; font-size: 14px;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="global-banner">
-            <marquee behavior="scroll" direction="left" scrollamount="6">
-                🎉 UPDATE 1.4: THE "DIAL-UP MODEM" UPDATE HAS COME OUT! 🎉 CHECK OUT /ANALYTICS FOR MORE INFO! 📊 NOW FEATURING: WORKING VOICE CALLS • PLUG-AND-PLAY MICROPHONES • SERVER-SIDE ACCOUNTS • PERSISTENT MESSAGES • STATUS SELECTOR • MOBILE SYNC • P2P FILE SHARING • AND MORE! 🚀
-            </marquee>
+/* ============ AUTH ============ */
+#authOverlay {
+    position:fixed; top:20px; left:0; right:0; bottom:0;
+    display:none; flex-direction:column; overflow-y:auto; z-index:1000;
+    background-color:#4a4a52;
+    background-image:
+        repeating-linear-gradient(0deg,
+            rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px,
+            transparent 1px, transparent 4px),
+        repeating-linear-gradient(90deg,
+            rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px,
+            transparent 1px, transparent 4px);
+}
+#authOverlay.active { display:flex; }
+.auth-window {
+    width:100%; max-width:480px; margin:auto; padding:24px 20px;
+}
+.auth-tabs {
+    display:flex; margin:0 auto 20px;
+    width:100%; max-width:340px;
+    background:linear-gradient(180deg,#3a3a42 0%,#1a1a20 100%);
+    border:1px solid #000; border-radius:8px; padding:3px;
+    box-shadow:inset 0 1px 2px rgba(0,0,0,0.5);
+}
+.auth-tab {
+    flex:1; padding:9px 12px; text-align:center;
+    color:#8a8a8a; font-size:13px; font-weight:700;
+    cursor:pointer; border-radius:6px;
+    text-shadow:0 -1px 0 rgba(0,0,0,0.5); transition:all 0.15s;
+}
+.auth-tab.active {
+    background:linear-gradient(180deg,#b088d0 0%,#8040b0 49%,#6C00A0 50%,#4a0070 100%);
+    color:#fff; text-shadow:0 -1px 0 rgba(0,0,0,0.4);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.4), 0 1px 2px rgba(0,0,0,0.3);
+}
+.auth-body { width:100%; max-width:340px; margin:0 auto; }
+.auth-fieldset {
+    position:relative;
+    background:linear-gradient(180deg,#fff 0%,#f7f7f7 100%);
+    border:1px solid #000; border-radius:10px;
+    padding:8px 0; margin-bottom:16px; overflow:hidden;
+    box-shadow:0 2px 8px rgba(0,0,0,0.4);
+}
+.auth-legend {
+    display:block;
+    background:linear-gradient(180deg,#f0f0f0 0%,#d0d0d0 100%);
+    color:#3c3c43; padding:7px 14px;
+    font-size:12px; font-weight:700;
+    text-transform:uppercase; letter-spacing:0.5px;
+    text-shadow:0 1px 0 rgba(255,255,255,0.7);
+    border-bottom:1px solid #b0b0b0;
+}
+.xp-input {
+    display:block; width:100%; padding:10px 14px;
+    border:none; border-bottom:1px solid #d9d9d9;
+    background:transparent; font-size:15px; font-family:inherit;
+    color:#1a1a1a; outline:none;
+}
+.xp-input:last-of-type { border-bottom:none; }
+.xp-input::placeholder { color:#8e8e93; }
+.xp-button-large {
+    display:flex; align-items:center; justify-content:center;
+    width:100%; min-height:44px; padding:12px 20px;
+    background:linear-gradient(180deg,#b088d0 0%,#8040b0 49%,#6C00A0 50%,#4a0070 100%);
+    border:1px solid #2c0044; border-radius:10px;
+    color:#fff; font-size:16px; font-weight:700; font-family:inherit;
+    text-shadow:0 -1px 0 rgba(0,0,0,0.4);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 4px rgba(0,0,0,0.3);
+    cursor:pointer;
+}
+.xp-button-large:active { background:linear-gradient(180deg,#4a0070 0%,#2c0044 100%); }
+.auth-error {
+    display:none;
+    background:linear-gradient(180deg,#8a1a1a 0%,#5a0a0a 100%);
+    color:#fff; padding:10px 14px;
+    border:1px solid #400; border-radius:8px;
+    font-size:13px; font-weight:600; text-align:center;
+    text-shadow:0 -1px 0 rgba(0,0,0,0.4); margin-bottom:12px;
+}
+.auth-error.show { display:block; }
+.auth-footer {
+    text-align:center; color:#b0b0b0; font-size:12px;
+    margin-top:24px; text-shadow:0 -1px 0 rgba(0,0,0,0.6);
+}
+.auth-footer a { color:#cfb0e8; text-decoration:none; font-weight:700; }
+
+/* ============ MAIN APP ============ */
+#mobileApp {
+    display:none; flex:1; flex-direction:column;
+    background:#fff; min-height:0; overflow:hidden;
+}
+#mobileApp.active { display:flex; }
+
+/* ============ NAV BAR ============ */
+.nav-bar {
+    height:44px;
+    background:linear-gradient(180deg,#b088d0 0%,#8040b0 49%,#6C00A0 50%,#4a0070 100%);
+    border-bottom:1px solid #2c0044;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.4);
+    display:flex; align-items:center; padding:0 8px;
+    color:#fff; font-size:17px; font-weight:700;
+    flex-shrink:0; position:relative; z-index:10;
+}
+.nav-title {
+    flex:1; text-align:center;
+    text-shadow:0 -1px 0 rgba(0,0,0,0.5);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    padding:0 8px;
+}
+.nav-btn {
+    background:linear-gradient(180deg,#e8d8f4 0%,#c8a8e0 49%,#b088d0 50%,#9068b8 100%);
+    border:1px solid #3a0055; border-radius:6px;
+    color:#2c0044; font-family:inherit; font-size:12px; font-weight:700;
+    padding:5px 10px; min-height:30px; min-width:44px;
+    text-shadow:0 1px 0 rgba(255,255,255,0.6);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.7), 0 1px 1px rgba(0,0,0,0.3);
+    cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
+    visibility:visible;
+}
+.nav-btn:active {
+    background:linear-gradient(180deg,#6C00A0 0%,#4a0070 100%);
+    color:#fff; text-shadow:0 -1px 0 rgba(0,0,0,0.5);
+}
+.nav-btn.hidden { visibility:hidden; }
+
+/* ============ PANES ============ */
+.tab-content {
+    display:none; flex:1; min-height:0; overflow:hidden;
+    flex-direction:column;
+}
+.tab-content.active { display:flex; }
+
+/* ============ CONTACT LIST ============ */
+#contactsTab.active {
+    background:#fff; overflow-y:auto;
+    -webkit-overflow-scrolling:touch; display:block;
+}
+.messages-list { background:#fff; min-height:100%; }
+.contact-row {
+    display:flex; align-items:center;
+    padding:9px 30px 9px 12px; min-height:62px;
+    border-bottom:1px solid #d9d9d9;
+    background:#fff; cursor:pointer; position:relative;
+}
+.contact-row:active { background:linear-gradient(180deg,#b088d0 0%,#9068b8 100%); }
+.contact-row:active .contact-name,
+.contact-row:active .contact-preview { color:#fff; }
+.contact-row:active .contact-chev::after { border-color:#fff; }
+.contact-main { flex:1; min-width:0; }
+.contact-name {
+    font-size:16px; font-weight:700; color:#000;
+    margin-bottom:3px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.contact-preview {
+    font-size:14px; color:#8e8e93;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    display:flex; align-items:center; gap:4px;
+}
+.status-dot {
+    display:inline-block; width:8px; height:8px;
+    border-radius:50%; flex-shrink:0;
+    border:1px solid rgba(0,0,0,0.15);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.4);
+}
+.status-dot.online    { background:linear-gradient(180deg,#7ad86a 0%,#4aac3a 100%); }
+.status-dot.busy      { background:linear-gradient(180deg,#e87878 0%,#d94a4a 100%); }
+.status-dot.away      { background:linear-gradient(180deg,#f0b040 0%,#d97a20 100%); }
+.status-dot.offline   { background:linear-gradient(180deg,#b0b0b0 0%,#808080 100%); }
+.contact-chev {
+    position:absolute; right:10px; top:50%;
+    transform:translateY(-50%);
+    width:10px; height:10px;
+}
+.contact-chev::after {
+    content:''; display:block; width:8px; height:8px;
+    border-top:2px solid #b088d0;
+    border-right:2px solid #b088d0;
+    transform:rotate(45deg); margin-top:-2px;
+}
+
+/* ============ CHAT ============ */
+#chatTab.active { display:flex; }
+.chat-header {
+    display:flex; gap:8px; padding:8px 10px;
+    background:linear-gradient(180deg,#f0f0f0 0%,#e0e0e0 100%);
+    border-bottom:1px solid #c0c0c0; flex-shrink:0;
+}
+.chat-header.hidden { display:none; }
+.seg-btn {
+    flex:1; padding:9px 8px;
+    background:linear-gradient(180deg,#fbfbfb 0%,#e8e8e8 45%,#d5d5d5 46%,#c0c0c0 100%);
+    border:1px solid #7a7a7a; border-radius:6px;
+    color:#3c3c43; font-size:14px; font-weight:700; font-family:inherit;
+    text-shadow:0 1px 0 rgba(255,255,255,0.75);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 1px rgba(0,0,0,0.15);
+    cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center;
+    gap:4px;
+}
+.seg-btn:active { background:linear-gradient(180deg,#b8b8b8 0%,#a0a0a0 100%); }
+
+.chat-messages {
+    flex:1; overflow-y:auto; padding:12px 0; min-height:0;
+    -webkit-overflow-scrolling:touch;
+    background-color:#d6d8db;
+    background-image:
+        repeating-linear-gradient(135deg,
+            rgba(255,255,255,0.35) 0px, rgba(255,255,255,0.35) 1px,
+            transparent 1px, transparent 8px);
+}
+
+/* ============ EMPTY STATE ============ */
+.empty-state {
+    text-align:center; padding:60px 20px; color:#8e8e93;
+}
+.empty-icon { font-size:48px; margin-bottom:12px; opacity:0.7; }
+.empty-title {
+    font-size:16px; font-weight:700; color:#4c566c;
+    text-shadow:0 1px 0 rgba(255,255,255,0.7); margin-bottom:4px;
+}
+.empty-text { font-size:13px; color:#8e8e93; }
+
+/* ============ MESSAGES ============ */
+.message {
+    display:flex; margin:4px 12px;
+    max-width:100%; clear:both;
+}
+.message-self { justify-content:flex-end; }
+.message-other { justify-content:flex-start; }
+.bubble-wrap {
+    max-width:76%; display:flex; flex-direction:column;
+    position:relative;
+}
+.message-self .bubble-wrap { align-items:flex-end; }
+.message-other .bubble-wrap { align-items:flex-start; }
+.message-sender {
+    font-size:11px; color:#6a6a6f; font-weight:700;
+    margin-bottom:3px; padding:0 12px;
+    text-shadow:0 1px 0 rgba(255,255,255,0.8);
+}
+.bubble {
+    padding:9px 14px; border-radius:16px;
+    font-size:15px; line-height:1.3; position:relative;
+    word-wrap:break-word;
+    box-shadow:0 1px 1px rgba(0,0,0,0.12);
+    max-width:100%;
+}
+.message-self .bubble {
+    background:linear-gradient(180deg,#c8f0a8 0%,#8de060 45%,#5dc238 46%,#4aad2a 100%);
+    border:1px solid #3a8a1a; color:#0a2000;
+    border-bottom-right-radius:4px;
+}
+.message-self .bubble::after {
+    content:''; position:absolute;
+    bottom:-1px; right:-7px;
+    width:10px; height:12px;
+    background:#4aad2a; border-right:1px solid #3a8a1a;
+    clip-path:polygon(0 0, 100% 100%, 0 100%);
+}
+.message-other .bubble {
+    background:linear-gradient(180deg,#ffffff 0%,#f4f4f4 45%,#e6e6e6 46%,#d8d8d8 100%);
+    border:1px solid #a8a8a8; color:#1a1a1a;
+    border-bottom-left-radius:4px;
+}
+.message-other .bubble::after {
+    content:''; position:absolute;
+    bottom:-1px; left:-7px;
+    width:10px; height:12px;
+    background:#d8d8d8; border-left:1px solid #a8a8a8;
+    clip-path:polygon(100% 0, 100% 100%, 0 100%);
+}
+.bubble-image { padding:4px !important; background:transparent !important;
+    border:none !important; box-shadow:none !important; }
+.bubble-image::after { display:none !important; }
+.message-image {
+    max-width:220px; max-height:220px; border-radius:12px;
+    border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.3);
+    cursor:pointer; display:block;
+}
+.message-time {
+    font-size:10px; color:#8e8e93;
+    text-shadow:0 1px 0 rgba(255,255,255,0.8);
+    padding:2px 14px 0;
+}
+
+/* ============ INPUT BAR ============ */
+.chat-input-container {
+    background:linear-gradient(180deg,#d8d8d8 0%,#b0b0b0 100%);
+    border-top:1px solid #7a7a7a;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);
+    padding:7px 8px;
+    padding-bottom:max(7px, env(safe-area-inset-bottom));
+    display:flex; align-items:center; gap:6px; flex-shrink:0;
+}
+.chat-input-container.hidden { display:none; }
+.camera-btn {
+    flex-shrink:0; width:32px; height:32px; border-radius:50%;
+    background:linear-gradient(180deg,#fff 0%,#d5d5d5 100%);
+    border:1px solid #7a7a7a;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 1px rgba(0,0,0,0.2);
+    color:#3c3c43; font-size:16px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-family:inherit; padding:0;
+}
+.camera-btn:active { background:linear-gradient(180deg,#b8b8b8 0%,#a0a0a0 100%); }
+.chat-input {
+    flex:1; padding:8px 14px;
+    border:1px solid #8a8a8a; border-radius:16px;
+    background:linear-gradient(180deg,#fafafa 0%,#fff 100%);
+    box-shadow:inset 0 1px 2px rgba(0,0,0,0.12);
+    font-size:15px; font-family:inherit; outline:none;
+    min-width:0; color:#1a1a1a;
+}
+.chat-input::placeholder { color:#8e8e93; }
+.send-button {
+    flex-shrink:0; height:32px; padding:0 16px; min-width:60px;
+    background:linear-gradient(180deg,#b088d0 0%,#8040b0 49%,#6C00A0 50%,#4a0070 100%);
+    border:1px solid #2c0044; border-radius:16px;
+    color:#fff; font-size:14px; font-weight:700; font-family:inherit;
+    cursor:pointer; text-shadow:0 -1px 0 rgba(0,0,0,0.4);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.4), 0 1px 2px rgba(0,0,0,0.3);
+    display:flex; align-items:center; justify-content:center;
+}
+.send-button:active { background:linear-gradient(180deg,#4a0070 0%,#2c0044 100%); }
+
+/* ============ MODALS ============ */
+.modal {
+    display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+    background:rgba(0,0,0,0.92); z-index:10000;
+    align-items:center; justify-content:center;
+}
+.modal.active { display:flex; }
+.modal-content {
+    max-width:95%; max-height:95%; border-radius:8px;
+    box-shadow:0 4px 30px rgba(0,0,0,0.8);
+}
+.modal-close {
+    position:absolute; top:20px; right:20px;
+    width:40px; height:40px; border-radius:50%;
+    background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.4);
+    color:#fff; font-size:26px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; line-height:1;
+}
+.toast {
+    position:fixed; top:60px; left:50%; transform:translateX(-50%);
+    background:linear-gradient(180deg,#555 0%,#1a1a1a 100%);
+    color:#fff; padding:10px 20px; border-radius:20px;
+    font-size:13px; font-weight:600; z-index:11000; display:none;
+    box-shadow:0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+    text-shadow:0 -1px 0 rgba(0,0,0,0.4);
+    max-width:90%; text-align:center;
+    border:1px solid rgba(255,255,255,0.2);
+}
+.toast.show { display:block; }
+.toast.error { background:linear-gradient(180deg,#8a1a1a 0%,#5a0a0a 100%); }
+
+/* ============ ACTION SHEET ============ */
+.status-sheet-overlay {
+    display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+    background:rgba(0,0,0,0.5); z-index:10100;
+    align-items:flex-end; justify-content:center;
+}
+.status-sheet-overlay.active { display:flex; }
+.status-sheet {
+    width:100%; max-width:500px; padding:8px;
+    padding-bottom:max(8px, env(safe-area-inset-bottom));
+    animation:slideUp 0.2s ease;
+}
+@keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+.status-sheet-title {
+    background:linear-gradient(180deg,#f0f0f0 0%,#d0d0d0 100%);
+    color:#3c3c43; font-weight:700; font-size:13px; text-align:center;
+    padding:10px;
+    border:1px solid #5a5a5a; border-bottom:none;
+    border-top-left-radius:10px; border-top-right-radius:10px;
+    text-shadow:0 1px 0 rgba(255,255,255,0.7);
+}
+.status-sheet-body {
+    background:linear-gradient(180deg,#f0f0f0 0%,#d0d0d0 100%);
+    border:1px solid #5a5a5a; border-top:none;
+    border-bottom-left-radius:10px; border-bottom-right-radius:10px;
+    overflow:hidden; margin-bottom:8px;
+}
+.status-sheet-option {
+    display:flex; align-items:center; gap:12px;
+    width:100%; padding:12px 16px;
+    background:linear-gradient(180deg,#fbfbfb 0%,#e8e8e8 100%);
+    border:none; border-bottom:1px solid #b0b0b0;
+    font-size:16px; font-weight:600; color:#2c2c2c;
+    text-shadow:0 1px 0 rgba(255,255,255,0.7);
+    cursor:pointer; font-family:inherit; text-align:left;
+}
+.status-sheet-option:last-child { border-bottom:none; }
+.status-sheet-option:active {
+    background:linear-gradient(180deg,#8040b0 0%,#6C00A0 100%);
+    color:#fff; text-shadow:0 -1px 0 rgba(0,0,0,0.4);
+}
+.status-sheet-option .dot {
+    width:12px; height:12px; border-radius:50%; flex-shrink:0;
+    border:1px solid rgba(0,0,0,0.2);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.4);
+}
+.status-sheet-option .dot.online    { background:linear-gradient(180deg,#7ad86a 0%,#4aac3a 100%); }
+.status-sheet-option .dot.busy      { background:linear-gradient(180deg,#e87878 0%,#d94a4a 100%); }
+.status-sheet-option .dot.away      { background:linear-gradient(180deg,#f0b040 0%,#d97a20 100%); }
+.status-sheet-option .dot.invisible,
+.status-sheet-option .dot.offline   { background:linear-gradient(180deg,#b0b0b0 0%,#808080 100%); }
+.status-sheet-option .check { margin-left:auto; opacity:0; font-weight:700; }
+.status-sheet-option.current .check { opacity:1; }
+.status-sheet-cancel {
+    background:linear-gradient(180deg,#555 0%,#2a2a2a 100%);
+    color:#fff; text-shadow:0 -1px 0 rgba(0,0,0,0.5);
+    font-weight:700; font-size:16px; text-align:center;
+    padding:12px; border:1px solid #111; border-radius:10px; cursor:pointer;
+}
+
+/* ============ CALLS ============ */
+.xp-window-overlay {
+    position:fixed; top:0; left:0; right:0; bottom:0;
+    z-index:10500; display:none;
+    align-items:center; justify-content:center; padding:16px;
+    background:rgba(0,0,0,0.65);
+}
+.xp-window-overlay.active { display:flex; }
+.call-window {
+    width:100%; max-width:340px;
+    background:linear-gradient(180deg,#f0f0f0 0%,#d8d8d8 100%);
+    border:1px solid #000; border-radius:12px;
+    box-shadow:0 4px 20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.6);
+    overflow:hidden;
+}
+.call-window .xp-titlebar {
+    background:linear-gradient(180deg,#b088d0 0%,#8040b0 49%,#6C00A0 50%,#4a0070 100%);
+    color:#fff; padding:8px 12px;
+    font-weight:700; font-size:14px; text-align:center;
+    text-shadow:0 -1px 0 rgba(0,0,0,0.4);
+    border-bottom:1px solid #2c0044; min-height:34px;
+    display:flex; align-items:center; justify-content:space-between;
+}
+.call-window .xp-titlebar .xp-button {
+    min-width:32px; min-height:24px; padding:2px 8px; font-size:14px;
+    background:linear-gradient(180deg,#e8d8f4 0%,#c8a8e0 50%,#a880c8 100%);
+    border:1px solid #3a0055; border-radius:6px;
+    color:#2c0044; cursor:pointer; font-weight:700;
+}
+.call-body { padding:20px 16px; text-align:center; }
+.call-body .call-icon { font-size:54px; margin:8px 0 16px;
+    filter:drop-shadow(0 3px 4px rgba(0,0,0,0.3)); }
+.call-body .call-name { font-size:20px; font-weight:700;
+    color:#1a1a1a; text-shadow:0 1px 0 rgba(255,255,255,0.8);
+    margin-bottom:4px; }
+.call-body .call-sub { font-size:14px; color:#666;
+    text-shadow:0 1px 0 rgba(255,255,255,0.8); margin-bottom:12px; }
+.call-body .call-timer {
+    font-size:30px; font-weight:300; color:#2c2c2c;
+    font-family:'Courier New',monospace; letter-spacing:3px;
+    margin:12px 0; text-shadow:0 1px 0 rgba(255,255,255,0.8);
+}
+.call-body .call-status-line {
+    font-size:14px; font-weight:700; color:#6C00A0;
+    text-shadow:0 1px 0 rgba(255,255,255,0.8); margin-bottom:6px;
+}
+.call-actions {
+    display:flex; gap:12px; justify-content:center; margin-top:16px;
+}
+.call-actions .xp-button-large {
+    flex:1; min-width:0; padding:12px 8px;
+    font-size:15px; border-radius:10px;
+    border:1px solid #2c0044; font-weight:700;
+    cursor:pointer; color:#fff; text-shadow:0 -1px 0 rgba(0,0,0,0.4);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 4px rgba(0,0,0,0.3);
+}
+.btn-answer {
+    background:linear-gradient(180deg,#7ad86a 0%,#4aac3a 45%,#2a8c1a 46%,#1a6a0a 100%) !important;
+    border-color:#0a4a00 !important;
+}
+.btn-decline, .btn-end {
+    background:linear-gradient(180deg,#e87878 0%,#d94a4a 45%,#a82a2a 46%,#8a1a1a 100%) !important;
+    border-color:#5a0a0a !important;
+}
+.btn-end { width:100%; margin-top:12px; }
+.audio-controls-mobile {
+    display:flex; gap:8px; justify-content:center; margin:12px 0;
+}
+.audio-controls-mobile button {
+    flex:1; padding:10px 6px; font-size:13px; font-weight:700;
+    background:linear-gradient(180deg,#fbfbfb 0%,#e8e8e8 45%,#d5d5d5 46%,#c0c0c0 100%);
+    border:1px solid #7a7a7a; border-radius:8px;
+    color:#3c3c43; font-family:inherit; cursor:pointer;
+}
+.call-error-mobile {
+    display:none;
+    background:linear-gradient(180deg,#8a1a1a 0%,#5a0a0a 100%);
+    color:#fff; border:1px solid #400;
+    padding:8px 12px; font-size:12px; font-weight:600;
+    border-radius:8px; text-align:center; margin:8px 0;
+}
+.call-error-mobile.show { display:block; }
+.call-hidden-video {
+    position:absolute; width:1px; height:1px;
+    overflow:hidden; opacity:0; pointer-events:none;
+}
+
+/* ============ FILE TRANSFER ============ */
+.ft-progress-bar {
+    height:14px;
+    background:linear-gradient(180deg,#c8c8c8 0%,#a0a0a0 100%);
+    border:1px solid #7a7a7a; border-radius:7px;
+    box-shadow:inset 0 1px 2px rgba(0,0,0,0.25);
+    overflow:hidden; margin:12px 0;
+}
+.ft-progress-fill {
+    height:100%;
+    background:linear-gradient(180deg,#b088d0 0%,#8040b0 49%,#6C00A0 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.4);
+    width:0%; transition:width 0.15s linear; border-radius:6px;
+}
+.ft-filename-mobile {
+    font-weight:700; font-size:14px; color:#1a1a1a;
+    word-break:break-all; margin:6px 0;
+}
+.ft-filesize-mobile {
+    font-size:12px; color:#666; margin-bottom:8px;
+}
+.ft-stats-mobile {
+    display:flex; justify-content:space-between;
+    font-size:12px; color:#666; margin-top:6px;
+}
+.ft-status-mobile {
+    text-align:center; font-size:14px; font-weight:600;
+    color:#2c2c2c; margin:8px 0;
+}
+.ft-icon-mobile {
+    font-size:54px; text-align:center; margin:8px 0 16px;
+    filter:drop-shadow(0 3px 4px rgba(0,0,0,0.3));
+}
+.ft-chat-bar {
+    display:flex; align-items:center; gap:8px;
+    padding:6px 10px; margin:6px 10px;
+    background:linear-gradient(180deg,#f0f0f0 0%,#d8d8d8 100%);
+    border:1px solid #a8a8a8; border-radius:8px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 1px rgba(0,0,0,0.1);
+    font-size:12px; color:#2c2c2c;
+    clear:both; width:calc(100% - 20px); box-sizing:border-box;
+    float:none; max-width:100%;
+}
+.ft-chat-bar .ft-bar-icon { font-size:16px; flex-shrink:0; }
+.ft-chat-bar .ft-bar-text { flex:1; min-width:0; }
+.ft-chat-bar .ft-bar-text strong {
+    display:block; font-weight:700; font-size:12px;
+    margin-bottom:2px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.ft-chat-bar .ft-bar-text small {
+    color:#666; font-size:11px; display:block;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.ft-chat-bar .ft-bar-progress {
+    width:100%; height:6px; background:rgba(0,0,0,0.15);
+    border:1px solid #a8a8a8; border-radius:3px;
+    margin-top:4px; overflow:hidden;
+}
+.ft-chat-bar .ft-bar-progress-fill {
+    height:100%;
+    background:linear-gradient(180deg,#b088d0 0%,#8040b0 49%,#6C00A0 100%);
+    width:0%; transition:width 0.2s linear;
+}
+.ft-chat-bar.success { border-color:#2a8c1a; }
+.ft-chat-bar.success .ft-bar-progress-fill { background:linear-gradient(180deg,#7ad86a 0%,#2a8c1a 100%); }
+.ft-chat-bar.error { border-color:#a82a2a; }
+.ft-chat-bar.error .ft-bar-progress-fill { background:linear-gradient(180deg,#e87878 0%,#a82a2a 100%); }
+.ft-chat-bar.cancelled { border-color:#808080; }
+.ft-chat-bar .ft-bar-close {
+    flex-shrink:0; width:20px; height:20px; border-radius:50%;
+    background:linear-gradient(180deg,#d0d0d0 0%,#a0a0a0 100%);
+    border:1px solid #7a7a7a; color:#3c3c43;
+    font-size:12px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; padding:0; font-family:inherit; line-height:1;
+}
+.hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<div class="status-bar">
+    <span class="sb-side sb-left">
+        <span class="sb-dots"><span></span><span></span><span></span></span>
+    </span>
+    <span class="sb-center" id="sbTime">12:34 PM</span>
+    <span class="sb-side sb-right">
+        <span class="sb-battery"></span>
+    </span>
+</div>
+
+<div id="authOverlay" class="active">
+    <div class="auth-window">
+        <div class="auth-tabs">
+            <div class="auth-tab active" id="loginTabBtn" onclick="showAuthTab('login')">Sign In</div>
+            <div class="auth-tab" id="registerTabBtn" onclick="showAuthTab('register')">Create</div>
         </div>
-        
-        <div class="theme-switcher">
-            <button id="themeToggle" class="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
-        </div>
-        
-        <div id="imageModal" class="modal" onclick="closeModal()">
-            <span class="modal-close">&times;</span>
-            <img class="modal-content" id="modalImage">
-        </div>
-        
-        <div id="toast" class="toast"></div>
-        
-        <div id="statusSheetOverlay" class="status-sheet-overlay" onclick="if (event.target === this) closeStatusSheet()">
-            <div class="status-sheet" onclick="event.stopPropagation()">
-                <div class="status-sheet-title">Change your status</div>
-                <div class="status-sheet-body">
-                    <button class="status-sheet-option" data-status="online" onclick="setStatus('online')">
-                        <span class="dot online"></span><span>Online</span><span class="check">✓</span>
-                    </button>
-                    <button class="status-sheet-option" data-status="busy" onclick="setStatus('busy')">
-                        <span class="dot busy"></span><span>Busy</span><span class="check">✓</span>
-                    </button>
-                    <button class="status-sheet-option" data-status="away" onclick="setStatus('away')">
-                        <span class="dot away"></span><span>Away</span><span class="check">✓</span>
-                    </button>
-                    <button class="status-sheet-option" data-status="invisible" onclick="setStatus('invisible')">
-                        <span class="dot invisible"></span><span>Invisible</span><span class="check">✓</span>
-                    </button>
-                    <button class="status-sheet-option" data-status="offline" onclick="setStatus('offline')">
-                        <span class="dot offline"></span><span>Appear Offline</span><span class="check">✓</span>
-                    </button>
+        <div class="auth-body">
+            <div id="authErrorMessage" class="auth-error"></div>
+            <div id="loginTabContent">
+                <div class="auth-fieldset">
+                    <div class="auth-legend">Account</div>
+                    <input type="text" id="mobileUsername" class="xp-input" placeholder="Username" value="test" autocomplete="off">
+                    <input type="password" id="mobilePassword" class="xp-input" placeholder="Password" value="test" autocomplete="off">
                 </div>
-                <div class="status-sheet-cancel" onclick="closeStatusSheet()">Cancel</div>
+                <button class="xp-button-large" id="mobileLoginBtn">Sign In</button>
+            </div>
+            <div id="registerTabContent" class="hidden">
+                <div class="auth-fieldset">
+                    <div class="auth-legend">New Account</div>
+                    <input type="text" id="regUsername" class="xp-input" placeholder="Username" autocomplete="off">
+                    <input type="password" id="regPassword" class="xp-input" placeholder="Password" autocomplete="off">
+                    <input type="email" id="regEmail" class="xp-input" placeholder="Email" autocomplete="off">
+                    <input type="text" id="regDisplayName" class="xp-input" placeholder="Display Name" autocomplete="off">
+                </div>
+                <button class="xp-button-large" id="mobileRegisterBtn">Create Account</button>
             </div>
         </div>
-        
-        <!-- ===== AUTH ===== -->
-        <div id="authOverlay">
-            <div class="auth-window xp-window">
-                <div class="xp-titlebar">
-                    <div class="xp-titlebar-title">
-                        <span>📞 Skype Classic - Sign In</span>
-                    </div>
-                    <div class="xp-titlebar-controls">
-                        <div class="xp-button">×</div>
-                    </div>
-                </div>
-                <div class="auth-tabs">
-                    <div class="auth-tab active" id="loginTabBtn" onclick="showAuthTab('login')">Login</div>
-                    <div class="auth-tab" id="registerTabBtn" onclick="showAuthTab('register')">Create Account</div>
-                </div>
-                <div class="auth-body">
-                    <div id="authErrorMessage" class="auth-error"></div>
-                    
-                    <div id="loginTabContent">
-                        <div class="auth-fieldset">
-                            <div class="auth-legend">Account Information</div>
-                            <input type="text" id="mobileUsername" class="xp-input" placeholder="Username" value="test" autocomplete="off">
-                            <input type="password" id="mobilePassword" class="xp-input" placeholder="Password" value="test" autocomplete="off">
-                        </div>
-                        <div style="text-align: center;">
-                            <button class="xp-button-large" id="mobileLoginBtn">Sign In</button>
-                        </div>
-                    </div>
-                    
-                    <div id="registerTabContent" class="hidden">
-                        <div class="auth-fieldset">
-                            <div class="auth-legend">New Account</div>
-                            <input type="text" id="regUsername" class="xp-input" placeholder="Username" autocomplete="off">
-                            <input type="password" id="regPassword" class="xp-input" placeholder="Password" autocomplete="off">
-                            <input type="email" id="regEmail" class="xp-input" placeholder="Email (optional)" autocomplete="off">
-                            <input type="text" id="regDisplayName" class="xp-input" placeholder="Display Name (optional)" autocomplete="off">
-                        </div>
-                        <div style="text-align: center;">
-                            <button class="xp-button-large" id="mobileRegisterBtn">Create Account</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="auth-footer">
-                    <a href="/?desktop=true">Desktop Version</a> • Demo: test/test
-                </div>
-                <div class="xp-status-bar">
-                    <span id="authStatusMessage">Ready to connect...</span>
-                </div>
+        <div class="auth-footer">
+            <a href="/?desktop=true">Desktop Version</a> &bull; Demo: test/test
+        </div>
+    </div>
+</div>
+
+<div id="mobileApp">
+    <div class="nav-bar">
+        <button class="nav-btn hidden" id="navBackBtn" onclick="leaveChat()">Messages</button>
+        <span class="nav-title" id="navTitle">Messages</span>
+        <button class="nav-btn" id="navActionBtn" onclick="navAction()">✎</button>
+    </div>
+    
+    <div id="contactsTab" class="tab-content active">
+        <div class="messages-list" id="mobileContactList">
+            <div class="empty-state">
+                <div class="empty-icon">💬</div>
+                <div class="empty-title">No Messages</div>
+                <div class="empty-text">Tap ✎ to start</div>
             </div>
         </div>
-        
-        <!-- ===== MAIN APP ===== -->
-        <div id="mobileApp">
-            <div class="mobile-window xp-window">
-                <div class="xp-titlebar">
-                    <div class="xp-titlebar-title">
-                        <span style="flex-shrink: 0;">📞 Skype Classic</span>
-                        <span class="titlebar-user-chip" id="mobileUserChip" onclick="openStatusSheet()">
-                            <span class="mobile-self-status-dot online" id="mobileSelfStatusDot"></span>
-                            <span class="titlebar-user-name" id="currentUserDisplay">User</span>
-                        </span>
-                    </div>
-                    <div class="xp-titlebar-controls">
-                        <div class="xp-button" onclick="mobileLogout()" title="Logout">×</div>
-                    </div>
-                </div>
-                
-                <div class="mobile-tabs">
-                    <button class="mobile-tab active" onclick="switchTab('contacts', event)">👥 Contacts</button>
-                    <button class="mobile-tab" onclick="switchTab('chat', event)">💬 Chat</button>
-                </div>
-                
-                <div id="contactsTab" class="tab-content active">
-                    <div class="contacts-header">
-                        <h3>👥 Contacts</h3>
-                        <input type="text" id="contactSearch" class="search-box" placeholder="🔍 Search contacts..." oninput="searchContacts()">
-                    </div>
-                    <button class="add-contact-btn" onclick="addContact()">
-                        <span style="font-size: 18px;">+</span> Add Friend
-                    </button>
-                    <div class="contact-list" id="mobileContactList">
-                        <div class="empty-state">
-                            <div class="empty-icon">👤</div>
-                            <div class="empty-title">No contacts yet</div>
-                            <div class="empty-text">Tap "Add Friend" to get started</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div id="chatTab" class="tab-content">
-                    <div id="chatHeader" class="chat-header hidden">
-                        <button class="back-btn" onclick="leaveChat()">←</button>
-                        <span id="chatHeaderTitle">Chat</span>
-                        <button class="file-contact-btn" onclick="selectMobileFile()" title="Send File">📎</button>
-                        <button class="call-contact-btn" onclick="startMobileCall()" title="Call contact">📞</button>
-                    </div>
-                    <div class="chat-messages" id="mobileMessages">
-                        <div class="empty-state">
-                            <div class="empty-icon">💬</div>
-                            <div class="empty-title">No chat selected</div>
-                            <div class="empty-text">Select a contact to start messaging</div>
-                        </div>
-                    </div>
-                    <div class="chat-input-container hidden" id="chatInputContainer">
-                        <input type="text" id="mobileMessageInput" class="chat-input" placeholder="Type a message..." onkeypress="if(event.key === 'Enter') sendMobileMessage()">
-                        <button class="image-button" onclick="selectImage()" title="Send Image">📷</button>
-                        <button class="send-button" onclick="sendMobileMessage()">➤</button>
-                    </div>
-                </div>
-                
-                <div class="xp-status-bar">
-                    <span id="chatStatusBar">Ready to chat...</span>
-                </div>
+    </div>
+    
+    <div id="chatTab" class="tab-content">
+        <div id="chatHeader" class="chat-header hidden">
+            <button class="seg-btn" onclick="startMobileCall()">📞 Call</button>
+            <button class="seg-btn" onclick="selectMobileFile()">📎 Send File</button>
+        </div>
+        <div class="chat-messages" id="mobileMessages"></div>
+        <div class="chat-input-container hidden" id="chatInputContainer">
+            <button class="camera-btn" onclick="selectImage()" title="Send Image">📷</button>
+            <input type="text" id="mobileMessageInput" class="chat-input" placeholder="Text Message" onkeypress="if(event.key === 'Enter') sendMobileMessage()">
+            <button class="send-button" onclick="sendMobileMessage()">Send</button>
+        </div>
+    </div>
+</div>
+
+<input type="file" id="imageInput" accept="image/*" style="display:none;">
+<input type="file" id="mobileFileInput" style="display:none;">
+
+<div id="imageModal" class="modal" onclick="closeModal()">
+    <span class="modal-close">&times;</span>
+    <img class="modal-content" id="modalImage">
+</div>
+
+<div id="toast" class="toast"></div>
+
+<div id="statusSheetOverlay" class="status-sheet-overlay" onclick="if (event.target === this) closeStatusSheet()">
+    <div class="status-sheet" onclick="event.stopPropagation()">
+        <div class="status-sheet-title">Change your status</div>
+        <div class="status-sheet-body">
+            <button class="status-sheet-option" data-status="online" onclick="setStatus('online')">
+                <span class="dot online"></span><span>Online</span><span class="check">✓</span>
+            </button>
+            <button class="status-sheet-option" data-status="busy" onclick="setStatus('busy')">
+                <span class="dot busy"></span><span>Busy</span><span class="check">✓</span>
+            </button>
+            <button class="status-sheet-option" data-status="away" onclick="setStatus('away')">
+                <span class="dot away"></span><span>Away</span><span class="check">✓</span>
+            </button>
+            <button class="status-sheet-option" data-status="invisible" onclick="setStatus('invisible')">
+                <span class="dot invisible"></span><span>Invisible</span><span class="check">✓</span>
+            </button>
+            <button class="status-sheet-option" data-status="offline" onclick="setStatus('offline')">
+                <span class="dot offline"></span><span>Appear Offline</span><span class="check">✓</span>
+            </button>
+        </div>
+        <div class="status-sheet-cancel" onclick="closeStatusSheet()">Cancel</div>
+    </div>
+</div>
+
+<div id="mobileIncomingCallOverlay" class="xp-window-overlay">
+    <div class="call-window">
+        <div class="xp-titlebar">
+            <span>Incoming Call</span>
+            <button class="xp-button" onclick="declineIncomingCall()">×</button>
+        </div>
+        <div class="call-body">
+            <div class="call-icon">📞</div>
+            <div class="call-name" id="mobileCallerName">User</div>
+            <div class="call-sub">is calling you</div>
+            <div class="call-actions">
+                <button class="xp-button-large btn-decline" onclick="declineIncomingCall()">Decline</button>
+                <button class="xp-button-large btn-answer" onclick="acceptIncomingCall()">Accept</button>
             </div>
         </div>
-        
-        <input type="file" id="imageInput" accept="image/*" style="display: none;">
-        <input type="file" id="mobileFileInput" style="display: none;">
+    </div>
+</div>
 
-        <!-- ===== Audio elements for mobile ===== -->
-        <audio id="mLoginSound" preload="auto"><source src="/sounds/logon.mp3" type="audio/mpeg"></audio>
-        <audio id="mLogoutSound" preload="auto"><source src="/sounds/logoff.mp3" type="audio/mpeg"></audio>
-        <audio id="mMessageSound" preload="auto"><source src="/sounds/messagereceived.mp3" type="audio/mpeg"></audio>
-        <audio id="mSendSound" preload="auto"><source src="/sounds/messagesent.mp3" type="audio/mpeg"></audio>
-        <audio id="mCallSound" preload="auto" loop><source src="/sounds/call_incoming.mp3" type="audio/mpeg"></audio>
-        <audio id="mDialingSound" preload="auto" loop><source src="/sounds/dialing.mp3" type="audio/mpeg"></audio>
-        <audio id="mCallEndSound" preload="auto"><source src="/sounds/call_end.mp3" type="audio/mpeg"></audio>
-        <audio id="mCallAcceptSound" preload="auto"><source src="/sounds/call_accept.mp3" type="audio/mpeg"></audio>
-        <audio id="mCallErrorSound" preload="auto"><source src="/sounds/call_error.mp3" type="audio/mpeg"></audio>
-        <audio id="mFtStartSound" preload="auto"><source src="/sounds/ft-start.mp3" type="audio/mpeg"></audio>
-        <audio id="mFtSuccessSound" preload="auto"><source src="/sounds/ft-success.mp3" type="audio/mpeg"></audio>
-        <audio id="mFtFailSound" preload="auto"><source src="/sounds/ft-fail.mp3" type="audio/mpeg"></audio>
+<div id="mobileCallOverlay" class="xp-window-overlay">
+    <div class="call-window">
+        <div class="xp-titlebar">
+            <span>Call</span>
+            <button class="xp-button" onclick="endMobileCall()">×</button>
+        </div>
+        <div class="call-body">
+            <div class="call-status-line" id="mobileCallStatusLine">Calling</div>
+            <div class="call-name" id="mobileCallTargetName">User</div>
+            <div class="call-timer" id="mobileCallTimer">00:00</div>
+            <div class="call-error-mobile" id="mobileCallError"></div>
+            <div class="audio-controls-mobile" id="mobileAudioControls" style="display:none;">
+                <button id="mobileMuteBtn" onclick="toggleMute()">Mute</button>
+                <button id="mobileDeafenBtn" onclick="toggleDeafen()">Deafen</button>
+            </div>
+            <button class="xp-button-large btn-end" onclick="endMobileCall()">End Call</button>
+            <video id="mobileLocalVideo" autoplay muted playsinline class="call-hidden-video"></video>
+            <audio id="mobileRemoteAudio" autoplay></audio>
+        </div>
+    </div>
+</div>
 
-        <!-- ===== Incoming call window ===== -->
-        <div id="mobileIncomingCallOverlay" class="xp-window-overlay">
-            <div class="call-window">
-                <div class="xp-titlebar">
-                    <span>📞 Incoming Call...</span>
-                    <div class="xp-button" onclick="declineIncomingCall()">×</div>
-                </div>
-                <div class="call-body">
-                    <div class="call-name" id="mobileCallerName">User</div>
-                    <div class="call-sub">is calling you</div>
-                    <div class="call-icon">📞</div>
-                    <div class="call-actions">
-                        <button class="xp-button-large btn-answer" onclick="acceptIncomingCall()">Answer</button>
-                        <button class="xp-button-large btn-decline" onclick="declineIncomingCall()">Decline</button>
-                    </div>
-                </div>
+<div id="mobileFtOfferOverlay" class="xp-window-overlay">
+    <div class="call-window">
+        <div class="xp-titlebar">
+            <span>Incoming File</span>
+            <button class="xp-button" onclick="declineIncomingTransfer()">×</button>
+        </div>
+        <div class="call-body">
+            <div class="ft-icon-mobile">📄</div>
+            <div class="ft-status-mobile" id="mobileFtOfferFrom">Someone wants to send you a file</div>
+            <div class="ft-filename-mobile" id="mobileFtOfferFilename">file.bin</div>
+            <div class="ft-filesize-mobile" id="mobileFtOfferFilesize">0 B</div>
+            <div class="call-actions">
+                <button class="xp-button-large btn-decline" onclick="declineIncomingTransfer()">Decline</button>
+                <button class="xp-button-large btn-answer" onclick="acceptIncomingTransfer()">Accept</button>
             </div>
         </div>
+    </div>
+</div>
 
-        <!-- ===== Active call window ===== -->
-        <div id="mobileCallOverlay" class="xp-window-overlay">
-            <div class="call-window">
-                <div class="xp-titlebar">
-                    <span>📞 Active Call</span>
-                    <div class="xp-button" onclick="endMobileCall()">×</div>
-                </div>
-                <div class="call-body">
-                    <div class="call-status-line" id="mobileCallStatusLine">Calling...</div>
-                    <div class="call-name" id="mobileCallTargetName">User</div>
-                    <div class="call-timer" id="mobileCallTimer">00:00</div>
-                    
-                    <div class="call-error-mobile" id="mobileCallError"></div>
-                    
-                    <div class="audio-controls-mobile" id="mobileAudioControls" style="display:none;">
-                        <button id="mobileMuteBtn" onclick="toggleMute()">Mute</button>
-                        <button id="mobileDeafenBtn" onclick="toggleDeafen()">Deafen</button>
-                    </div>
-                    
-                    <button class="xp-button-large btn-end" onclick="endMobileCall()">End Call</button>
-                    
-                    <video id="mobileLocalVideo" autoplay muted playsinline class="call-hidden-video"></video>
-                    <audio id="mobileRemoteAudio" autoplay></audio>
-                </div>
-            </div>
+<div id="mobileFtProgressOverlay" class="xp-window-overlay">
+    <div class="call-window">
+        <div class="xp-titlebar">
+            <span id="mobileFtTitle">File Transfer</span>
+            <button class="xp-button" onclick="cancelCurrentFt()">×</button>
         </div>
-
-        <!-- ===== Incoming file transfer offer ===== -->
-        <div id="mobileFtOfferOverlay" class="xp-window-overlay">
-            <div class="call-window">
-                <div class="xp-titlebar">
-                    <span>📁 Incoming File</span>
-                    <div class="xp-button" onclick="declineIncomingTransfer()">×</div>
-                </div>
-                <div class="call-body">
-                    <div class="ft-icon-mobile">📄</div>
-                    <div class="ft-status-mobile" id="mobileFtOfferFrom">Someone wants to send you a file!</div>
-                    <div class="ft-filename-mobile" id="mobileFtOfferFilename">file.bin</div>
-                    <div class="ft-filesize-mobile" id="mobileFtOfferFilesize">0 B</div>
-                    <div class="call-actions">
-                        <button class="xp-button-large btn-answer" onclick="acceptIncomingTransfer()">Accept</button>
-                        <button class="xp-button-large btn-decline" onclick="declineIncomingTransfer()">Decline</button>
-                    </div>
-                </div>
+        <div class="call-body">
+            <div class="ft-filename-mobile" id="mobileFtFilename">file.bin</div>
+            <div class="ft-filesize-mobile" id="mobileFtPeer">0 B</div>
+            <div class="ft-progress-bar">
+                <div class="ft-progress-fill" id="mobileFtFill"></div>
             </div>
-        </div>
-
-        <!-- ===== File transfer progress ===== -->
-        <div id="mobileFtProgressOverlay" class="xp-window-overlay">
-            <div class="call-window">
-                <div class="xp-titlebar">
-                    <span id="mobileFtTitle">📁 File Transfer</span>
-                    <div class="xp-button" onclick="cancelCurrentFt()">×</div>
-                </div>
-                <div class="call-body">
-                    <div class="ft-filename-mobile" id="mobileFtFilename">file.bin</div>
-                    <div class="ft-filesize-mobile" id="mobileFtPeer">0 B</div>
-                    <div class="ft-progress-bar">
-                        <div class="ft-progress-fill" id="mobileFtFill"></div>
-                    </div>
-                    <div class="ft-status-mobile" id="mobileFtStatus">Waiting...</div>
-                    <div class="ft-stats-mobile">
-                        <span id="mobileFtSpeed">0 B/s</span>
-                        <span id="mobileFtEta">ETA: --:--</span>
-                    </div>
-                    <div style="margin-top: 12px;">
-                        <button class="xp-button-large btn-end" onclick="cancelCurrentFt()">Cancel</button>
-                    </div>
-                </div>
+            <div class="ft-status-mobile" id="mobileFtStatus">Waiting...</div>
+            <div class="ft-stats-mobile">
+                <span id="mobileFtSpeed">0 B/s</span>
+                <span id="mobileFtEta">ETA: --:--</span>
             </div>
+            <button class="xp-button-large btn-end" onclick="cancelCurrentFt()" style="margin-top:12px;">Cancel</button>
         </div>
-        
-        <div class="footer-note">Fan project. Not affiliated with Microsoft.</div>
+    </div>
+</div>
 
-        <script>
-            let mobileUser = null;
-            let mobileWs = null;
-            let currentChat = null;
-            let contacts = [];
-            let reconnectAttempts = 0;
-            const MAX_RECONNECT = 5;
-            let connectionInProgress = false;
-            let renderedMessageIds = new Set();
-            let myStatus = 'online';
+<audio id="mLoginSound" preload="auto"><source src="/sounds/logon.mp3" type="audio/mpeg"></audio>
+<audio id="mLogoutSound" preload="auto"><source src="/sounds/logoff.mp3" type="audio/mpeg"></audio>
+<audio id="mMessageSound" preload="auto"><source src="/sounds/messagereceived.mp3" type="audio/mpeg"></audio>
+<audio id="mSendSound" preload="auto"><source src="/sounds/messagesent.mp3" type="audio/mpeg"></audio>
+<audio id="mCallSound" preload="auto" loop><source src="/sounds/call_incoming.mp3" type="audio/mpeg"></audio>
+<audio id="mDialingSound" preload="auto" loop><source src="/sounds/dialing.mp3" type="audio/mpeg"></audio>
+<audio id="mCallEndSound" preload="auto"><source src="/sounds/call_end.mp3" type="audio/mpeg"></audio>
+<audio id="mCallAcceptSound" preload="auto"><source src="/sounds/call_accept.mp3" type="audio/mpeg"></audio>
+<audio id="mCallErrorSound" preload="auto"><source src="/sounds/call_error.mp3" type="audio/mpeg"></audio>
+<audio id="mFtStartSound" preload="auto"><source src="/sounds/ft-start.mp3" type="audio/mpeg"></audio>
+<audio id="mFtSuccessSound" preload="auto"><source src="/sounds/ft-success.mp3" type="audio/mpeg"></audio>
+<audio id="mFtFailSound" preload="auto"><source src="/sounds/ft-fail.mp3" type="audio/mpeg"></audio>
 
-            // Call state
-            let isInCall = false;
-            let currentCallWith = null;
-            let incomingCallFrom = null;
-            let mobileCallStartTime = null;
-            let mobileCallTimerInterval = null;
-            let mobileLocalStream = null;
-            let mobilePeerConnection = null;
-            let mobileMuted = false;
-            let mobileDeafened = false;
-            let mobileMicGranted = false;
-            let mobilePendingIce = [];
+<script>
+let mobileUser = null;
+let mobileWs = null;
+let currentChat = null;
+let currentChatDisplayName = null;
+let currentView = 'list';
+let contacts = [];
+let reconnectAttempts = 0;
+const MAX_RECONNECT = 5;
+let connectionInProgress = false;
+let renderedMessageIds = new Set();
+let myStatus = 'online';
 
-            // File transfer state
-            const FT_CHUNK_SIZE = 16 * 1024;
-            const FT_BUFFER_THRESHOLD = 1024 * 1024;
-            const mFtTransfers = new Map();
-            let mFtIncomingOffer = null;
-            let mFtActiveId = null;
+let isInCall = false;
+let currentCallWith = null;
+let incomingCallFrom = null;
+let mobileCallStartTime = null;
+let mobileCallTimerInterval = null;
+let mobileLocalStream = null;
+let mobilePeerConnection = null;
+let mobileMuted = false;
+let mobileDeafened = false;
+let mobileMicGranted = false;
+let mobilePendingIce = [];
 
-            const STATUS_LABELS = {
-                online: 'Online',
-                busy: 'Busy',
-                away: 'Away',
-                invisible: 'Invisible',
-                offline: 'Appear Offline'
-            };
+const FT_CHUNK_SIZE = 16 * 1024;
+const FT_BUFFER_THRESHOLD = 1024 * 1024;
+const mFtTransfers = new Map();
+let mFtIncomingOffer = null;
+let mFtActiveId = null;
 
-            function mPlaySound(id, loop = false) {
-                const el = document.getElementById(id);
-                if (!el) return;
-                try {
-                    el.loop = loop;
-                    el.currentTime = 0;
-                    el.play().catch(e => console.log('Audio play failed:', e));
-                } catch (e) {}
-            }
-            function mStopSound(id) {
-                const el = document.getElementById(id);
-                if (!el) return;
-                try {
-                    el.pause();
-                    el.currentTime = 0;
-                    el.loop = false;
-                } catch (e) {}
-            }
-            function playMobileLoginSound() { mPlaySound('mLoginSound'); }
-            function playMobileLogoutSound() { mPlaySound('mLogoutSound'); }
-            function playMobileMessageSound() { mPlaySound('mMessageSound'); }
-            function playMobileSendSound() { mPlaySound('mSendSound'); }
-            function playMobileCallSound() { mPlaySound('mCallSound', true); }
-            function playMobileDialingSound() { mPlaySound('mDialingSound', true); }
-            function playMobileCallEndSound() {
-                mPlaySound('mCallEndSound');
-                mStopSound('mCallSound');
-                mStopSound('mDialingSound');
-            }
-            function playMobileCallAcceptSound() { mPlaySound('mCallAcceptSound'); }
-            function playMobileCallErrorSound() { mPlaySound('mCallErrorSound'); }
-            function stopMobileCallSounds() {
-                mStopSound('mCallSound');
-                mStopSound('mDialingSound');
-            }
-            function playMobileFtStartSound() { mPlaySound('mFtStartSound'); }
-            function playMobileFtSuccessSound() { mPlaySound('mFtSuccessSound'); }
-            function playMobileFtFailSound() { mPlaySound('mFtFailSound'); }
+const STATUS_LABELS = {
+    online: 'Online',
+    busy: 'Busy',
+    away: 'Away',
+    invisible: 'Invisible',
+    offline: 'Appear Offline'
+};
 
-            function updateSelfStatusUI() {
-                const dot = document.getElementById('mobileSelfStatusDot');
-                if (!dot) return;
-                dot.className = 'mobile-self-status-dot ' + myStatus;
-            }
+function escHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+        return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+}
 
-            function openStatusSheet() {
-                const sheet = document.getElementById('statusSheetOverlay');
-                if (!sheet) return;
-                document.querySelectorAll('.status-sheet-option').forEach(opt => {
-                    if (opt.getAttribute('data-status') === myStatus) {
-                        opt.classList.add('current');
-                    } else {
-                        opt.classList.remove('current');
-                    }
-                });
-                sheet.classList.add('active');
-            }
+function mPlaySound(id, loop) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    try {
+        el.loop = !!loop;
+        el.currentTime = 0;
+        el.play().catch(function(e) { console.log('Audio play failed:', e); });
+    } catch (e) {}
+}
+function mStopSound(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    try { el.pause(); el.currentTime = 0; el.loop = false; } catch (e) {}
+}
+function playMobileLoginSound()      { mPlaySound('mLoginSound'); }
+function playMobileLogoutSound()     { mPlaySound('mLogoutSound'); }
+function playMobileMessageSound()    { mPlaySound('mMessageSound'); }
+function playMobileSendSound()       { mPlaySound('mSendSound'); }
+function playMobileCallSound()       { mPlaySound('mCallSound', true); }
+function playMobileDialingSound()    { mPlaySound('mDialingSound', true); }
+function playMobileCallEndSound()    { mPlaySound('mCallEndSound'); mStopSound('mCallSound'); mStopSound('mDialingSound'); }
+function playMobileCallAcceptSound() { mPlaySound('mCallAcceptSound'); }
+function playMobileCallErrorSound()  { mPlaySound('mCallErrorSound'); }
+function stopMobileCallSounds()      { mStopSound('mCallSound'); mStopSound('mDialingSound'); }
+function playMobileFtStartSound()    { mPlaySound('mFtStartSound'); }
+function playMobileFtSuccessSound()  { mPlaySound('mFtSuccessSound'); }
+function playMobileFtFailSound()     { mPlaySound('mFtFailSound'); }
 
-            function closeStatusSheet() {
-                const sheet = document.getElementById('statusSheetOverlay');
-                if (sheet) sheet.classList.remove('active');
-            }
+function updateSelfStatusUI() {
+    const dot = document.getElementById('mobileSelfStatusDot');
+    if (!dot) return;
+    dot.className = 'mobile-self-status-dot ' + myStatus;
+}
 
-            function setStatus(status) {
-                if (!STATUS_LABELS[status]) return;
-                myStatus = status;
-                updateSelfStatusUI();
-                closeStatusSheet();
+function updateStatusBarTime() {
+    const now = new Date();
+    let h = now.getHours();
+    const m = now.getMinutes().toString().padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    const el = document.getElementById('sbTime');
+    if (el) el.textContent = h + ':' + m + ' ' + ampm;
+}
+setInterval(updateStatusBarTime, 30000);
+
+function setView(view) {
+    currentView = view;
+    document.querySelectorAll('.tab-content').forEach(function(c) {
+        c.classList.remove('active');
+    });
+    const backBtn = document.getElementById('navBackBtn');
+    const titleEl = document.getElementById('navTitle');
+    const actionBtn = document.getElementById('navActionBtn');
+    const chatHeader = document.getElementById('chatHeader');
+    const inputBar = document.getElementById('chatInputContainer');
+    
+    if (view === 'chat') {
+        document.getElementById('chatTab').classList.add('active');
+        backBtn.classList.remove('hidden');
+        titleEl.textContent = currentChatDisplayName || 'Chat';
+        actionBtn.style.visibility = 'hidden';
+        if (chatHeader) chatHeader.classList.remove('hidden');
+        if (inputBar) inputBar.classList.remove('hidden');
+    } else {
+        document.getElementById('contactsTab').classList.add('active');
+        backBtn.classList.add('hidden');
+        titleEl.textContent = 'Messages';
+        actionBtn.style.visibility = 'visible';
+        if (chatHeader) chatHeader.classList.add('hidden');
+        if (inputBar) inputBar.classList.add('hidden');
+    }
+}
+
+function switchTab(name) {
+    setView(name === 'chat' ? 'chat' : 'list');
+}
+
+function navAction() {
+    if (currentView === 'list') {
+        addContact();
+    }
+}
+
+function openStatusSheet() {
+    const sheet = document.getElementById('statusSheetOverlay');
+    if (!sheet) return;
+    document.querySelectorAll('.status-sheet-option').forEach(function(opt) {
+        if (opt.getAttribute('data-status') === myStatus) opt.classList.add('current');
+        else opt.classList.remove('current');
+    });
+    sheet.classList.add('active');
+}
+function closeStatusSheet() {
+    const sheet = document.getElementById('statusSheetOverlay');
+    if (sheet) sheet.classList.remove('active');
+}
+
+function setStatus(status) {
+    if (!STATUS_LABELS[status]) return;
+    myStatus = status;
+    updateSelfStatusUI();
+    closeStatusSheet();
+    if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+        mobileWs.send(JSON.stringify({ type: 'status_change', status: status }));
+    }
+    showToast('Status: ' + STATUS_LABELS[status]);
+}
+
+function showAuthTab(tab) {
+    const loginBtn = document.getElementById('loginTabBtn');
+    const registerBtn = document.getElementById('registerTabBtn');
+    const loginContent = document.getElementById('loginTabContent');
+    const registerContent = document.getElementById('registerTabContent');
+    const err = document.getElementById('authErrorMessage');
+    err.classList.remove('show');
+    if (tab === 'login') {
+        loginBtn.classList.add('active');
+        registerBtn.classList.remove('active');
+        loginContent.classList.remove('hidden');
+        registerContent.classList.add('hidden');
+    } else {
+        registerBtn.classList.add('active');
+        loginBtn.classList.remove('active');
+        registerContent.classList.remove('hidden');
+        loginContent.classList.add('hidden');
+    }
+}
+
+function showToast(message, isError) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.classList.toggle('error', !!isError);
+    toast.classList.add('show');
+    clearTimeout(toast._timeout);
+    toast._timeout = setTimeout(function() {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
+async function mobileLogin() {
+    const username = document.getElementById('mobileUsername').value.trim();
+    const password = document.getElementById('mobilePassword').value.trim();
+    const errorDiv = document.getElementById('authErrorMessage');
+    errorDiv.classList.remove('show');
+    if (!username || !password) {
+        errorDiv.textContent = 'Please enter username and password';
+        errorDiv.classList.add('show');
+        return;
+    }
+    try {
+        const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: username, password: password })
+        });
+        const result = await res.json();
+        if (result.success) {
+            mobileUser = { username: username, displayName: result.displayName || username };
+            myStatus = 'online';
+            document.getElementById('authOverlay').classList.remove('active');
+            document.getElementById('mobileApp').classList.add('active');
+            connectionInProgress = false;
+            playMobileLoginSound();
+            setView('list');
+            connectWebSocket();
+        } else {
+            errorDiv.textContent = result.error || 'Invalid username or password';
+            errorDiv.classList.add('show');
+        }
+    } catch (e) {
+        console.error('Login error:', e);
+        errorDiv.textContent = 'Login failed. Check server connection.';
+        errorDiv.classList.add('show');
+    }
+}
+
+async function mobileRegister() {
+    const username = document.getElementById('regUsername').value.trim();
+    const password = document.getElementById('regPassword').value;
+    const email = document.getElementById('regEmail').value.trim();
+    const displayName = document.getElementById('regDisplayName').value.trim() || username;
+    const errorDiv = document.getElementById('authErrorMessage');
+    errorDiv.classList.remove('show');
+    if (!username || !password) {
+        errorDiv.textContent = 'Please enter username and password';
+        errorDiv.classList.add('show');
+        return;
+    }
+    try {
+        const res = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: username, password: password, displayName: displayName, email: email })
+        });
+        const result = await res.json();
+        if (result.success) {
+            showToast('Account created! Please sign in.');
+            document.getElementById('mobileUsername').value = username;
+            document.getElementById('mobilePassword').value = '';
+            document.getElementById('regUsername').value = '';
+            document.getElementById('regPassword').value = '';
+            document.getElementById('regEmail').value = '';
+            document.getElementById('regDisplayName').value = '';
+            showAuthTab('login');
+        } else {
+            errorDiv.textContent = result.error || 'Registration failed';
+            errorDiv.classList.add('show');
+        }
+    } catch (e) {
+        console.error('Register error:', e);
+        errorDiv.textContent = 'Registration failed. Check server connection.';
+        errorDiv.classList.add('show');
+    }
+}
+
+function connectWebSocket() {
+    if (connectionInProgress) return;
+    connectionInProgress = true;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = protocol + '//' + window.location.host;
+    try {
+        mobileWs = new WebSocket(wsUrl);
+        mobileWs.onopen = function() {
+            connectionInProgress = false;
+            reconnectAttempts = 0;
+            showToast('Connected');
+            mobileWs.send(JSON.stringify({
+                type: 'join',
+                username: mobileUser.username,
+                userId: Date.now(),
+                displayName: mobileUser.displayName,
+                status: myStatus
+            }));
+            setTimeout(function() {
                 if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                    mobileWs.send(JSON.stringify({
-                        type: 'status_change',
-                        status: status
-                    }));
+                    mobileWs.send(JSON.stringify({ type: 'get_contacts', username: mobileUser.username }));
                 }
-                const bar = document.getElementById('chatStatusBar');
-                if (bar) bar.textContent = 'Status: ' + STATUS_LABELS[status];
-                showToast('Status: ' + STATUS_LABELS[status]);
-            }
-
-            function showAuthTab(tab) {
-                const loginBtn = document.getElementById('loginTabBtn');
-                const registerBtn = document.getElementById('registerTabBtn');
-                const loginContent = document.getElementById('loginTabContent');
-                const registerContent = document.getElementById('registerTabContent');
-                const err = document.getElementById('authErrorMessage');
-                err.classList.remove('show');
-                if (tab === 'login') {
-                    loginBtn.classList.add('active');
-                    registerBtn.classList.remove('active');
-                    loginContent.classList.remove('hidden');
-                    registerContent.classList.add('hidden');
+            }, 500);
+        };
+        mobileWs.onmessage = function(event) {
+            try { handleMessage(JSON.parse(event.data)); }
+            catch (e) { console.error('Error parsing message:', e); }
+        };
+        mobileWs.onerror = function() {
+            connectionInProgress = false;
+            showToast('Connection error', true);
+        };
+        mobileWs.onclose = function() {
+            connectionInProgress = false;
+            if (mobileUser) {
+                if (reconnectAttempts < MAX_RECONNECT) {
+                    reconnectAttempts++;
+                    showToast('Reconnecting... (' + reconnectAttempts + '/' + MAX_RECONNECT + ')');
+                    setTimeout(connectWebSocket, 3000);
                 } else {
-                    registerBtn.classList.add('active');
-                    loginBtn.classList.remove('active');
-                    registerContent.classList.remove('hidden');
-                    loginContent.classList.add('hidden');
+                    showToast('Connection lost. Please refresh.', true);
                 }
             }
+        };
+    } catch (e) {
+        connectionInProgress = false;
+        showToast('Failed to connect', true);
+    }
+}
 
-            function toggleTheme() {
-                const body = document.body;
-                const button = document.getElementById('themeToggle');
-                if (body.classList.contains('dark-theme')) {
-                    body.classList.remove('dark-theme');
-                    button.innerHTML = '🌙 Dark';
-                    localStorage.setItem('skypeTheme', 'light');
+function handleMessage(data) {
+    switch (data.type) {
+        case 'contact_list':
+            if (data.contacts) { contacts = data.contacts; renderContacts(); }
+            break;
+        case 'contact_add_result':
+            if (data.success) {
+                showToast('Contact added');
+                if (mobileWs && mobileWs.readyState === WebSocket.OPEN)
+                    mobileWs.send(JSON.stringify({ type: 'get_contacts', username: mobileUser.username }));
+            } else {
+                showToast(data.message || 'Failed to add contact', true);
+            }
+            break;
+        case 'contact_added':
+            if (data.contact) {
+                showToast((data.contact.displayName || 'Someone') + ' added you');
+                if (mobileWs && mobileWs.readyState === WebSocket.OPEN)
+                    mobileWs.send(JSON.stringify({ type: 'get_contacts', username: mobileUser.username }));
+            }
+            break;
+        case 'new_message':
+            if (data.data) {
+                if (data.data.from !== mobileUser.username) playMobileMessageSound();
+                if (data.data.from === currentChat || data.data.to === currentChat) {
+                    displayMessage(data.data, data.data.from === mobileUser.username);
                 } else {
-                    body.classList.add('dark-theme');
-                    button.innerHTML = '☀️ Light';
-                    localStorage.setItem('skypeTheme', 'dark');
+                    showToast('New message from ' + (data.data.fromDisplay || data.data.from));
                 }
             }
-
-            function loadTheme() {
-                const savedTheme = localStorage.getItem('skypeTheme');
-                const body = document.body;
-                const button = document.getElementById('themeToggle');
-                if (savedTheme === 'dark') {
-                    body.classList.add('dark-theme');
-                    if (button) button.innerHTML = '☀️ Light';
-                } else {
-                    body.classList.remove('dark-theme');
-                    if (button) button.innerHTML = '🌙 Dark';
-                }
-            }
-
-            function showToast(message, isError = false) {
-                const toast = document.getElementById('toast');
-                toast.textContent = message;
-                toast.classList.toggle('error', isError);
-                toast.classList.add('show');
-                clearTimeout(toast._timeout);
-                toast._timeout = setTimeout(() => {
-                    toast.classList.remove('show');
-                }, 3000);
-            }
-
-            async function mobileLogin() {
-                const username = document.getElementById('mobileUsername').value.trim();
-                const password = document.getElementById('mobilePassword').value.trim();
-                const errorDiv = document.getElementById('authErrorMessage');
-                const statusBar = document.getElementById('authStatusMessage');
-                errorDiv.classList.remove('show');
-
-                if (!username || !password) {
-                    errorDiv.textContent = 'Please enter username and password';
-                    errorDiv.classList.add('show');
-                    return;
-                }
-
-                statusBar.textContent = 'Logging in...';
-
-                try {
-                    const res = await fetch('/api/login', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username, password })
-                    });
-                    const result = await res.json();
-
-                    if (result.success) {
-                        mobileUser = { username: username, displayName: result.displayName || username };
-                        myStatus = 'online';
-                        document.getElementById('authOverlay').style.display = 'none';
-                        document.getElementById('mobileApp').classList.add('active');
-                        document.getElementById('currentUserDisplay').textContent = mobileUser.displayName;
-                        updateSelfStatusUI();
-                        statusBar.textContent = 'Connected';
-                        connectionInProgress = false;
-                        playMobileLoginSound();
-                        connectWebSocket();
-                    } else {
-                        errorDiv.textContent = result.error || 'Invalid username or password';
-                        errorDiv.classList.add('show');
-                        statusBar.textContent = 'Login failed';
-                    }
-                } catch (e) {
-                    console.error('Login error:', e);
-                    errorDiv.textContent = 'Login failed. Check server connection.';
-                    errorDiv.classList.add('show');
-                    statusBar.textContent = 'Connection error';
-                }
-            }
-
-            async function mobileRegister() {
-                const username = document.getElementById('regUsername').value.trim();
-                const password = document.getElementById('regPassword').value;
-                const email = document.getElementById('regEmail').value.trim();
-                const displayName = document.getElementById('regDisplayName').value.trim() || username;
-                const errorDiv = document.getElementById('authErrorMessage');
-                errorDiv.classList.remove('show');
-
-                if (!username || !password) {
-                    errorDiv.textContent = 'Please enter username and password';
-                    errorDiv.classList.add('show');
-                    return;
-                }
-
-                try {
-                    const res = await fetch('/api/register', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username, password, displayName, email })
-                    });
-                    const result = await res.json();
-                    if (result.success) {
-                        showToast('Account created! Please sign in.');
-                        document.getElementById('mobileUsername').value = username;
-                        document.getElementById('mobilePassword').value = '';
-                        document.getElementById('regUsername').value = '';
-                        document.getElementById('regPassword').value = '';
-                        document.getElementById('regEmail').value = '';
-                        document.getElementById('regDisplayName').value = '';
-                        showAuthTab('login');
-                    } else {
-                        errorDiv.textContent = result.error || 'Registration failed';
-                        errorDiv.classList.add('show');
-                    }
-                } catch (e) {
-                    console.error('Register error:', e);
-                    errorDiv.textContent = 'Registration failed. Check server connection.';
-                    errorDiv.classList.add('show');
-                }
-            }
-
-            function connectWebSocket() {
-                if (connectionInProgress) return;
-                connectionInProgress = true;
-                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                const wsUrl = protocol + '//' + window.location.host;
-                try {
-                    mobileWs = new WebSocket(wsUrl);
-                    mobileWs.onopen = function() {
-                        connectionInProgress = false;
-                        reconnectAttempts = 0;
-                        showToast('Connected to server');
-                        mobileWs.send(JSON.stringify({
-                            type: 'join',
-                            username: mobileUser.username,
-                            userId: Date.now(),
-                            displayName: mobileUser.displayName,
-                            status: myStatus
-                        }));
-                        setTimeout(() => {
-                            if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                                mobileWs.send(JSON.stringify({
-                                    type: 'get_contacts',
-                                    username: mobileUser.username
-                                }));
-                            }
-                        }, 500);
-                    };
-                    mobileWs.onmessage = function(event) {
-                        try {
-                            const data = JSON.parse(event.data);
-                            handleMessage(data);
-                        } catch (e) {
-                            console.error('Error parsing message:', e);
-                        }
-                    };
-                    mobileWs.onerror = function() {
-                        connectionInProgress = false;
-                        showToast('Connection error', true);
-                    };
-                    mobileWs.onclose = function() {
-                        connectionInProgress = false;
-                        if (mobileUser) {
-                            if (reconnectAttempts < MAX_RECONNECT) {
-                                reconnectAttempts++;
-                                showToast('Reconnecting... (' + reconnectAttempts + '/' + MAX_RECONNECT + ')');
-                                setTimeout(connectWebSocket, 3000);
-                            } else {
-                                showToast('Connection lost. Please refresh.', true);
-                            }
-                        }
-                    };
-                } catch (e) {
-                    connectionInProgress = false;
-                    showToast('Failed to connect', true);
-                }
-            }
-
-            function handleMessage(data) {
-                switch(data.type) {
-                    case 'contact_list':
-                        if (data.contacts) { contacts = data.contacts; renderContacts(); }
-                        break;
-                    case 'contact_add_result':
-                        if (data.success) {
-                            showToast('✅ Contact added!');
-                            if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                                mobileWs.send(JSON.stringify({ type: 'get_contacts', username: mobileUser.username }));
-                            }
-                        } else {
-                            showToast('❌ ' + (data.message || 'Failed to add contact'), true);
-                        }
-                        break;
-                    case 'contact_added':
-                        if (data.contact) {
-                            showToast('👤 ' + (data.contact.displayName || 'Someone') + ' added you!');
-                            if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                                mobileWs.send(JSON.stringify({ type: 'get_contacts', username: mobileUser.username }));
-                            }
-                        }
-                        break;
-                    case 'new_message':
-                        if (data.data) {
-                            if (data.data.from !== mobileUser.username) {
-                                playMobileMessageSound();
-                            }
-                            if (data.data.from === currentChat || data.data.to === currentChat) {
-                                displayMessage(data.data, data.data.from === mobileUser.username);
-                            } else {
-                                showToast('📨 New message from ' + (data.data.fromDisplay || data.data.from));
-                            }
-                        }
-                        break;
-                    case 'image_receive':
-                        playMobileMessageSound();
-                        if (data.from === currentChat || data.to === currentChat) {
-                            displayImage(data);
-                        } else {
-                            showToast('📷 Image from ' + (data.fromDisplay || data.from));
-                        }
-                        break;
-                    case 'chat_history':
-                        if (data.messages && data.chatId === currentChat) {
-                            document.getElementById('mobileMessages').innerHTML = '';
-                            renderedMessageIds.clear();
-                            data.messages.forEach(msg => {
-                                if (msg.imageData) displayImage(msg, msg.from === mobileUser.username);
-                                else displayMessage(msg, msg.from === mobileUser.username);
-                            });
-                            reattachMobileFtBars(data.chatId);
-                        }
-                        break;
-                    case 'user_join':
-                    case 'user_leave':
-                        if (data.users) updateContactStatuses(data.users);
-                        break;
-
-                    case 'call_request':
-                        if (isInCall) {
-                            if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                                mobileWs.send(JSON.stringify({
-                                    type: 'call_declined',
-                                    from: mobileUser.username,
-                                    to: data.from
-                                }));
-                            }
-                            return;
-                        }
-                        incomingCallFrom = data.from;
-                        document.getElementById('mobileCallerName').textContent = data.fromDisplay || data.from;
-                        document.getElementById('mobileIncomingCallOverlay').classList.add('active');
-                        playMobileCallSound();
-                        window.currentCallId = data.callId || 'call_' + Date.now();
-                        break;
-
-                    case 'call_accepted':
-                        stopMobileCallSounds();
-                        playMobileCallAcceptSound();
-                        if (data.callId) window.currentCallId = data.callId;
-                        document.getElementById('mobileCallTargetName').textContent = data.fromDisplay || data.from;
-                        document.getElementById('mobileCallStatusLine').textContent = 'In call with';
-                        document.getElementById('mobileCallOverlay').classList.add('active');
-                        startMobileCallTimer();
-                        isInCall = true;
-                        currentCallWith = data.from;
-                        setupMobileWebRTC(true);
-                        break;
-
-                    case 'call_declined':
-                        stopMobileCallSounds();
-                        playMobileCallEndSound();
-                        document.getElementById('mobileCallOverlay').classList.remove('active');
-                        document.getElementById('mobileIncomingCallOverlay').classList.remove('active');
-                        showToast((data.fromDisplay || data.from) + ' declined your call', true);
-                        isInCall = false;
-                        currentCallWith = null;
-                        cleanupMobileWebRTC();
-                        break;
-
-                    case 'call_end':
-                        if (isInCall || incomingCallFrom) {
-                            stopMobileCallSounds();
-                            playMobileCallEndSound();
-                            document.getElementById('mobileCallOverlay').classList.remove('active');
-                            document.getElementById('mobileIncomingCallOverlay').classList.remove('active');
-                            if (mobileCallTimerInterval) {
-                                clearInterval(mobileCallTimerInterval);
-                                mobileCallTimerInterval = null;
-                            }
-                            isInCall = false;
-                            currentCallWith = null;
-                            incomingCallFrom = null;
-                            mobileCallStartTime = null;
-                            cleanupMobileWebRTC();
-                            showToast('Call ended');
-                        }
-                        break;
-
-                    case 'webrtc_offer':
-                        handleMobileWebRTCOffer(data.offer, data.from);
-                        break;
-
-                    case 'webrtc_answer':
-                        handleMobileWebRTCAnswer(data.answer);
-                        break;
-
-                    case 'ice_candidate':
-                        handleMobileICECandidate(data.candidate);
-                        break;
-
-                    case 'ft_offer':
-                        handleMobileFtOffer(data);
-                        break;
-                    case 'ft_accept':
-                        handleMobileFtAccept(data);
-                        break;
-                    case 'ft_decline':
-                        handleMobileFtDecline(data);
-                        break;
-                    case 'ft_cancel':
-                        handleMobileFtCancel(data);
-                        break;
-                    case 'ft_signal':
-                        handleMobileFtSignal(data);
-                        break;
-                }
-            }
-
-            function updateContactStatuses(onlineUsers) {
-                contacts.forEach(contact => {
-                    const online = onlineUsers.find(u => u.username === contact.username);
-                    contact.status = online ? (online.status || 'online') : 'offline';
-                });
-                renderContacts();
-            }
-
-            function renderContacts() {
-                const list = document.getElementById('mobileContactList');
-                if (contacts.length === 0) {
-                    list.innerHTML = \`
-                        <div class="empty-state">
-                            <div class="empty-icon">👤</div>
-                            <div class="empty-title">No contacts yet</div>
-                            <div class="empty-text">Tap "Add Friend" to get started</div>
-                        </div>
-                    \`;
-                    return;
-                }
-                list.innerHTML = contacts.map(contact => {
-                    const st = contact.status || 'offline';
-                    const stLabel = st.charAt(0).toUpperCase() + st.slice(1);
-                    return \`
-                    <div class="mobile-contact" onclick="selectContact('\${contact.username}', '\${contact.displayName}')">
-                        <div class="contact-avatar">\${contact.displayName.charAt(0).toUpperCase()}</div>
-                        <div class="contact-info">
-                            <div class="contact-name">\${contact.displayName}</div>
-                            <div class="contact-status \${st}">
-                                <span class="status-dot"></span>
-                                \${stLabel}
-                            </div>
-                        </div>
-                    </div>
-                \`;
-                }).join('');
-            }
-
-            function searchContacts() {
-                const searchTerm = document.getElementById('contactSearch').value.toLowerCase();
-                document.querySelectorAll('.mobile-contact').forEach(contact => {
-                    const name = contact.querySelector('.contact-name').textContent.toLowerCase();
-                    contact.style.display = name.includes(searchTerm) ? 'flex' : 'none';
-                });
-            }
-
-            function addContact() {
-                if (!mobileUser) { showToast('Please login first', true); return; }
-                if (!mobileWs || mobileWs.readyState !== WebSocket.OPEN) {
-                    showToast('Connecting to server...', true);
-                    connectWebSocket();
-                    return;
-                }
-                const username = prompt('Enter username to add:');
-                if (!username || !username.trim()) return;
-                if (username === mobileUser.username) { showToast("You can't add yourself!", true); return; }
-                if (contacts.find(c => c.username === username)) { showToast('Contact already exists!', true); return; }
-                const displayName = prompt('Enter display name (optional):') || username;
-                mobileWs.send(JSON.stringify({
-                    type: 'add_contact',
-                    username: mobileUser.username,
-                    contactUsername: username,
-                    contactDisplayName: displayName
-                }));
-                showToast('Adding contact...');
-            }
-
-            function selectContact(username, displayName) {
-                currentChat = username;
-                document.getElementById('chatHeader').classList.remove('hidden');
-                document.getElementById('chatHeaderTitle').textContent = displayName;
-                document.getElementById('chatInputContainer').classList.remove('hidden');
+            break;
+        case 'image_receive':
+            playMobileMessageSound();
+            if (data.from === currentChat || data.to === currentChat) displayImage(data);
+            else showToast('Image from ' + (data.fromDisplay || data.from));
+            break;
+        case 'chat_history':
+            if (data.messages && data.chatId === currentChat) {
                 document.getElementById('mobileMessages').innerHTML = '';
                 renderedMessageIds.clear();
-                switchTab('chat');
-                if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                    mobileWs.send(JSON.stringify({ type: 'get_history', with: username }));
-                }
-                setTimeout(() => {
-                    document.getElementById('mobileMessageInput').focus();
-                }, 300);
+                data.messages.forEach(function(msg) {
+                    if (msg.imageData) displayImage(msg, msg.from === mobileUser.username);
+                    else displayMessage(msg, msg.from === mobileUser.username);
+                });
+                reattachMobileFtBars(data.chatId);
             }
-
-            function leaveChat() {
-                currentChat = null;
-                renderedMessageIds.clear();
-                document.getElementById('chatHeader').classList.add('hidden');
-                document.getElementById('chatInputContainer').classList.add('hidden');
-                document.getElementById('mobileMessages').innerHTML = \`
-                    <div class="empty-state">
-                        <div class="empty-icon">💬</div>
-                        <div class="empty-title">No chat selected</div>
-                        <div class="empty-text">Select a contact to start messaging</div>
-                    </div>
-                \`;
-                switchTab('contacts');
+            break;
+        case 'user_join':
+        case 'user_leave':
+            if (data.users) updateContactStatuses(data.users);
+            break;
+        case 'call_request':
+            if (isInCall) {
+                if (mobileWs && mobileWs.readyState === WebSocket.OPEN)
+                    mobileWs.send(JSON.stringify({ type: 'call_declined', from: mobileUser.username, to: data.from }));
+                return;
             }
-
-            function selectImage() {
-                if (!currentChat) { showToast('Select a chat first!', true); return; }
-                if (!mobileWs || mobileWs.readyState !== WebSocket.OPEN) { showToast('Not connected to server', true); return; }
-                document.getElementById('imageInput').click();
-            }
-
-            function selectMobileFile() {
-                if (!currentChat) { showToast('Select a chat first!', true); return; }
-                if (!mobileWs || mobileWs.readyState !== WebSocket.OPEN) { showToast('Not connected to server', true); return; }
-                document.getElementById('mobileFileInput').click();
-            }
-
-            document.getElementById('imageInput').addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                if (!file) return;
-                if (!file.type.startsWith('image/')) { showToast('Please select an image file', true); return; }
-                if (file.size > 5 * 1024 * 1024) { showToast('Image too large! Max 5MB', true); return; }
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    if (mobileWs && mobileWs.readyState === WebSocket.OPEN && currentChat) {
-                        mobileWs.send(JSON.stringify({
-                            type: 'image_share',
-                            to: currentChat,
-                            from: mobileUser.username,
-                            fromDisplay: mobileUser.displayName,
-                            imageData: event.target.result,
-                            fileName: file.name,
-                            timestamp: new Date().toISOString()
-                        }));
-                        displayImage({
-                            id: Date.now(),
-                            from: mobileUser.username,
-                            fromDisplay: mobileUser.displayName,
-                            imageData: event.target.result,
-                            timestamp: new Date().toISOString()
-                        }, true);
-                    }
-                };
-                reader.readAsDataURL(file);
-                e.target.value = '';
-            });
-
-            document.getElementById('mobileFileInput').addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                e.target.value = '';
-                if (!file) return;
-                if (!currentChat) { showToast('Select a chat first!', true); return; }
-                if (!mobileWs || mobileWs.readyState !== WebSocket.OPEN) { showToast('Not connected', true); return; }
-                if (file.size === 0) { showToast('Cannot send empty file', true); return; }
-                if (file.size > 500 * 1024 * 1024) { showToast('File too large (max 500MB)', true); return; }
-                sendMobileFile(currentChat, file);
-            });
-
-            function sendMobileMessage() {
-                const input = document.getElementById('mobileMessageInput');
-                const message = input.value.trim();
-                if (!message || !currentChat || !mobileWs) return;
-                if (mobileWs.readyState !== WebSocket.OPEN) { showToast('Not connected to server', true); return; }
-                const messageData = {
-                    id: Date.now(),
-                    from: mobileUser.username,
-                    fromDisplay: mobileUser.displayName,
-                    to: currentChat,
-                    message: message,
-                    timestamp: new Date().toISOString()
-                };
-                mobileWs.send(JSON.stringify({ type: 'message', data: messageData }));
-                playMobileSendSound();
-                displayMessage(messageData, true);
-                input.value = '';
-            }
-
-            function displayMessage(data, isSelf = false) {
-                const msgId = data.id;
-                if (msgId != null) {
-                    if (renderedMessageIds.has(msgId)) { return; }
-                    renderedMessageIds.add(msgId);
-                }
-                const messagesDiv = document.getElementById('mobileMessages');
-                const emptyState = messagesDiv.querySelector('.empty-state');
-                if (emptyState) emptyState.remove();
-                const time = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const messageDiv = document.createElement('div');
-                messageDiv.className = 'message ' + (isSelf ? 'message-self' : 'message-other');
-                messageDiv.innerHTML = \`
-                    <div class="message-sender">\${data.fromDisplay || data.from}</div>
-                    <div class="message-bubble">\${data.message}</div>
-                    <div class="message-time">\${time}</div>
-                \`;
-                messagesDiv.appendChild(messageDiv);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            }
-
-            function displayImage(data, isSelf = false) {
-                const msgId = data.id;
-                if (msgId != null) {
-                    if (renderedMessageIds.has(msgId)) { return; }
-                    renderedMessageIds.add(msgId);
-                }
-                const messagesDiv = document.getElementById('mobileMessages');
-                const emptyState = messagesDiv.querySelector('.empty-state');
-                if (emptyState) emptyState.remove();
-                const time = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const messageDiv = document.createElement('div');
-                messageDiv.className = 'message ' + (isSelf ? 'message-self' : 'message-other');
-                messageDiv.innerHTML = \`
-                    <div class="message-sender">\${data.fromDisplay || data.from}</div>
-                    <div class="message-bubble" style="background: none; padding: 4px;">
-                        <img src="\${data.imageData}" class="message-image" onclick="openModal('\${data.imageData}')">
-                    </div>
-                    <div class="message-time">\${time}</div>
-                \`;
-                messagesDiv.appendChild(messageDiv);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            }
-
-            function openModal(imageSrc) {
-                document.getElementById('modalImage').src = imageSrc;
-                document.getElementById('imageModal').classList.add('active');
-            }
-            function closeModal() {
-                document.getElementById('imageModal').classList.remove('active');
-            }
-
-            function switchTab(tabName, event) {
-                document.querySelectorAll('.mobile-tab').forEach(tab => tab.classList.remove('active'));
-                if (event && event.target) {
-                    event.target.classList.add('active');
-                } else {
-                    document.querySelectorAll('.mobile-tab').forEach(tab => {
-                        if (tab.textContent.toLowerCase().includes(tabName)) tab.classList.add('active');
-                    });
-                }
-                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-                document.getElementById(tabName + 'Tab').classList.add('active');
-            }
-
-            function mobileLogout() {
-                playMobileLogoutSound();
-                endMobileCall();
-                if (mobileWs) mobileWs.close();
-                mobileUser = null;
-                currentChat = null;
-                contacts = [];
-                connectionInProgress = false;
-                renderedMessageIds.clear();
-                myStatus = 'online';
-                document.getElementById('mobileApp').classList.remove('active');
-                document.getElementById('authOverlay').style.display = 'flex';
-                document.getElementById('authErrorMessage').classList.remove('show');
-                document.getElementById('authStatusMessage').textContent = 'Ready to connect...';
-                showToast('Logged out');
-            }
-
-            function startMobileCall() {
-                if (!currentChat) {
-                    showToast('Open a chat first', true);
-                    return;
-                }
-                if (isInCall) {
-                    showToast('Already in a call', true);
-                    return;
-                }
-                
-                if (!mobileMicGranted) {
-                    requestMobileMicPermission().then(ok => {
-                        if (ok) startMobileCall();
-                    });
-                    return;
-                }
-                
-                if (!mobileWs || mobileWs.readyState !== WebSocket.OPEN) {
-                    showToast('Not connected to server', true);
-                    return;
-                }
-                
-                currentCallWith = currentChat;
-                playMobileDialingSound();
-                
-                const callId = 'call_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-                window.currentCallId = callId;
-                
-                document.getElementById('mobileCallTargetName').textContent = currentChat;
-                document.getElementById('mobileCallStatusLine').textContent = 'Calling...';
-                document.getElementById('mobileCallTimer').textContent = 'Ringing';
-                document.getElementById('mobileCallOverlay').classList.add('active');
-                
-                mobileWs.send(JSON.stringify({
-                    type: 'call_request',
-                    callId: callId,
-                    from: mobileUser.username,
-                    fromDisplay: mobileUser.displayName,
-                    to: currentChat
-                }));
-                
-                setTimeout(() => {
-                    const overlay = document.getElementById('mobileCallOverlay');
-                    const statusLine = document.getElementById('mobileCallStatusLine');
-                    if (overlay.classList.contains('active') && statusLine.textContent === 'Calling...') {
-                        showToast('Call timed out', true);
-                        endMobileCall();
-                    }
-                }, 30000);
-            }
-
-            function acceptIncomingCall() {
-                stopMobileCallSounds();
-                playMobileCallAcceptSound();
-                
-                const callPartner = incomingCallFrom;
-                if (!callPartner) return;
-                
-                document.getElementById('mobileIncomingCallOverlay').classList.remove('active');
-                document.getElementById('mobileCallTargetName').textContent = callPartner;
-                document.getElementById('mobileCallStatusLine').textContent = 'In call with';
-                document.getElementById('mobileCallOverlay').classList.add('active');
-                startMobileCallTimer();
-                isInCall = true;
-                currentCallWith = callPartner;
-                incomingCallFrom = null;
-                
-                if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                    mobileWs.send(JSON.stringify({
-                        type: 'call_accepted',
-                        callId: window.currentCallId,
-                        from: mobileUser.username,
-                        fromDisplay: mobileUser.displayName,
-                        to: callPartner
-                    }));
-                }
-                
-                if (!mobileMicGranted) {
-                    requestMobileMicPermission().then(ok => {
-                        if (ok) setupMobileWebRTC(false);
-                    });
-                } else {
-                    setupMobileWebRTC(false);
-                }
-            }
-
-            function declineIncomingCall() {
+            incomingCallFrom = data.from;
+            document.getElementById('mobileCallerName').textContent = data.fromDisplay || data.from;
+            document.getElementById('mobileIncomingCallOverlay').classList.add('active');
+            playMobileCallSound();
+            window.currentCallId = data.callId || 'call_' + Date.now();
+            break;
+        case 'call_accepted':
+            stopMobileCallSounds();
+            playMobileCallAcceptSound();
+            if (data.callId) window.currentCallId = data.callId;
+            document.getElementById('mobileCallTargetName').textContent = data.fromDisplay || data.from;
+            document.getElementById('mobileCallStatusLine').textContent = 'In call with';
+            document.getElementById('mobileCallOverlay').classList.add('active');
+            startMobileCallTimer();
+            isInCall = true;
+            currentCallWith = data.from;
+            setupMobileWebRTC(true);
+            break;
+        case 'call_declined':
+            stopMobileCallSounds();
+            playMobileCallEndSound();
+            document.getElementById('mobileCallOverlay').classList.remove('active');
+            document.getElementById('mobileIncomingCallOverlay').classList.remove('active');
+            showToast((data.fromDisplay || data.from) + ' declined', true);
+            isInCall = false;
+            currentCallWith = null;
+            cleanupMobileWebRTC();
+            break;
+        case 'call_end':
+            if (isInCall || incomingCallFrom) {
                 stopMobileCallSounds();
                 playMobileCallEndSound();
-                document.getElementById('mobileIncomingCallOverlay').classList.remove('active');
-                
-                if (incomingCallFrom && mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                    mobileWs.send(JSON.stringify({
-                        type: 'call_declined',
-                        callId: window.currentCallId,
-                        from: mobileUser.username,
-                        to: incomingCallFrom
-                    }));
-                }
-                incomingCallFrom = null;
-                cleanupMobileWebRTC();
-            }
-
-            function endMobileCall() {
-                stopMobileCallSounds();
-                if (isInCall || incomingCallFrom) {
-                    playMobileCallEndSound();
-                }
-                
                 document.getElementById('mobileCallOverlay').classList.remove('active');
                 document.getElementById('mobileIncomingCallOverlay').classList.remove('active');
-                
-                if (mobileCallTimerInterval) {
-                    clearInterval(mobileCallTimerInterval);
-                    mobileCallTimerInterval = null;
-                }
-                
-                if (currentCallWith && mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                    mobileWs.send(JSON.stringify({
-                        type: 'call_end',
-                        callId: window.currentCallId,
-                        from: mobileUser.username,
-                        fromDisplay: mobileUser.displayName,
-                        to: currentCallWith
-                    }));
-                }
-                
-                cleanupMobileWebRTC();
+                if (mobileCallTimerInterval) { clearInterval(mobileCallTimerInterval); mobileCallTimerInterval = null; }
                 isInCall = false;
                 currentCallWith = null;
                 incomingCallFrom = null;
                 mobileCallStartTime = null;
+                cleanupMobileWebRTC();
+                showToast('Call ended');
             }
+            break;
+        case 'webrtc_offer':    handleMobileWebRTCOffer(data.offer, data.from); break;
+        case 'webrtc_answer':   handleMobileWebRTCAnswer(data.answer); break;
+        case 'ice_candidate':   handleMobileICECandidate(data.candidate); break;
+        case 'ft_offer':        handleMobileFtOffer(data); break;
+        case 'ft_accept':       handleMobileFtAccept(data); break;
+        case 'ft_decline':      handleMobileFtDecline(data); break;
+        case 'ft_cancel':       handleMobileFtCancel(data); break;
+        case 'ft_signal':       handleMobileFtSignal(data); break;
+    }
+}
 
-            function startMobileCallTimer() {
-                mobileCallStartTime = new Date();
-                document.getElementById('mobileCallTimer').textContent = '00:00';
-                if (mobileCallTimerInterval) clearInterval(mobileCallTimerInterval);
-                mobileCallTimerInterval = setInterval(() => {
-                    const diff = Math.floor((Date.now() - mobileCallStartTime) / 1000);
-                    const m = Math.floor(diff / 60);
-                    const s = diff % 60;
-                    document.getElementById('mobileCallTimer').textContent =
-                        m.toString().padStart(2, '0') + ':' + s.toString().padStart(2, '0');
-                }, 1000);
+function updateContactStatuses(onlineUsers) {
+    contacts.forEach(function(contact) {
+        const online = onlineUsers.find(function(u) { return u.username === contact.username; });
+        contact.status = online ? (online.status || 'online') : 'offline';
+    });
+    renderContacts();
+}
+
+function renderContacts() {
+    const list = document.getElementById('mobileContactList');
+    if (!contacts.length) {
+        list.innerHTML =
+            '<div class="empty-state">' +
+                '<div class="empty-icon">💬</div>' +
+                '<div class="empty-title">No Messages</div>' +
+                '<div class="empty-text">Tap ✎ to start</div>' +
+            '</div>';
+        return;
+    }
+    list.innerHTML = contacts.map(function(contact) {
+        const st = contact.status || 'offline';
+        const stLabel = st.charAt(0).toUpperCase() + st.slice(1);
+        const name = escHtml(contact.displayName || contact.username);
+        const user = escHtml(contact.username);
+        return '<div class="contact-row" data-user="' + user + '" data-display="' + name + '">' +
+            '<div class="contact-main">' +
+                '<div class="contact-name">' + name + '</div>' +
+                '<div class="contact-preview">' +
+                    '<span class="status-dot ' + st + '"></span>' +
+                    '<span>' + stLabel + '</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="contact-chev"></div>' +
+        '</div>';
+    }).join('');
+}
+
+function searchContacts() {
+    const term = (document.getElementById('contactSearch') || {}).value;
+    if (!term) return;
+    const lower = term.toLowerCase();
+    document.querySelectorAll('.contact-row').forEach(function(row) {
+        const name = (row.querySelector('.contact-name') || {}).textContent || '';
+        row.style.display = name.toLowerCase().indexOf(lower) !== -1 ? 'flex' : 'none';
+    });
+}
+
+function addContact() {
+    if (!mobileUser) { showToast('Please login first', true); return; }
+    if (!mobileWs || mobileWs.readyState !== WebSocket.OPEN) { showToast('Connecting...', true); connectWebSocket(); return; }
+    const username = prompt('Enter username to add:');
+    if (!username || !username.trim()) return;
+    if (username === mobileUser.username) { showToast("You can't add yourself", true); return; }
+    if (contacts.find(function(c) { return c.username === username; })) { showToast('Already a contact', true); return; }
+    const displayName = prompt('Enter display name (optional):') || username;
+    mobileWs.send(JSON.stringify({
+        type: 'add_contact',
+        username: mobileUser.username,
+        contactUsername: username,
+        contactDisplayName: displayName
+    }));
+    showToast('Adding contact...');
+}
+
+function selectContact(username, displayName) {
+    currentChat = username;
+    currentChatDisplayName = displayName;
+    renderedMessageIds.clear();
+    document.getElementById('mobileMessages').innerHTML =
+        '<div class="empty-state">' +
+            '<div class="empty-icon">💬</div>' +
+            '<div class="empty-title">No Messages</div>' +
+            '<div class="empty-text">Send a message to start</div>' +
+        '</div>';
+    setView('chat');
+    if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+        mobileWs.send(JSON.stringify({ type: 'get_history', with: username }));
+    }
+    setTimeout(function() {
+        const input = document.getElementById('mobileMessageInput');
+        if (input) input.focus();
+    }, 300);
+}
+
+function leaveChat() {
+    currentChat = null;
+    currentChatDisplayName = null;
+    renderedMessageIds.clear();
+    setView('list');
+}
+
+function selectImage() {
+    if (!currentChat) { showToast('Open a chat first', true); return; }
+    if (!mobileWs || mobileWs.readyState !== WebSocket.OPEN) { showToast('Not connected', true); return; }
+    document.getElementById('imageInput').click();
+}
+
+function selectMobileFile() {
+    if (!currentChat) { showToast('Open a chat first', true); return; }
+    if (!mobileWs || mobileWs.readyState !== WebSocket.OPEN) { showToast('Not connected', true); return; }
+    document.getElementById('mobileFileInput').click();
+}
+
+document.getElementById('imageInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { showToast('Not an image', true); return; }
+    if (file.size > 5 * 1024 * 1024) { showToast('Image too large (max 5MB)', true); return; }
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        if (mobileWs && mobileWs.readyState === WebSocket.OPEN && currentChat) {
+            mobileWs.send(JSON.stringify({
+                type: 'image_share',
+                to: currentChat,
+                from: mobileUser.username,
+                fromDisplay: mobileUser.displayName,
+                imageData: event.target.result,
+                fileName: file.name,
+                timestamp: new Date().toISOString()
+            }));
+            displayImage({
+                id: Date.now(),
+                from: mobileUser.username,
+                fromDisplay: mobileUser.displayName,
+                imageData: event.target.result,
+                timestamp: new Date().toISOString()
+            }, true);
+        }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+});
+
+document.getElementById('mobileFileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!currentChat) { showToast('Open a chat first', true); return; }
+    if (!mobileWs || mobileWs.readyState !== WebSocket.OPEN) { showToast('Not connected', true); return; }
+    if (file.size === 0) { showToast('Empty file', true); return; }
+    if (file.size > 500 * 1024 * 1024) { showToast('File too large (max 500MB)', true); return; }
+    sendMobileFile(currentChat, file);
+});
+
+function sendMobileMessage() {
+    const input = document.getElementById('mobileMessageInput');
+    const message = input.value.trim();
+    if (!message || !currentChat || !mobileWs) return;
+    if (mobileWs.readyState !== WebSocket.OPEN) { showToast('Not connected', true); return; }
+    const messageData = {
+        id: Date.now(),
+        from: mobileUser.username,
+        fromDisplay: mobileUser.displayName,
+        to: currentChat,
+        message: message,
+        timestamp: new Date().toISOString()
+    };
+    mobileWs.send(JSON.stringify({ type: 'message', data: messageData }));
+    playMobileSendSound();
+    displayMessage(messageData, true);
+    input.value = '';
+}
+
+function displayMessage(data, isSelf) {
+    const msgId = data.id;
+    if (msgId != null) {
+        if (renderedMessageIds.has(msgId)) return;
+        renderedMessageIds.add(msgId);
+    }
+    const messagesDiv = document.getElementById('mobileMessages');
+    const emptyState = messagesDiv.querySelector('.empty-state');
+    if (emptyState) emptyState.remove();
+    const time = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message ' + (isSelf ? 'message-self' : 'message-other');
+    let html = '<div class="bubble-wrap">';
+    if (!isSelf) {
+        html += '<div class="message-sender">' + escHtml(data.fromDisplay || data.from) + '</div>';
+    }
+    html += '<div class="bubble">' + escHtml(data.message || '') + '</div>';
+    html += '<div class="message-time">' + time + '</div>';
+    html += '</div>';
+    messageDiv.innerHTML = html;
+    messagesDiv.appendChild(messageDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function displayImage(data, isSelf) {
+    const msgId = data.id;
+    if (msgId != null) {
+        if (renderedMessageIds.has(msgId)) return;
+        renderedMessageIds.add(msgId);
+    }
+    const messagesDiv = document.getElementById('mobileMessages');
+    const emptyState = messagesDiv.querySelector('.empty-state');
+    if (emptyState) emptyState.remove();
+    const time = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message ' + (isSelf ? 'message-self' : 'message-other');
+    let html = '<div class="bubble-wrap">';
+    if (!isSelf) html += '<div class="message-sender">' + escHtml(data.fromDisplay || data.from) + '</div>';
+    html += '<div class="bubble bubble-image"><img class="message-image" alt="image"></div>';
+    html += '<div class="message-time">' + time + '</div>';
+    html += '</div>';
+    messageDiv.innerHTML = html;
+    const img = messageDiv.querySelector('.message-image');
+    if (img) {
+        img.src = data.imageData;
+        img.onclick = function() { openModal(data.imageData); };
+    }
+    messagesDiv.appendChild(messageDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function openModal(src) {
+    document.getElementById('modalImage').src = src;
+    document.getElementById('imageModal').classList.add('active');
+}
+function closeModal() {
+    document.getElementById('imageModal').classList.remove('active');
+}
+
+function mobileLogout() {
+    playMobileLogoutSound();
+    endMobileCall();
+    if (mobileWs) mobileWs.close();
+    mobileUser = null;
+    currentChat = null;
+    currentChatDisplayName = null;
+    contacts = [];
+    connectionInProgress = false;
+    renderedMessageIds.clear();
+    myStatus = 'online';
+    document.getElementById('mobileApp').classList.remove('active');
+    document.getElementById('authOverlay').classList.add('active');
+    document.getElementById('authErrorMessage').classList.remove('show');
+    setView('list');
+    showToast('Logged out');
+}
+
+/* ==================== CALLS ==================== */
+function startMobileCall() {
+    if (!currentChat) { showToast('Open a chat first', true); return; }
+    if (isInCall) { showToast('Already in a call', true); return; }
+    if (!mobileMicGranted) {
+        requestMobileMicPermission().then(function(ok) { if (ok) startMobileCall(); });
+        return;
+    }
+    if (!mobileWs || mobileWs.readyState !== WebSocket.OPEN) { showToast('Not connected', true); return; }
+    currentCallWith = currentChat;
+    playMobileDialingSound();
+    const callId = 'call_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+    window.currentCallId = callId;
+    document.getElementById('mobileCallTargetName').textContent = currentChatDisplayName || currentChat;
+    document.getElementById('mobileCallStatusLine').textContent = 'Calling...';
+    document.getElementById('mobileCallTimer').textContent = 'Ringing';
+    document.getElementById('mobileCallOverlay').classList.add('active');
+    mobileWs.send(JSON.stringify({
+        type: 'call_request',
+        callId: callId,
+        from: mobileUser.username,
+        fromDisplay: mobileUser.displayName,
+        to: currentChat
+    }));
+    setTimeout(function() {
+        const overlay = document.getElementById('mobileCallOverlay');
+        const statusLine = document.getElementById('mobileCallStatusLine');
+        if (overlay.classList.contains('active') && statusLine.textContent === 'Calling...') {
+            showToast('Call timed out', true);
+            endMobileCall();
+        }
+    }, 30000);
+}
+
+function acceptIncomingCall() {
+    stopMobileCallSounds();
+    playMobileCallAcceptSound();
+    const partner = incomingCallFrom;
+    if (!partner) return;
+    document.getElementById('mobileIncomingCallOverlay').classList.remove('active');
+    document.getElementById('mobileCallTargetName').textContent = partner;
+    document.getElementById('mobileCallStatusLine').textContent = 'In call with';
+    document.getElementById('mobileCallOverlay').classList.add('active');
+    startMobileCallTimer();
+    isInCall = true;
+    currentCallWith = partner;
+    incomingCallFrom = null;
+    if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+        mobileWs.send(JSON.stringify({
+            type: 'call_accepted',
+            callId: window.currentCallId,
+            from: mobileUser.username,
+            fromDisplay: mobileUser.displayName,
+            to: partner
+        }));
+    }
+    if (!mobileMicGranted) {
+        requestMobileMicPermission().then(function(ok) { if (ok) setupMobileWebRTC(false); });
+    } else {
+        setupMobileWebRTC(false);
+    }
+}
+
+function declineIncomingCall() {
+    stopMobileCallSounds();
+    playMobileCallEndSound();
+    document.getElementById('mobileIncomingCallOverlay').classList.remove('active');
+    if (incomingCallFrom && mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+        mobileWs.send(JSON.stringify({
+            type: 'call_declined',
+            callId: window.currentCallId,
+            from: mobileUser.username,
+            to: incomingCallFrom
+        }));
+    }
+    incomingCallFrom = null;
+    cleanupMobileWebRTC();
+}
+
+function endMobileCall() {
+    stopMobileCallSounds();
+    if (isInCall || incomingCallFrom) playMobileCallEndSound();
+    document.getElementById('mobileCallOverlay').classList.remove('active');
+    document.getElementById('mobileIncomingCallOverlay').classList.remove('active');
+    if (mobileCallTimerInterval) { clearInterval(mobileCallTimerInterval); mobileCallTimerInterval = null; }
+    if (currentCallWith && mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+        mobileWs.send(JSON.stringify({
+            type: 'call_end',
+            callId: window.currentCallId,
+            from: mobileUser.username,
+            fromDisplay: mobileUser.displayName,
+            to: currentCallWith
+        }));
+    }
+    cleanupMobileWebRTC();
+    isInCall = false;
+    currentCallWith = null;
+    incomingCallFrom = null;
+    mobileCallStartTime = null;
+}
+
+function startMobileCallTimer() {
+    mobileCallStartTime = new Date();
+    document.getElementById('mobileCallTimer').textContent = '00:00';
+    if (mobileCallTimerInterval) clearInterval(mobileCallTimerInterval);
+    mobileCallTimerInterval = setInterval(function() {
+        const diff = Math.floor((Date.now() - mobileCallStartTime) / 1000);
+        const m = Math.floor(diff / 60);
+        const s = diff % 60;
+        document.getElementById('mobileCallTimer').textContent =
+            m.toString().padStart(2, '0') + ':' + s.toString().padStart(2, '0');
+    }, 1000);
+}
+
+async function requestMobileMicPermission() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        mobileMicGranted = true;
+        stream.getTracks().forEach(function(t) { t.stop(); });
+        return true;
+    } catch (e) {
+        showMobileCallError('Microphone access denied.');
+        playMobileCallErrorSound();
+        return false;
+    }
+}
+
+function showMobileCallError(msg) {
+    const el = document.getElementById('mobileCallError');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+}
+function hideMobileCallError() {
+    const el = document.getElementById('mobileCallError');
+    if (el) el.classList.remove('show');
+}
+
+async function setupMobileWebRTC(isCaller) {
+    try {
+        if (!mobileMicGranted) {
+            const ok = await requestMobileMicPermission();
+            if (!ok) return;
+        }
+        mobileLocalStream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000, channelCount: 1 },
+            video: false
+        });
+        const localVideo = document.getElementById('mobileLocalVideo');
+        if (localVideo) { localVideo.srcObject = mobileLocalStream; localVideo.muted = true; localVideo.play().catch(function(){}); }
+        mobilePeerConnection = new RTCPeerConnection({
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ],
+            iceCandidatePoolSize: 10
+        });
+        mobileLocalStream.getTracks().forEach(function(track) {
+            mobilePeerConnection.addTrack(track, mobileLocalStream);
+        });
+        mobilePeerConnection.ontrack = function(event) {
+            const remoteAudio = document.getElementById('mobileRemoteAudio');
+            if (remoteAudio && event.streams[0]) {
+                remoteAudio.srcObject = event.streams[0];
+                remoteAudio.play().catch(function(e){ console.log('Remote audio play failed:', e); });
             }
-
-            async function requestMobileMicPermission() {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-                    mobileMicGranted = true;
-                    stream.getTracks().forEach(t => t.stop());
-                    return true;
-                } catch (e) {
-                    showMobileCallError('Microphone access denied. Please allow microphone in browser settings.');
-                    playMobileCallErrorSound();
-                    return false;
-                }
+        };
+        mobilePeerConnection.onicecandidate = function(event) {
+            if (event.candidate && mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+                mobileWs.send(JSON.stringify({ type: 'ice_candidate', to: currentCallWith, candidate: event.candidate }));
             }
-
-            function showMobileCallError(msg) {
-                const el = document.getElementById('mobileCallError');
-                if (!el) return;
-                el.textContent = msg;
-                el.classList.add('show');
-            }
-
-            function hideMobileCallError() {
-                const el = document.getElementById('mobileCallError');
-                if (el) el.classList.remove('show');
-            }
-
-            async function setupMobileWebRTC(isCaller) {
-                try {
-                    if (!mobileMicGranted) {
-                        const ok = await requestMobileMicPermission();
-                        if (!ok) return;
-                    }
-                    
-                    mobileLocalStream = await navigator.mediaDevices.getUserMedia({
-                        audio: {
-                            echoCancellation: true,
-                            noiseSuppression: true,
-                            autoGainControl: true,
-                            sampleRate: 48000,
-                            channelCount: 1
-                        },
-                        video: false
-                    });
-                    
-                    const localVideo = document.getElementById('mobileLocalVideo');
-                    if (localVideo) {
-                        localVideo.srcObject = mobileLocalStream;
-                        localVideo.muted = true;
-                        localVideo.play().catch(e => {});
-                    }
-                    
-                    const config = {
-                        iceServers: [
-                            { urls: 'stun:stun.l.google.com:19302' },
-                            { urls: 'stun:stun1.l.google.com:19302' }
-                        ],
-                        iceCandidatePoolSize: 10
-                    };
-                    
-                    mobilePeerConnection = new RTCPeerConnection(config);
-                    
-                    mobileLocalStream.getTracks().forEach(track => {
-                        mobilePeerConnection.addTrack(track, mobileLocalStream);
-                    });
-                    
-                    mobilePeerConnection.ontrack = (event) => {
-                        const remoteAudio = document.getElementById('mobileRemoteAudio');
-                        if (remoteAudio && event.streams[0]) {
-                            remoteAudio.srcObject = event.streams[0];
-                            remoteAudio.play().catch(e => console.log('Remote audio play failed:', e));
-                        }
-                    };
-                    
-                    mobilePeerConnection.onicecandidate = (event) => {
-                        if (event.candidate && mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                            mobileWs.send(JSON.stringify({
-                                type: 'ice_candidate',
-                                to: currentCallWith,
-                                candidate: event.candidate
-                            }));
-                        }
-                    };
-                    
-                    mobilePeerConnection.oniceconnectionstatechange = () => {
-                        if (mobilePeerConnection.iceConnectionState === 'connected' ||
-                            mobilePeerConnection.iceConnectionState === 'completed') {
-                            hideMobileCallError();
-                            document.getElementById('mobileAudioControls').style.display = 'flex';
-                        } else if (mobilePeerConnection.iceConnectionState === 'failed') {
-                            showMobileCallError('Connection failed.');
-                            playMobileCallErrorSound();
-                            setTimeout(() => endMobileCall(), 2500);
-                        }
-                    };
-                    
-                    if (isCaller) {
-                        const offer = await mobilePeerConnection.createOffer({
-                            offerToReceiveAudio: true,
-                            offerToReceiveVideo: false
-                        });
-                        await mobilePeerConnection.setLocalDescription(offer);
-                        if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                            mobileWs.send(JSON.stringify({
-                                type: 'webrtc_offer',
-                                to: currentCallWith,
-                                offer: offer
-                            }));
-                        }
-                    }
-                } catch (e) {
-                    console.error('Mobile WebRTC setup error:', e);
-                    showMobileCallError('Call setup failed: ' + e.message);
-                    playMobileCallErrorSound();
-                    setTimeout(() => endMobileCall(), 2500);
-                }
-            }
-
-            async function handleMobileWebRTCOffer(offer, from) {
-                try {
-                    if (!mobilePeerConnection) {
-                        await setupMobileWebRTC(false);
-                    }
-                    await mobilePeerConnection.setRemoteDescription(offer);
-                    const answer = await mobilePeerConnection.createAnswer();
-                    await mobilePeerConnection.setLocalDescription(answer);
-                    if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                        mobileWs.send(JSON.stringify({
-                            type: 'webrtc_answer',
-                            to: from,
-                            answer: answer
-                        }));
-                    }
-                    await flushMobileIce();
-                } catch (e) {
-                    console.error('Mobile offer handling error:', e);
-                    showMobileCallError('Failed to accept call.');
-                    playMobileCallErrorSound();
-                    setTimeout(() => endMobileCall(), 2500);
-                }
-            }
-
-            async function handleMobileWebRTCAnswer(answer) {
-                try {
-                    if (!mobilePeerConnection) return;
-                    await mobilePeerConnection.setRemoteDescription(answer);
-                    await flushMobileIce();
-                } catch (e) {
-                    console.error('Mobile answer handling error:', e);
-                }
-            }
-
-            async function handleMobileICECandidate(candidate) {
-                try {
-                    if (mobilePeerConnection && mobilePeerConnection.remoteDescription) {
-                        await mobilePeerConnection.addIceCandidate(candidate);
-                    } else {
-                        mobilePendingIce.push(candidate);
-                    }
-                } catch (e) {
-                    console.error('Mobile ICE error:', e);
-                }
-            }
-
-            async function flushMobileIce() {
-                if (!mobilePeerConnection || !mobilePeerConnection.remoteDescription) return;
-                const queued = mobilePendingIce;
-                mobilePendingIce = [];
-                for (const c of queued) {
-                    try { await mobilePeerConnection.addIceCandidate(c); } catch (e) {}
-                }
-            }
-
-            function toggleMute() {
-                if (mobileLocalStream) {
-                    const tracks = mobileLocalStream.getAudioTracks();
-                    tracks.forEach(t => t.enabled = !t.enabled);
-                    mobileMuted = !mobileMuted;
-                    const btn = document.getElementById('mobileMuteBtn');
-                    if (btn) btn.textContent = mobileMuted ? 'Unmute' : 'Mute';
-                }
-            }
-
-            function toggleDeafen() {
-                const remote = document.getElementById('mobileRemoteAudio');
-                if (remote) {
-                    remote.muted = !remote.muted;
-                    mobileDeafened = !mobileDeafened;
-                    const btn = document.getElementById('mobileDeafenBtn');
-                    if (btn) btn.textContent = mobileDeafened ? 'Undeafen' : 'Deafen';
-                }
-            }
-
-            function cleanupMobileWebRTC() {
-                mobilePendingIce = [];
-                
-                if (mobileLocalStream) {
-                    mobileLocalStream.getTracks().forEach(t => t.stop());
-                    mobileLocalStream = null;
-                }
-                if (mobilePeerConnection) {
-                    mobilePeerConnection.close();
-                    mobilePeerConnection = null;
-                }
-                
-                const lv = document.getElementById('mobileLocalVideo');
-                if (lv) { lv.srcObject = null; lv.pause(); }
-                const ra = document.getElementById('mobileRemoteAudio');
-                if (ra) { ra.srcObject = null; ra.pause(); }
-                
-                mobileMuted = false;
-                mobileDeafened = false;
-                
-                const mb = document.getElementById('mobileMuteBtn');
-                if (mb) mb.textContent = 'Mute';
-                const db = document.getElementById('mobileDeafenBtn');
-                if (db) db.textContent = 'Deafen';
-                
-                document.getElementById('mobileAudioControls').style.display = 'none';
+        };
+        mobilePeerConnection.oniceconnectionstatechange = function() {
+            const st = mobilePeerConnection.iceConnectionState;
+            if (st === 'connected' || st === 'completed') {
                 hideMobileCallError();
+                document.getElementById('mobileAudioControls').style.display = 'flex';
+            } else if (st === 'failed') {
+                showMobileCallError('Connection failed.');
+                playMobileCallErrorSound();
+                setTimeout(endMobileCall, 2500);
             }
-
-            // ==================== MOBILE FILE TRANSFER ====================
-            function mFormatBytes(bytes) {
-                if (bytes === 0) return '0 B';
-                const k = 1024;
-                const sizes = ['B', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return (bytes / Math.pow(k, i)).toFixed(i === 0 ? 0 : 1) + ' ' + sizes[i];
+        };
+        if (isCaller) {
+            const offer = await mobilePeerConnection.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: false });
+            await mobilePeerConnection.setLocalDescription(offer);
+            if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+                mobileWs.send(JSON.stringify({ type: 'webrtc_offer', to: currentCallWith, offer: offer }));
             }
-            function mFormatSpeed(bps) {
-                if (!bps || bps <= 0) return '0 B/s';
-                return mFormatBytes(bps) + '/s';
+        }
+    } catch (e) {
+        console.error('WebRTC setup error:', e);
+        showMobileCallError('Call setup failed: ' + e.message);
+        playMobileCallErrorSound();
+        setTimeout(endMobileCall, 2500);
+    }
+}
+
+async function handleMobileWebRTCOffer(offer, from) {
+    try {
+        if (!mobilePeerConnection) await setupMobileWebRTC(false);
+        await mobilePeerConnection.setRemoteDescription(offer);
+        const answer = await mobilePeerConnection.createAnswer();
+        await mobilePeerConnection.setLocalDescription(answer);
+        if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+            mobileWs.send(JSON.stringify({ type: 'webrtc_answer', to: from, answer: answer }));
+        }
+        await flushMobileIce();
+    } catch (e) {
+        console.error('Offer handling error:', e);
+        showMobileCallError('Failed to accept call.');
+        playMobileCallErrorSound();
+        setTimeout(endMobileCall, 2500);
+    }
+}
+
+async function handleMobileWebRTCAnswer(answer) {
+    try {
+        if (!mobilePeerConnection) return;
+        await mobilePeerConnection.setRemoteDescription(answer);
+        await flushMobileIce();
+    } catch (e) { console.error('Answer handling error:', e); }
+}
+
+async function handleMobileICECandidate(candidate) {
+    try {
+        if (mobilePeerConnection && mobilePeerConnection.remoteDescription) {
+            await mobilePeerConnection.addIceCandidate(candidate);
+        } else {
+            mobilePendingIce.push(candidate);
+        }
+    } catch (e) { console.error('ICE error:', e); }
+}
+
+async function flushMobileIce() {
+    if (!mobilePeerConnection || !mobilePeerConnection.remoteDescription) return;
+    const queued = mobilePendingIce;
+    mobilePendingIce = [];
+    for (const c of queued) { try { await mobilePeerConnection.addIceCandidate(c); } catch (e) {} }
+}
+
+function toggleMute() {
+    if (mobileLocalStream) {
+        mobileLocalStream.getAudioTracks().forEach(function(t) { t.enabled = !t.enabled; });
+        mobileMuted = !mobileMuted;
+        const btn = document.getElementById('mobileMuteBtn');
+        if (btn) btn.textContent = mobileMuted ? 'Unmute' : 'Mute';
+    }
+}
+
+function toggleDeafen() {
+    const remote = document.getElementById('mobileRemoteAudio');
+    if (remote) {
+        remote.muted = !remote.muted;
+        mobileDeafened = !mobileDeafened;
+        const btn = document.getElementById('mobileDeafenBtn');
+        if (btn) btn.textContent = mobileDeafened ? 'Undeafen' : 'Deafen';
+    }
+}
+
+function cleanupMobileWebRTC() {
+    mobilePendingIce = [];
+    if (mobileLocalStream) {
+        mobileLocalStream.getTracks().forEach(function(t) { t.stop(); });
+        mobileLocalStream = null;
+    }
+    if (mobilePeerConnection) { mobilePeerConnection.close(); mobilePeerConnection = null; }
+    const lv = document.getElementById('mobileLocalVideo');
+    if (lv) { lv.srcObject = null; lv.pause(); }
+    const ra = document.getElementById('mobileRemoteAudio');
+    if (ra) { ra.srcObject = null; ra.pause(); }
+    mobileMuted = false;
+    mobileDeafened = false;
+    const mb = document.getElementById('mobileMuteBtn');
+    if (mb) mb.textContent = 'Mute';
+    const db = document.getElementById('mobileDeafenBtn');
+    if (db) db.textContent = 'Deafen';
+    document.getElementById('mobileAudioControls').style.display = 'none';
+    hideMobileCallError();
+}
+
+/* ==================== FILE TRANSFER ==================== */
+function mFormatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return (bytes / Math.pow(k, i)).toFixed(i === 0 ? 0 : 1) + ' ' + sizes[i];
+}
+function mFormatSpeed(bps) {
+    if (!bps || bps <= 0) return '0 B/s';
+    return mFormatBytes(bps) + '/s';
+}
+function mFormatEta(sec) {
+    if (!isFinite(sec) || sec <= 0) return '--:--';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return m.toString().padStart(2, '0') + ':' + s.toString().padStart(2, '0');
+}
+function makeMobileTransferId() {
+    return 'ft_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+}
+
+function showMobileFtChatBar(peer, transferId, opts) {
+    if (!peer) return;
+    if (currentChat !== peer) return;
+    opts = opts || {};
+    const container = document.getElementById('mobileMessages');
+    if (!container) return;
+    const barId = 'mftbar_' + (transferId || (Date.now() + '_' + Math.random().toString(36).substr(2, 5)));
+    let bar = document.getElementById(barId);
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.id = barId;
+        bar.className = 'ft-chat-bar';
+        bar.innerHTML =
+            '<div class="ft-bar-icon">📎</div>' +
+            '<div class="ft-bar-text">' +
+                '<strong class="ft-bar-title"></strong>' +
+                '<small class="ft-bar-sub"></small>' +
+                '<div class="ft-bar-progress"><div class="ft-bar-progress-fill"></div></div>' +
+            '</div>' +
+            '<div class="ft-bar-close" title="Dismiss">×</div>';
+        bar.querySelector('.ft-bar-close').onclick = function() { bar.remove(); };
+        container.appendChild(bar);
+    }
+    const titleEl = bar.querySelector('.ft-bar-title');
+    const subEl = bar.querySelector('.ft-bar-sub');
+    const fillEl = bar.querySelector('.ft-bar-progress-fill');
+    const progressWrap = bar.querySelector('.ft-bar-progress');
+    if (opts.title) titleEl.textContent = opts.title;
+    if (opts.sub) subEl.textContent = opts.sub;
+    if (typeof opts.progress === 'number') {
+        progressWrap.style.display = '';
+        fillEl.style.width = Math.max(0, Math.min(100, opts.progress)).toFixed(1) + '%';
+    } else if (opts.hideProgress) {
+        progressWrap.style.display = 'none';
+    }
+    bar.classList.remove('success', 'error', 'cancelled');
+    if (opts.status === 'success') bar.classList.add('success');
+    else if (opts.status === 'error') bar.classList.add('error');
+    else if (opts.status === 'cancelled') bar.classList.add('cancelled');
+    if (opts.icon) bar.querySelector('.ft-bar-icon').textContent = opts.icon;
+    container.scrollTop = container.scrollHeight;
+}
+
+function reattachMobileFtBars(peer) {
+    mFtTransfers.forEach(function(t) {
+        if (t.peer !== peer) return;
+        const done = t.direction === 'send' ? t.bytesSent : t.receivedBytes;
+        const total = t.filesize || 1;
+        const pct = Math.min(100, (done / total) * 100);
+        let icon, title, sub, status;
+        if (t.direction === 'send') { icon = '📤'; title = 'Sending ' + t.filename; }
+        else { icon = '📥'; title = 'Receiving ' + t.filename; }
+        switch (t.status) {
+            case 'offered':      sub = mFormatBytes(total) + ' - waiting'; break;
+            case 'connecting':   sub = mFormatBytes(total) + ' - connecting'; break;
+            case 'transferring': sub = mFormatBytes(done) + ' / ' + mFormatBytes(total) + (t.speed > 0 ? ' - ' + mFormatSpeed(t.speed) : ''); break;
+            case 'done':         sub = mFormatBytes(total) + ' - complete'; status = 'success'; break;
+            case 'declined':     sub = 'Declined'; status = 'error'; break;
+            case 'cancelled':    sub = 'Cancelled'; status = 'cancelled'; break;
+            case 'failed':       sub = 'Failed: ' + (t.error || 'error'); status = 'error'; break;
+        }
+        showMobileFtChatBar(peer, t.id, { icon: icon, title: title, sub: sub, progress: pct, status: status });
+    });
+}
+
+function sendMobileFile(recipient, file) {
+    const transferId = makeMobileTransferId();
+    const transfer = {
+        id: transferId, direction: 'send', peer: recipient,
+        filename: file.name, filesize: file.size,
+        mime: file.type || 'application/octet-stream',
+        file: file, status: 'offered',
+        bytesSent: 0, bytesReceived: 0,
+        startTime: null, lastTickTime: null, lastTickBytes: 0,
+        speed: 0, pc: null, dc: null, pendingIce: []
+    };
+    mFtTransfers.set(transferId, transfer);
+    showMobileFtProgress(transfer);
+    playMobileFtStartSound();
+    showMobileFtChatBar(recipient, transferId, {
+        icon: '📤', title: 'Sending ' + file.name,
+        sub: mFormatBytes(file.size) + ' - waiting',
+        progress: 0
+    });
+    mobileWs.send(JSON.stringify({
+        type: 'ft_offer',
+        transferId: transferId,
+        from: mobileUser.username,
+        fromDisplay: mobileUser.displayName,
+        to: recipient,
+        filename: file.name,
+        filesize: file.size,
+        mime: transfer.mime
+    }));
+    console.log('FT: [mobile] sent ft_offer', { transferId: transferId, to: recipient, filename: file.name });
+}
+
+function handleMobileFtOffer(data) {
+    console.log('FT: [mobile] received ft_offer', data);
+    if (!data || !data.transferId) return;
+    if (mFtIncomingOffer) {
+        if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+            mobileWs.send(JSON.stringify({ type: 'ft_decline', transferId: data.transferId, from: mobileUser.username, to: data.from }));
+        }
+        return;
+    }
+    mFtIncomingOffer = {
+        transferId: data.transferId,
+        from: data.from,
+        fromDisplay: data.fromDisplay || data.from,
+        filename: data.filename || 'file.bin',
+        filesize: data.filesize || 0,
+        mime: data.mime || 'application/octet-stream'
+    };
+    document.getElementById('mobileFtOfferFrom').textContent = (data.fromDisplay || data.from) + ' wants to send you a file';
+    document.getElementById('mobileFtOfferFilename').textContent = mFtIncomingOffer.filename;
+    document.getElementById('mobileFtOfferFilesize').textContent = mFormatBytes(mFtIncomingOffer.filesize);
+    document.getElementById('mobileFtOfferOverlay').classList.add('active');
+    playMobileFtStartSound();
+}
+
+function acceptIncomingTransfer() {
+    if (!mFtIncomingOffer) return;
+    const offer = mFtIncomingOffer;
+    mFtIncomingOffer = null;
+    document.getElementById('mobileFtOfferOverlay').classList.remove('active');
+    if (!mobileWs || mobileWs.readyState !== WebSocket.OPEN) { playMobileFtFailSound(); return; }
+    mobileWs.send(JSON.stringify({ type: 'ft_accept', transferId: offer.transferId, from: mobileUser.username, to: offer.from }));
+    const transfer = {
+        id: offer.transferId, direction: 'receive', peer: offer.from,
+        peerDisplay: offer.fromDisplay,
+        filename: offer.filename, filesize: offer.filesize, mime: offer.mime,
+        status: 'connecting',
+        bytesSent: 0, bytesReceived: 0,
+        startTime: null, lastTickTime: null, lastTickBytes: 0,
+        speed: 0, pc: null, dc: null, pendingIce: [],
+        chunks: [], receivedBytes: 0
+    };
+    mFtTransfers.set(offer.transferId, transfer);
+    showMobileFtProgress(transfer);
+    showMobileFtChatBar(offer.from, offer.transferId, {
+        icon: '📥', title: 'Receiving ' + offer.filename,
+        sub: mFormatBytes(offer.filesize) + ' - connecting',
+        progress: 0
+    });
+    setupMobileFtReceiver(transfer);
+}
+
+function declineIncomingTransfer() {
+    if (!mFtIncomingOffer) return;
+    const offer = mFtIncomingOffer;
+    mFtIncomingOffer = null;
+    document.getElementById('mobileFtOfferOverlay').classList.remove('active');
+    if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+        mobileWs.send(JSON.stringify({ type: 'ft_decline', transferId: offer.transferId, from: mobileUser.username, to: offer.from }));
+    }
+    playMobileFtFailSound();
+    showMobileFtChatBar(offer.from, null, {
+        icon: '❌', title: offer.filename, sub: 'You declined',
+        hideProgress: true, status: 'cancelled'
+    });
+}
+
+function handleMobileFtAccept(data) {
+    const transfer = mFtTransfers.get(data.transferId);
+    if (!transfer || transfer.direction !== 'send') return;
+    transfer.status = 'connecting';
+    updateMobileFtProgress(transfer);
+    setupMobileFtSender(transfer);
+}
+
+function handleMobileFtDecline(data) {
+    const transfer = mFtTransfers.get(data.transferId);
+    if (!transfer) return;
+    transfer.status = 'declined';
+    updateMobileFtProgress(transfer);
+    playMobileFtFailSound();
+    showMobileFtChatBar(transfer.peer, transfer.id, {
+        icon: '❌', title: transfer.filename, sub: 'Declined',
+        hideProgress: true, status: 'error'
+    });
+    setTimeout(function() { removeMobileFtTransfer(transfer.id); }, 2500);
+}
+
+function handleMobileFtCancel(data) {
+    const transfer = mFtTransfers.get(data.transferId);
+    if (!transfer) return;
+    transfer.status = 'cancelled';
+    updateMobileFtProgress(transfer);
+    playMobileFtFailSound();
+    if (transfer.pc) { try { transfer.pc.close(); } catch (e) {} transfer.pc = null; }
+    showMobileFtChatBar(transfer.peer, transfer.id, {
+        icon: '❌', title: transfer.filename,
+        sub: transfer.direction === 'send' ? 'Cancelled' : 'Sender cancelled',
+        hideProgress: true, status: 'cancelled'
+    });
+    setTimeout(function() { removeMobileFtTransfer(transfer.id); }, 2500);
+}
+
+function handleMobileFtSignal(data) {
+    const transfer = mFtTransfers.get(data.transferId);
+    if (!transfer) return;
+    if (!transfer.pc) {
+        transfer.pendingSignals = transfer.pendingSignals || [];
+        transfer.pendingSignals.push(data.signal);
+        return;
+    }
+    processMobileFtSignal(transfer, data.signal);
+}
+
+async function processMobileFtSignal(transfer, signal) {
+    try {
+        if (signal.type === 'offer' || signal.type === 'answer') {
+            if (transfer.pc.signalingState === 'have-local-offer' && signal.type === 'offer') return;
+            if (transfer.pc.signalingState === 'have-remote-offer' && signal.type === 'offer') return;
+            if (transfer.pc.signalingState === 'stable' && signal.type === 'answer') return;
+            if (transfer.pc.signalingState !== 'have-local-offer' && signal.type === 'answer') return;
+            await transfer.pc.setRemoteDescription(signal);
+            for (const c of (transfer.pendingIce || [])) { try { await transfer.pc.addIceCandidate(c); } catch (e) {} }
+            transfer.pendingIce = [];
+            if (signal.type === 'offer') {
+                const answer = await transfer.pc.createAnswer();
+                await transfer.pc.setLocalDescription(answer);
+                sendMobileFtSignal(transfer, { type: 'answer', sdp: answer.sdp });
             }
-            function mFormatEta(sec) {
-                if (!isFinite(sec) || sec <= 0) return '--:--';
-                const m = Math.floor(sec / 60);
-                const s = Math.floor(sec % 60);
-                return m.toString().padStart(2, '0') + ':' + s.toString().padStart(2, '0');
+        } else if (signal.type === 'candidate' && signal.candidate) {
+            if (transfer.pc.remoteDescription) await transfer.pc.addIceCandidate(signal.candidate);
+            else { transfer.pendingIce = transfer.pendingIce || []; transfer.pendingIce.push(signal.candidate); }
+        }
+    } catch (e) {
+        failMobileFtTransfer(transfer, 'Signal error: ' + e.message);
+    }
+}
+
+function sendMobileFtSignal(transfer, signal) {
+    if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+        mobileWs.send(JSON.stringify({
+            type: 'ft_signal',
+            transferId: transfer.id,
+            from: mobileUser.username,
+            to: transfer.peer,
+            signal: signal
+        }));
+    }
+}
+
+async function setupMobileFtSender(transfer) {
+    try {
+        transfer.pc = new RTCPeerConnection({
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        });
+        transfer.pc.onicecandidate = function(e) {
+            if (e.candidate) sendMobileFtSignal(transfer, { type: 'candidate', candidate: e.candidate });
+        };
+        transfer.pc.oniceconnectionstatechange = function() {
+            const st = transfer.pc.iceConnectionState;
+            if (st !== 'failed') return;
+            if (transfer.direction === 'send' && transfer.bytesSent >= transfer.filesize) { finishMobileSend(transfer); return; }
+            if (transfer.direction === 'receive' && (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd)) { finishMobileReceive(transfer); return; }
+            if (transfer.status !== 'done' && transfer.status !== 'cancelled' && transfer.status !== 'declined' && transfer.status !== 'failed') {
+                failMobileFtTransfer(transfer, 'Connection failed');
             }
-            function makeMobileTransferId() {
-                return 'ft_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+        };
+        const dc = transfer.pc.createDataChannel('file', { ordered: true });
+        transfer.dc = dc;
+        wireMobileDataChannel(transfer, dc, 'send');
+        const offer = await transfer.pc.createOffer();
+        await transfer.pc.setLocalDescription(offer);
+        sendMobileFtSignal(transfer, { type: 'offer', sdp: offer.sdp });
+    } catch (e) {
+        failMobileFtTransfer(transfer, 'Setup failed: ' + e.message);
+    }
+}
+
+async function setupMobileFtReceiver(transfer) {
+    try {
+        transfer.pc = new RTCPeerConnection({
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        });
+        transfer.pc.onicecandidate = function(e) {
+            if (e.candidate) sendMobileFtSignal(transfer, { type: 'candidate', candidate: e.candidate });
+        };
+        transfer.pc.oniceconnectionstatechange = function() {
+            const st = transfer.pc.iceConnectionState;
+            if (st !== 'failed') return;
+            if (transfer.direction === 'receive' && (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd)) { finishMobileReceive(transfer); return; }
+            if (transfer.status !== 'done' && transfer.status !== 'cancelled' && transfer.status !== 'declined' && transfer.status !== 'failed') {
+                failMobileFtTransfer(transfer, 'Connection failed');
             }
+        };
+        transfer.pc.ondatachannel = function(event) {
+            transfer.dc = event.channel;
+            wireMobileDataChannel(transfer, event.channel, 'receive');
+        };
+        if (transfer.pendingSignals) {
+            for (const sig of transfer.pendingSignals) await processMobileFtSignal(transfer, sig);
+            transfer.pendingSignals = [];
+        }
+    } catch (e) {
+        failMobileFtTransfer(transfer, 'Setup failed: ' + e.message);
+    }
+}
 
-            // ===== Mobile inline FT chat bar =====
-            function showMobileFtChatBar(peer, transferId, opts) {
-                if (!peer) return;
-                if (currentChat !== peer) return;
-                opts = opts || {};
+function wireMobileDataChannel(transfer, dc, side) {
+    dc.binaryType = 'arraybuffer';
+    dc.onopen = function() {
+        transfer.status = 'transferring';
+        transfer.startTime = Date.now();
+        transfer.lastTickTime = Date.now();
+        transfer.lastTickBytes = 0;
+        updateMobileFtProgress(transfer);
+        if (side === 'send') startMobileSendingChunks(transfer);
+        else { transfer.receivedBytes = 0; transfer.chunks = []; }
+    };
+    dc.onmessage = function(event) {
+        if (side !== 'receive') return;
+        const data = event.data;
+        if (typeof data === 'string') {
+            try {
+                const msg = JSON.parse(data);
+                if (msg.type === 'file-end') { transfer.gotFileEnd = true; finishMobileReceive(transfer); }
+            } catch (e) {}
+            return;
+        }
+        const chunk = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+        transfer.chunks.push(chunk);
+        transfer.receivedBytes += chunk.byteLength;
+        const now = Date.now();
+        if (now - transfer.lastTickTime >= 500) {
+            const dt = (now - transfer.lastTickTime) / 1000;
+            transfer.speed = (transfer.receivedBytes - transfer.lastTickBytes) / dt;
+            transfer.lastTickTime = now;
+            transfer.lastTickBytes = transfer.receivedBytes;
+        }
+        updateMobileFtProgress(transfer);
+    };
+    dc.onclose = function() {
+        if (transfer.status !== 'transferring') return;
+        if (transfer.direction === 'receive') {
+            if (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd) finishMobileReceive(transfer);
+            else failMobileFtTransfer(transfer, 'Connection closed');
+        } else if (transfer.direction === 'send') {
+            if (transfer.bytesSent >= transfer.filesize) finishMobileSend(transfer);
+            else failMobileFtTransfer(transfer, 'Connection closed');
+        }
+    };
+    dc.onerror = function(e) {
+        if (transfer.sendingDone) return;
+        if (transfer.direction === 'send' && transfer.bytesSent >= transfer.filesize) return;
+        if (transfer.direction === 'receive' && (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd)) return;
+        if (transfer.status === 'done' || transfer.status === 'cancelled' || transfer.status === 'declined' || transfer.status === 'failed') return;
+        const err = e && e.error;
+        if (err) {
+            const probe = String(err) + ' ' + (err.name || '') + ' ' + (err.message || '') + ' ' + ((err.constructor && err.constructor.name) || '');
+            if (probe.indexOf('Restricted') !== -1) return;
+        }
+        failMobileFtTransfer(transfer, 'Data channel error');
+    };
+}
 
-                const container = document.getElementById('mobileMessages');
-                if (!container) return;
-
-                const barId = 'mftbar_' + (transferId || (Date.now() + '_' + Math.random().toString(36).substr(2, 5)));
-                let bar = document.getElementById(barId);
-
-                if (!bar) {
-                    bar = document.createElement('div');
-                    bar.id = barId;
-                    bar.className = 'ft-chat-bar';
-                    bar.innerHTML = \`
-                        <div class="ft-bar-icon">📎</div>
-                        <div class="ft-bar-text">
-                            <strong class="ft-bar-title"></strong>
-                            <small class="ft-bar-sub"></small>
-                            <div class="ft-bar-progress"><div class="ft-bar-progress-fill"></div></div>
-                        </div>
-                        <div class="ft-bar-close" title="Dismiss">×</div>
-                    \`;
-                    bar.querySelector('.ft-bar-close').onclick = () => bar.remove();
-                    container.appendChild(bar);
-                }
-
-                const titleEl = bar.querySelector('.ft-bar-title');
-                const subEl = bar.querySelector('.ft-bar-sub');
-                const fillEl = bar.querySelector('.ft-bar-progress-fill');
-                const progressWrap = bar.querySelector('.ft-bar-progress');
-
-                if (opts.title) titleEl.textContent = opts.title;
-                if (opts.sub) subEl.textContent = opts.sub;
-
-                if (typeof opts.progress === 'number') {
-                    progressWrap.style.display = '';
-                    fillEl.style.width = Math.max(0, Math.min(100, opts.progress)).toFixed(1) + '%';
-                } else if (opts.hideProgress) {
-                    progressWrap.style.display = 'none';
-                }
-
-                bar.classList.remove('success', 'error', 'cancelled');
-                if (opts.status === 'success') bar.classList.add('success');
-                else if (opts.status === 'error') bar.classList.add('error');
-                else if (opts.status === 'cancelled') bar.classList.add('cancelled');
-
-                if (opts.icon) bar.querySelector('.ft-bar-icon').textContent = opts.icon;
-
-                container.scrollTop = container.scrollHeight;
+async function startMobileSendingChunks(transfer) {
+    try {
+        const file = transfer.file;
+        let offset = 0;
+        const dc = transfer.dc;
+        while (offset < file.size) {
+            while (dc.bufferedAmount > FT_BUFFER_THRESHOLD) {
+                await new Promise(function(r) { setTimeout(r, 20); });
+                if (transfer.status === 'cancelled' || transfer.status === 'failed') return;
             }
-
-            function reattachMobileFtBars(peer) {
-                mFtTransfers.forEach(t => {
-                    if (t.peer !== peer) return;
-                    const done = t.direction === 'send' ? t.bytesSent : t.receivedBytes;
-                    const total = t.filesize || 1;
-                    const pctVal = Math.min(100, (done / total) * 100);
-                    let barIcon, barTitle, barSub, barStatus;
-                    if (t.direction === 'send') { barIcon = '📤'; barTitle = 'Sending "' + t.filename + '"'; }
-                    else { barIcon = '📥'; barTitle = 'Receiving "' + t.filename + '"'; }
-                    switch (t.status) {
-                        case 'offered':     barSub = mFormatBytes(total) + ' • waiting…'; break;
-                        case 'connecting':  barSub = mFormatBytes(total) + ' • connecting…'; break;
-                        case 'transferring': barSub = mFormatBytes(done) + ' / ' + mFormatBytes(total) + (t.speed > 0 ? ' • ' + mFormatSpeed(t.speed) : ''); break;
-                        case 'done':        barSub = mFormatBytes(total) + ' • complete'; barStatus = 'success'; break;
-                        case 'declined':    barSub = 'Declined'; barStatus = 'error'; break;
-                        case 'cancelled':   barSub = 'Cancelled'; barStatus = 'cancelled'; break;
-                        case 'failed':      barSub = 'Failed: ' + (t.error || 'error'); barStatus = 'error'; break;
-                    }
-                    showMobileFtChatBar(peer, t.id, { icon: barIcon, title: barTitle, sub: barSub, progress: pctVal, status: barStatus });
-                });
-            }
-
-            function sendMobileFile(recipient, file) {
-                const transferId = makeMobileTransferId();
-                const transfer = {
-                    id: transferId,
-                    direction: 'send',
-                    peer: recipient,
-                    filename: file.name,
-                    filesize: file.size,
-                    mime: file.type || 'application/octet-stream',
-                    file: file,
-                    status: 'offered',
-                    bytesSent: 0,
-                    bytesReceived: 0,
-                    startTime: null,
-                    lastTickTime: null,
-                    lastTickBytes: 0,
-                    speed: 0,
-                    pc: null,
-                    dc: null,
-                    pendingIce: []
-                };
-                mFtTransfers.set(transferId, transfer);
-                showMobileFtProgress(transfer);
-                playMobileFtStartSound();
-
-                showMobileFtChatBar(recipient, transferId, {
-                    icon: '📤',
-                    title: 'Sending "' + file.name + '"',
-                    sub: mFormatBytes(file.size) + ' • waiting for accept…',
-                    progress: 0
-                });
-
-                mobileWs.send(JSON.stringify({
-                    type: 'ft_offer',
-                    transferId: transferId,
-                    from: mobileUser.username,
-                    fromDisplay: mobileUser.displayName,
-                    to: recipient,
-                    filename: file.name,
-                    filesize: file.size,
-                    mime: transfer.mime
-                }));
-                console.log('📤 FT: [mobile] sent ft_offer', {
-                    transferId: transferId,
-                    to: recipient,
-                    filename: file.name,
-                    size: file.size
-                });
-            }
-
-            function handleMobileFtOffer(data) {
-                if (mFtIncomingOffer) {
-                    if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                        mobileWs.send(JSON.stringify({
-                            type: 'ft_decline',
-                            transferId: data.transferId,
-                            from: mobileUser.username,
-                            to: data.from
-                        }));
-                    }
-                    return;
-                }
-                mFtIncomingOffer = {
-                    transferId: data.transferId,
-                    from: data.from,
-                    fromDisplay: data.fromDisplay || data.from,
-                    filename: data.filename || 'file.bin',
-                    filesize: data.filesize || 0,
-                    mime: data.mime || 'application/octet-stream'
-                };
-                document.getElementById('mobileFtOfferFrom').textContent =
-                    (data.fromDisplay || data.from) + ' wants to send you a file!';
-                document.getElementById('mobileFtOfferFilename').textContent = mFtIncomingOffer.filename;
-                document.getElementById('mobileFtOfferFilesize').textContent = mFormatBytes(mFtIncomingOffer.filesize);
-                document.getElementById('mobileFtOfferOverlay').classList.add('active');
-                playMobileFtStartSound();
-            }
-
-            function acceptIncomingTransfer() {
-                if (!mFtIncomingOffer) return;
-                const offer = mFtIncomingOffer;
-                mFtIncomingOffer = null;
-                document.getElementById('mobileFtOfferOverlay').classList.remove('active');
-
-                if (!mobileWs || mobileWs.readyState !== WebSocket.OPEN) {
-                    playMobileFtFailSound();
-                    return;
-                }
-
-                mobileWs.send(JSON.stringify({
-                    type: 'ft_accept',
-                    transferId: offer.transferId,
-                    from: mobileUser.username,
-                    to: offer.from
-                }));
-
-                const transfer = {
-                    id: offer.transferId,
-                    direction: 'receive',
-                    peer: offer.from,
-                    peerDisplay: offer.fromDisplay,
-                    filename: offer.filename,
-                    filesize: offer.filesize,
-                    mime: offer.mime,
-                    status: 'connecting',
-                    bytesSent: 0,
-                    bytesReceived: 0,
-                    startTime: null,
-                    lastTickTime: null,
-                    lastTickBytes: 0,
-                    speed: 0,
-                    pc: null,
-                    dc: null,
-                    pendingIce: [],
-                    chunks: [],
-                    receivedBytes: 0
-                };
-                mFtTransfers.set(offer.transferId, transfer);
-                showMobileFtProgress(transfer);
-
-                showMobileFtChatBar(offer.from, offer.transferId, {
-                    icon: '📥',
-                    title: 'Receiving "' + offer.filename + '"',
-                    sub: mFormatBytes(offer.filesize) + ' • connecting…',
-                    progress: 0
-                });
-
-                setupMobileFtReceiver(transfer);
-            }
-
-            function declineIncomingTransfer() {
-                if (!mFtIncomingOffer) return;
-                const offer = mFtIncomingOffer;
-                mFtIncomingOffer = null;
-                document.getElementById('mobileFtOfferOverlay').classList.remove('active');
-
-                if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                    mobileWs.send(JSON.stringify({
-                        type: 'ft_decline',
-                        transferId: offer.transferId,
-                        from: mobileUser.username,
-                        to: offer.from
-                    }));
-                }
-                playMobileFtFailSound();
-
-                showMobileFtChatBar(offer.from, null, {
-                    icon: '❌',
-                    title: '"' + offer.filename + '"',
-                    sub: 'You declined',
-                    hideProgress: true,
-                    status: 'cancelled'
-                });
-            }
-
-            function handleMobileFtAccept(data) {
-                const transfer = mFtTransfers.get(data.transferId);
-                if (!transfer || transfer.direction !== 'send') return;
-                transfer.status = 'connecting';
-                updateMobileFtProgress(transfer);
-                setupMobileFtSender(transfer);
-            }
-
-            function handleMobileFtDecline(data) {
-                const transfer = mFtTransfers.get(data.transferId);
-                if (!transfer) return;
-                transfer.status = 'declined';
-                updateMobileFtProgress(transfer);
-                playMobileFtFailSound();
-                showMobileFtChatBar(transfer.peer, transfer.id, {
-                    icon: '❌',
-                    title: '"' + transfer.filename + '"',
-                    sub: 'Declined',
-                    hideProgress: true,
-                    status: 'error'
-                });
-                setTimeout(() => removeMobileFtTransfer(transfer.id), 2500);
-            }
-
-            function handleMobileFtCancel(data) {
-                const transfer = mFtTransfers.get(data.transferId);
-                if (!transfer) return;
-                transfer.status = 'cancelled';
-                updateMobileFtProgress(transfer);
-                playMobileFtFailSound();
-                if (transfer.pc) { try { transfer.pc.close(); } catch(e){} transfer.pc = null; }
-                showMobileFtChatBar(transfer.peer, transfer.id, {
-                    icon: '❌',
-                    title: '"' + transfer.filename + '"',
-                    sub: transfer.direction === 'send' ? 'Cancelled' : 'Sender cancelled',
-                    hideProgress: true,
-                    status: 'cancelled'
-                });
-                setTimeout(() => removeMobileFtTransfer(transfer.id), 2500);
-            }
-
-            function handleMobileFtSignal(data) {
-                const transfer = mFtTransfers.get(data.transferId);
-                if (!transfer) return;
-                if (!transfer.pc) {
-                    transfer.pendingSignals = transfer.pendingSignals || [];
-                    transfer.pendingSignals.push(data.signal);
-                    return;
-                }
-                processMobileFtSignal(transfer, data.signal);
-            }
-
-            async function processMobileFtSignal(transfer, signal) {
-                try {
-                    if (signal.type === 'offer' || signal.type === 'answer') {
-                        if (transfer.pc.signalingState === 'have-local-offer' && signal.type === 'offer') {
-                            console.warn('Mobile FT: Ignoring incoming offer — we already have a local offer');
-                            return;
-                        }
-                        if (transfer.pc.signalingState === 'have-remote-offer' && signal.type === 'offer') {
-                            console.warn('Mobile FT: Ignoring incoming offer — already processing a remote offer');
-                            return;
-                        }
-                        if (transfer.pc.signalingState === 'stable' && signal.type === 'answer') {
-                            console.warn('Mobile FT: Ignoring incoming answer — connection is already stable');
-                            return;
-                        }
-                        if (transfer.pc.signalingState !== 'have-local-offer' && signal.type === 'answer') {
-                            console.warn('Mobile FT: Ignoring incoming answer — no local offer to answer');
-                            return;
-                        }
-
-                        await transfer.pc.setRemoteDescription(signal);
-                        for (const c of (transfer.pendingIce || [])) {
-                            try { await transfer.pc.addIceCandidate(c); } catch (e) {}
-                        }
-                        transfer.pendingIce = [];
-                        if (signal.type === 'offer') {
-                            const answer = await transfer.pc.createAnswer();
-                            await transfer.pc.setLocalDescription(answer);
-                            sendMobileFtSignal(transfer, { type: 'answer', sdp: answer.sdp });
-                        }
-                    } else if (signal.type === 'candidate' && signal.candidate) {
-                        if (transfer.pc.remoteDescription) {
-                            await transfer.pc.addIceCandidate(signal.candidate);
-                        } else {
-                            transfer.pendingIce = transfer.pendingIce || [];
-                            transfer.pendingIce.push(signal.candidate);
-                        }
-                    }
-                } catch (e) {
-                    failMobileFtTransfer(transfer, 'Signal error: ' + e.message);
-                }
-            }
-
-            function sendMobileFtSignal(transfer, signal) {
-                if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                    mobileWs.send(JSON.stringify({
-                        type: 'ft_signal',
-                        transferId: transfer.id,
-                        from: mobileUser.username,
-                        to: transfer.peer,
-                        signal: signal
-                    }));
-                }
-            }
-
-            async function setupMobileFtSender(transfer) {
-                try {
-                    transfer.pc = new RTCPeerConnection({ iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' }
-                    ]});
-                    transfer.pc.onicecandidate = (e) => {
-                        if (e.candidate) sendMobileFtSignal(transfer, { type: 'candidate', candidate: e.candidate });
-                    };
-                    transfer.pc.oniceconnectionstatechange = () => {
-                        if (transfer.pc.iceConnectionState === 'failed') {
-                            if (transfer.status !== 'done' && transfer.status !== 'cancelled' &&
-                                transfer.status !== 'declined' && transfer.status !== 'failed') {
-                                failMobileFtTransfer(transfer, 'Connection failed');
-                            }
-                        }
-                    };
-                    const dc = transfer.pc.createDataChannel('file', { ordered: true });
-                    transfer.dc = dc;
-                    wireMobileDataChannel(transfer, dc, 'send');
-                    const offer = await transfer.pc.createOffer();
-                    await transfer.pc.setLocalDescription(offer);
-                    sendMobileFtSignal(transfer, { type: 'offer', sdp: offer.sdp });
-                } catch (e) {
-                    failMobileFtTransfer(transfer, 'Setup failed: ' + e.message);
-                }
-            }
-
-            async function setupMobileFtReceiver(transfer) {
-                try {
-                    transfer.pc = new RTCPeerConnection({ iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' }
-                    ]});
-                    transfer.pc.onicecandidate = (e) => {
-                        if (e.candidate) sendMobileFtSignal(transfer, { type: 'candidate', candidate: e.candidate });
-                    };
-                    transfer.pc.oniceconnectionstatechange = () => {
-                        if (transfer.pc.iceConnectionState === 'failed') {
-                            if (transfer.status !== 'done' && transfer.status !== 'cancelled' &&
-                                transfer.status !== 'declined' && transfer.status !== 'failed') {
-                                failMobileFtTransfer(transfer, 'Connection failed');
-                            }
-                        }
-                    };
-                    transfer.pc.ondatachannel = (event) => {
-                        const dc = event.channel;
-                        transfer.dc = dc;
-                        wireMobileDataChannel(transfer, dc, 'receive');
-                    };
-                    if (transfer.pendingSignals) {
-                        for (const sig of transfer.pendingSignals) {
-                            await processMobileFtSignal(transfer, sig);
-                        }
-                        transfer.pendingSignals = [];
-                    }
-                } catch (e) {
-                    failMobileFtTransfer(transfer, 'Setup failed: ' + e.message);
-                }
-            }
-
-            function wireMobileDataChannel(transfer, dc, side) {
-                dc.binaryType = 'arraybuffer';
-                dc.onopen = () => {
-                    transfer.status = 'transferring';
-                    transfer.startTime = Date.now();
-                    transfer.lastTickTime = Date.now();
-                    transfer.lastTickBytes = 0;
-                    updateMobileFtProgress(transfer);
-                    if (side === 'send') {
-                        startMobileSendingChunks(transfer);
-                    } else {
-                        transfer.receivedBytes = 0;
-                        transfer.chunks = [];
-                    }
-                };
-                dc.onmessage = (event) => {
-                    if (side !== 'receive') return;
-                    const data = event.data;
-                    if (typeof data === 'string') {
-                        try {
-                            const msg = JSON.parse(data);
-                            if (msg.type === 'file-end') {
-                                transfer.gotFileEnd = true;
-                                finishMobileReceive(transfer);
-                            }
-                        } catch (e) {}
-                        return;
-                    }
-                    const chunk = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
-                    transfer.chunks.push(chunk);
-                    transfer.receivedBytes += chunk.byteLength;
-                    const now = Date.now();
-                    if (now - transfer.lastTickTime >= 500) {
-                        const dt = (now - transfer.lastTickTime) / 1000;
-                        const db = transfer.receivedBytes - transfer.lastTickBytes;
-                        transfer.speed = db / dt;
-                        transfer.lastTickTime = now;
-                        transfer.lastTickBytes = transfer.receivedBytes;
-                    }
-                    updateMobileFtProgress(transfer);
-                };
-                dc.onclose = () => {
-                    if (transfer.status !== 'transferring') return;
-                    if (transfer.direction === 'receive') {
-                        if (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd) {
-                            finishMobileReceive(transfer);
-                        } else {
-                            failMobileFtTransfer(transfer, 'Connection closed');
-                        }
-                    } else if (transfer.direction === 'send') {
-                        if (transfer.bytesSent >= transfer.filesize) {
-                            finishMobileSend(transfer);
-                        } else {
-                            failMobileFtTransfer(transfer, 'Connection closed');
-                        }
-                    }
-                };
-                dc.onerror = (e) => {
-                    const errName = (e && e.error && (e.error.name || e.error.message || e.error)) || '';
-                    if (errName === 'Restricted') return;
-
-                    if (transfer.status === 'done' ||
-                        transfer.status === 'cancelled' ||
-                        transfer.status === 'declined' ||
-                        transfer.status === 'failed') {
-                        return;
-                    }
-                    console.error('Mobile DC error:', e);
-                    failMobileFtTransfer(transfer, 'Data channel error');
-                };
-            }
-
-            async function startMobileSendingChunks(transfer) {
-                try {
-                    const file = transfer.file;
-                    let offset = 0;
-                    const dc = transfer.dc;
-                    while (offset < file.size) {
-                        while (dc.bufferedAmount > FT_BUFFER_THRESHOLD) {
-                            await new Promise(r => setTimeout(r, 20));
-                            if (transfer.status === 'cancelled' || transfer.status === 'failed') return;
-                        }
-                        const slice = file.slice(offset, offset + FT_CHUNK_SIZE);
-                        const buf = await slice.arrayBuffer();
-                        try { dc.send(buf); } catch (e) {
-                            failMobileFtTransfer(transfer, 'Send failed: ' + e.message);
-                            return;
-                        }
-                        offset += buf.byteLength;
-                        transfer.bytesSent = offset;
-                        const now = Date.now();
-                        if (now - transfer.lastTickTime >= 500) {
-                            const dt = (now - transfer.lastTickTime) / 1000;
-                            const db = transfer.bytesSent - transfer.lastTickBytes;
-                            transfer.speed = db / dt;
-                            transfer.lastTickTime = now;
-                            transfer.lastTickBytes = transfer.bytesSent;
-                            updateMobileFtProgress(transfer);
-                        }
-                    }
-                    try { dc.send(JSON.stringify({ type: 'file-end' })); } catch (e) {}
-                    updateMobileFtProgress(transfer);
-                    setTimeout(() => {
-                        if (transfer.status === 'transferring') finishMobileSend(transfer);
-                    }, 800);
-                } catch (e) {
-                    failMobileFtTransfer(transfer, 'Send error: ' + e.message);
-                }
-            }
-
-            function finishMobileSend(transfer) {
-                if (transfer.dc) {
-                    transfer.dc.onerror = null;
-                    transfer.dc.onclose = null;
-                    transfer.dc.onmessage = null;
-                }
-                transfer.status = 'done';
-                transfer.bytesSent = transfer.filesize;
-                updateMobileFtProgress(transfer);
-                playMobileFtSuccessSound();
-                showMobileFtChatBar(transfer.peer, transfer.id, {
-                    icon: '✅',
-                    title: '"' + transfer.filename + '"',
-                    sub: 'Sent • ' + mFormatBytes(transfer.filesize),
-                    hideProgress: true,
-                    status: 'success'
-                });
-                setTimeout(() => removeMobileFtTransfer(transfer.id), 4000);
-            }
-
-            function finishMobileReceive(transfer) {
-                if (transfer.status === 'done') return;
-                if (transfer.dc) {
-                    transfer.dc.onerror = null;
-                    transfer.dc.onclose = null;
-                    transfer.dc.onmessage = null;
-                }
-                transfer.status = 'done';
-                updateMobileFtProgress(transfer);
-                playMobileFtSuccessSound();
-                try {
-                    const blob = new Blob(transfer.chunks, { type: transfer.mime || 'application/octet-stream' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = transfer.filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    setTimeout(() => URL.revokeObjectURL(url), 10000);
-                } catch (e) {}
-                showMobileFtChatBar(transfer.peer, transfer.id, {
-                    icon: '✅',
-                    title: '"' + transfer.filename + '"',
-                    sub: 'Received • ' + mFormatBytes(transfer.filesize),
-                    hideProgress: true,
-                    status: 'success'
-                });
-                setTimeout(() => removeMobileFtTransfer(transfer.id), 4000);
-            }
-
-            function failMobileFtTransfer(transfer, reason) {
-                if (transfer.status === 'done' || transfer.status === 'failed') return;
-                transfer.status = 'failed';
-                transfer.error = reason;
-                updateMobileFtProgress(transfer);
-                playMobileFtFailSound();
-                if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                    mobileWs.send(JSON.stringify({
-                        type: 'ft_cancel',
-                        transferId: transfer.id,
-                        from: mobileUser.username,
-                        to: transfer.peer
-                    }));
-                }
-                if (transfer.pc) { try { transfer.pc.close(); } catch(e){} transfer.pc = null; }
-                showMobileFtChatBar(transfer.peer, transfer.id, {
-                    icon: '❌',
-                    title: '"' + transfer.filename + '"',
-                    sub: 'Failed: ' + (reason || 'error'),
-                    hideProgress: true,
-                    status: 'error'
-                });
-                setTimeout(() => removeMobileFtTransfer(transfer.id), 3000);
-            }
-
-            function cancelCurrentFt() {
-                if (mFtActiveId) {
-                    const transfer = mFtTransfers.get(mFtActiveId);
-                    if (transfer && transfer.status !== 'done' && transfer.status !== 'failed' && transfer.status !== 'cancelled') {
-                        transfer.status = 'cancelled';
-                        updateMobileFtProgress(transfer);
-                        playMobileFtFailSound();
-                        if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
-                            mobileWs.send(JSON.stringify({
-                                type: 'ft_cancel',
-                                transferId: transfer.id,
-                                from: mobileUser.username,
-                                to: transfer.peer
-                            }));
-                        }
-                        if (transfer.pc) { try { transfer.pc.close(); } catch(e){} transfer.pc = null; }
-                        showMobileFtChatBar(transfer.peer, transfer.id, {
-                            icon: '❌',
-                            title: '"' + transfer.filename + '"',
-                            sub: 'Cancelled',
-                            hideProgress: true,
-                            status: 'cancelled'
-                        });
-                    }
-                }
-                document.getElementById('mobileFtProgressOverlay').classList.remove('active');
-                mFtActiveId = null;
-            }
-
-            function removeMobileFtTransfer(id) {
-                const transfer = mFtTransfers.get(id);
-                if (!transfer) return;
-                mFtTransfers.delete(id);
-                if (mFtActiveId === id) {
-                    document.getElementById('mobileFtProgressOverlay').classList.remove('active');
-                    mFtActiveId = null;
-                }
-            }
-
-            function showMobileFtProgress(transfer) {
-                mFtActiveId = transfer.id;
-                document.getElementById('mobileFtTitle').textContent =
-                    transfer.direction === 'send' ? '📤 Sending File' : '📥 Receiving File';
-                document.getElementById('mobileFtFilename').textContent = transfer.filename;
-                document.getElementById('mobileFtPeer').textContent =
-                    mFormatBytes(transfer.filesize) +
-                    (transfer.direction === 'send' ? ' → ' + transfer.peer : ' ← ' + (transfer.peerDisplay || transfer.peer));
-                document.getElementById('mobileFtProgressOverlay').classList.add('active');
+            const slice = file.slice(offset, offset + FT_CHUNK_SIZE);
+            const buf = await slice.arrayBuffer();
+            try { dc.send(buf); } catch (e) { failMobileFtTransfer(transfer, 'Send failed: ' + e.message); return; }
+            offset += buf.byteLength;
+            transfer.bytesSent = offset;
+            const now = Date.now();
+            if (now - transfer.lastTickTime >= 500) {
+                const dt = (now - transfer.lastTickTime) / 1000;
+                transfer.speed = (transfer.bytesSent - transfer.lastTickBytes) / dt;
+                transfer.lastTickTime = now;
+                transfer.lastTickBytes = transfer.bytesSent;
                 updateMobileFtProgress(transfer);
             }
+        }
+        try { dc.send(JSON.stringify({ type: 'file-end' })); } catch (e) {}
+        transfer.sendingDone = true;
+        try { dc.onerror = null; } catch (e) {}
+        updateMobileFtProgress(transfer);
+        setTimeout(function() {
+            if (transfer.status === 'transferring') finishMobileSend(transfer);
+        }, 800);
+    } catch (e) {
+        failMobileFtTransfer(transfer, 'Send error: ' + e.message);
+    }
+}
 
-            function updateMobileFtProgress(transfer) {
-                if (mFtActiveId !== transfer.id) {
-                    // Still try to update the chat bar
-                    updateMobileFtChatBarOnly(transfer);
-                    return;
-                }
-                const fill = document.getElementById('mobileFtFill');
-                const status = document.getElementById('mobileFtStatus');
-                const speed = document.getElementById('mobileFtSpeed');
-                const eta = document.getElementById('mobileFtEta');
-                const done = transfer.direction === 'send' ? transfer.bytesSent : transfer.receivedBytes;
-                const total = transfer.filesize || 1;
-                const pctVal = Math.min(100, (done / total) * 100);
-                if (fill) fill.style.width = pctVal.toFixed(2) + '%';
-                if (status) {
-                    switch (transfer.status) {
-                        case 'offered': status.textContent = 'Waiting for acceptance...'; break;
-                        case 'connecting': status.textContent = 'Connecting...'; break;
-                        case 'transferring': status.textContent = (transfer.direction === 'send' ? 'Sending... ' : 'Receiving... ') + pctVal.toFixed(0) + '%'; break;
-                        case 'done': status.textContent = 'Complete'; break;
-                        case 'declined': status.textContent = 'Declined'; break;
-                        case 'cancelled': status.textContent = 'Cancelled'; break;
-                        case 'failed': status.textContent = 'Failed: ' + (transfer.error || 'error'); break;
-                    }
-                }
-                if (speed) speed.textContent = transfer.status === 'transferring' ? mFormatSpeed(transfer.speed) : '';
-                if (eta) {
-                    if (transfer.status === 'transferring' && transfer.speed > 0) {
-                        eta.textContent = 'ETA: ' + mFormatEta((total - done) / transfer.speed);
-                    } else {
-                        eta.textContent = '';
-                    }
-                }
-                updateMobileFtChatBarOnly(transfer);
+function finishMobileSend(transfer) {
+    if (transfer.status === 'done') return;
+    if (transfer.dc) { transfer.dc.onerror = null; transfer.dc.onclose = null; transfer.dc.onmessage = null; }
+    transfer.status = 'done';
+    transfer.bytesSent = transfer.filesize;
+    updateMobileFtProgress(transfer);
+    playMobileFtSuccessSound();
+    showMobileFtChatBar(transfer.peer, transfer.id, {
+        icon: '✅', title: transfer.filename,
+        sub: 'Sent - ' + mFormatBytes(transfer.filesize),
+        hideProgress: true, status: 'success'
+    });
+    setTimeout(function() { removeMobileFtTransfer(transfer.id); }, 4000);
+}
+
+function finishMobileReceive(transfer) {
+    if (transfer.status === 'done') return;
+    if (transfer.dc) { transfer.dc.onerror = null; transfer.dc.onclose = null; transfer.dc.onmessage = null; }
+    transfer.status = 'done';
+    updateMobileFtProgress(transfer);
+    playMobileFtSuccessSound();
+    try {
+        const blob = new Blob(transfer.chunks, { type: transfer.mime || 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = transfer.filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function() { URL.revokeObjectURL(url); }, 10000);
+    } catch (e) {}
+    showMobileFtChatBar(transfer.peer, transfer.id, {
+        icon: '✅', title: transfer.filename,
+        sub: 'Received - ' + mFormatBytes(transfer.filesize),
+        hideProgress: true, status: 'success'
+    });
+    setTimeout(function() { removeMobileFtTransfer(transfer.id); }, 4000);
+}
+
+function failMobileFtTransfer(transfer, reason) {
+    if (transfer.status === 'done' || transfer.status === 'failed') return;
+    transfer.status = 'failed';
+    transfer.error = reason;
+    updateMobileFtProgress(transfer);
+    playMobileFtFailSound();
+    if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+        mobileWs.send(JSON.stringify({ type: 'ft_cancel', transferId: transfer.id, from: mobileUser.username, to: transfer.peer }));
+    }
+    if (transfer.pc) { try { transfer.pc.close(); } catch (e) {} transfer.pc = null; }
+    showMobileFtChatBar(transfer.peer, transfer.id, {
+        icon: '❌', title: transfer.filename, sub: 'Failed: ' + (reason || 'error'),
+        hideProgress: true, status: 'error'
+    });
+    setTimeout(function() { removeMobileFtTransfer(transfer.id); }, 3000);
+}
+
+function cancelCurrentFt() {
+    if (mFtActiveId) {
+        const transfer = mFtTransfers.get(mFtActiveId);
+        if (transfer && transfer.status !== 'done' && transfer.status !== 'failed' && transfer.status !== 'cancelled') {
+            transfer.status = 'cancelled';
+            updateMobileFtProgress(transfer);
+            playMobileFtFailSound();
+            if (mobileWs && mobileWs.readyState === WebSocket.OPEN) {
+                mobileWs.send(JSON.stringify({ type: 'ft_cancel', transferId: transfer.id, from: mobileUser.username, to: transfer.peer }));
             }
-
-            function updateMobileFtChatBarOnly(transfer) {
-                const done = transfer.direction === 'send' ? transfer.bytesSent : transfer.receivedBytes;
-                const total = transfer.filesize || 1;
-                const pctVal = Math.min(100, (done / total) * 100);
-                let barIcon, barTitle, barSub, barStatus;
-                if (transfer.direction === 'send') { barIcon = '📤'; barTitle = 'Sending "' + transfer.filename + '"'; }
-                else { barIcon = '📥'; barTitle = 'Receiving "' + transfer.filename + '"'; }
-                switch (transfer.status) {
-                    case 'offered':     barSub = mFormatBytes(total) + ' • waiting…'; break;
-                    case 'connecting':  barSub = mFormatBytes(total) + ' • connecting…'; break;
-                    case 'transferring': barSub = mFormatBytes(done) + ' / ' + mFormatBytes(total) + (transfer.speed > 0 ? ' • ' + mFormatSpeed(transfer.speed) : ''); break;
-                    case 'done':        barSub = mFormatBytes(total) + ' • complete'; barStatus = 'success'; break;
-                    case 'declined':    barSub = 'Declined'; barStatus = 'error'; break;
-                    case 'cancelled':   barSub = 'Cancelled'; barStatus = 'cancelled'; break;
-                    case 'failed':      barSub = 'Failed: ' + (transfer.error || 'error'); barStatus = 'error'; break;
-                }
-                showMobileFtChatBar(transfer.peer, transfer.id, { icon: barIcon, title: barTitle, sub: barSub, progress: pctVal, status: barStatus });
-            }
-
-            document.addEventListener('DOMContentLoaded', function() {
-                loadTheme();
-                const loginBtn = document.getElementById('mobileLoginBtn');
-                if (loginBtn) loginBtn.addEventListener('click', mobileLogin);
-                const registerBtn = document.getElementById('mobileRegisterBtn');
-                if (registerBtn) registerBtn.addEventListener('click', mobileRegister);
-                document.getElementById('mobilePassword').addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') mobileLogin();
-                });
-                document.getElementById('imageModal').addEventListener('click', function(e) {
-                    if (e.target === this) closeModal();
-                });
+            if (transfer.pc) { try { transfer.pc.close(); } catch (e) {} transfer.pc = null; }
+            showMobileFtChatBar(transfer.peer, transfer.id, {
+                icon: '❌', title: transfer.filename, sub: 'Cancelled',
+                hideProgress: true, status: 'cancelled'
             });
-        </script>
-    </body>
-    </html>
-    `);
+        }
+    }
+    document.getElementById('mobileFtProgressOverlay').classList.remove('active');
+    mFtActiveId = null;
+}
+
+function removeMobileFtTransfer(id) {
+    const transfer = mFtTransfers.get(id);
+    if (!transfer) return;
+    mFtTransfers.delete(id);
+    if (mFtActiveId === id) {
+        document.getElementById('mobileFtProgressOverlay').classList.remove('active');
+        mFtActiveId = null;
+    }
+}
+
+function showMobileFtProgress(transfer) {
+    mFtActiveId = transfer.id;
+    document.getElementById('mobileFtTitle').textContent = transfer.direction === 'send' ? 'Sending File' : 'Receiving File';
+    document.getElementById('mobileFtFilename').textContent = transfer.filename;
+    document.getElementById('mobileFtPeer').textContent =
+        mFormatBytes(transfer.filesize) + (transfer.direction === 'send' ? ' to ' + transfer.peer : ' from ' + (transfer.peerDisplay || transfer.peer));
+    document.getElementById('mobileFtProgressOverlay').classList.add('active');
+    updateMobileFtProgress(transfer);
+}
+
+function updateMobileFtProgress(transfer) {
+    if (mFtActiveId !== transfer.id) {
+        updateMobileFtChatBarOnly(transfer);
+        return;
+    }
+    const fill = document.getElementById('mobileFtFill');
+    const status = document.getElementById('mobileFtStatus');
+    const speed = document.getElementById('mobileFtSpeed');
+    const eta = document.getElementById('mobileFtEta');
+    const done = transfer.direction === 'send' ? transfer.bytesSent : transfer.receivedBytes;
+    const total = transfer.filesize || 1;
+    const pct = Math.min(100, (done / total) * 100);
+    if (fill) fill.style.width = pct.toFixed(2) + '%';
+    if (status) {
+        switch (transfer.status) {
+            case 'offered':      status.textContent = 'Waiting for acceptance...'; break;
+            case 'connecting':   status.textContent = 'Connecting...'; break;
+            case 'transferring': status.textContent = (transfer.direction === 'send' ? 'Sending... ' : 'Receiving... ') + pct.toFixed(0) + '%'; break;
+            case 'done':         status.textContent = 'Complete'; break;
+            case 'declined':     status.textContent = 'Declined'; break;
+            case 'cancelled':    status.textContent = 'Cancelled'; break;
+            case 'failed':       status.textContent = 'Failed: ' + (transfer.error || 'error'); break;
+        }
+    }
+    if (speed) speed.textContent = transfer.status === 'transferring' ? mFormatSpeed(transfer.speed) : '';
+    if (eta) {
+        if (transfer.status === 'transferring' && transfer.speed > 0) eta.textContent = 'ETA: ' + mFormatEta((total - done) / transfer.speed);
+        else eta.textContent = '';
+    }
+    updateMobileFtChatBarOnly(transfer);
+}
+
+function updateMobileFtChatBarOnly(transfer) {
+    const done = transfer.direction === 'send' ? transfer.bytesSent : transfer.receivedBytes;
+    const total = transfer.filesize || 1;
+    const pct = Math.min(100, (done / total) * 100);
+    let icon, title, sub, status;
+    if (transfer.direction === 'send') { icon = '📤'; title = 'Sending ' + transfer.filename; }
+    else { icon = '📥'; title = 'Receiving ' + transfer.filename; }
+    switch (transfer.status) {
+        case 'offered':      sub = mFormatBytes(total) + ' - waiting'; break;
+        case 'connecting':   sub = mFormatBytes(total) + ' - connecting'; break;
+        case 'transferring': sub = mFormatBytes(done) + ' / ' + mFormatBytes(total) + (transfer.speed > 0 ? ' - ' + mFormatSpeed(transfer.speed) : ''); break;
+        case 'done':         sub = mFormatBytes(total) + ' - complete'; status = 'success'; break;
+        case 'declined':     sub = 'Declined'; status = 'error'; break;
+        case 'cancelled':    sub = 'Cancelled'; status = 'cancelled'; break;
+        case 'failed':       sub = 'Failed: ' + (transfer.error || 'error'); status = 'error'; break;
+    }
+    showMobileFtChatBar(transfer.peer, transfer.id, { icon: icon, title: title, sub: sub, progress: pct, status: status });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateStatusBarTime();
+    setView('list');
+    const contactsListEl = document.getElementById('mobileContactList');
+    if (contactsListEl) {
+        contactsListEl.addEventListener('click', function(e) {
+            const row = e.target.closest('.contact-row');
+            if (!row) return;
+            selectContact(row.getAttribute('data-user'), row.getAttribute('data-display'));
+        });
+    }
+    const loginBtn = document.getElementById('mobileLoginBtn');
+    if (loginBtn) loginBtn.addEventListener('click', mobileLogin);
+    const registerBtn = document.getElementById('mobileRegisterBtn');
+    if (registerBtn) registerBtn.addEventListener('click', mobileRegister);
+    const pw = document.getElementById('mobilePassword');
+    if (pw) pw.addEventListener('keypress', function(e) { if (e.key === 'Enter') mobileLogin(); });
+    const modal = document.getElementById('imageModal');
+    if (modal) modal.addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+    const navMe = document.getElementById('navBackBtn');
+    // Long-press on nav title to open status sheet (nice little easter egg)
+    const navTitle = document.getElementById('navTitle');
+    if (navTitle) {
+        let pressTimer;
+        navTitle.addEventListener('touchstart', function() {
+            pressTimer = setTimeout(openStatusSheet, 600);
+        });
+        navTitle.addEventListener('touchend', function() { clearTimeout(pressTimer); });
+        navTitle.addEventListener('mousedown', function() {
+            pressTimer = setTimeout(openStatusSheet, 600);
+        });
+        navTitle.addEventListener('mouseup', function() { clearTimeout(pressTimer); });
+    }
+});
+</script>
+</body>
+</html>
+`);
 });
 
 // ==================== ANALYTICS PAGE ====================
