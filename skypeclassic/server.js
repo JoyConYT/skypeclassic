@@ -3382,11 +3382,12 @@ app.get("/", (req, res) => {
             };
 
             dc.onerror = (e) => {
-                // Chrome fires a "Restricted" error on RTCDataChannel when the
-                // underlying DTLS transport is torn down after a successful
-                // transfer. It's benign — ignore it.
-                const errName = (e && e.error && (e.error.name || e.error.message || e.error)) || '';
-                if (errName === 'Restricted') return;
+                // Suppress teardown noise: if we already moved all the bytes,
+                // this channel is done and any error is just DTLS teardown.
+                if (transfer.sendingDone) return;
+                if (transfer.direction === 'send' && transfer.bytesSent >= transfer.filesize) return;
+                if (transfer.direction === 'receive' &&
+                    (transfer.receivedBytes >= transfer.filesize || transfer.gotFileEnd)) return;
 
                 if (transfer.status === 'done' ||
                     transfer.status === 'cancelled' ||
@@ -3394,6 +3395,18 @@ app.get("/", (req, res) => {
                     transfer.status === 'failed') {
                     return;
                 }
+
+                // Chrome's teardown error is an empty "Restricted {}" object
+                // with no .name/.message. Probe every angle.
+                const err = e && e.error;
+                if (err) {
+                    const probe = String(err) + ' ' +
+                                  (err.name || '') + ' ' +
+                                  (err.message || '') + ' ' +
+                                  ((err.constructor && err.constructor.name) || '');
+                    if (probe.indexOf('Restricted') !== -1) return;
+                }
+
                 console.error('DC error:', e);
                 failFtTransfer(transfer, 'Data channel error');
             };
@@ -3437,6 +3450,11 @@ app.get("/", (req, res) => {
                     try {
                         dc.send(JSON.stringify({ type: 'file-end' }));
                     } catch (e) {}
+
+                    // We're done sending. Mark it and detach the error handler
+                    // so Chrome's DTLS teardown "Restricted" event can't reach us.
+                    transfer.sendingDone = true;
+                    try { dc.onerror = null; } catch (e) {}
 
                     updateFtProgressWindow(transfer);
                     setTimeout(() => {
