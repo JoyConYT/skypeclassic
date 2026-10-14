@@ -5106,15 +5106,6 @@ body { color:#1a1a1a; font-size:15px; display:flex; flex-direction:column; }
 </head>
 <body>
 
-<div class="status-bar">
-    <span class="sb-side sb-left">
-        <span class="sb-dots"><span></span><span></span><span></span></span>
-    </span>
-    <span class="sb-center" id="sbTime">12:34 PM</span>
-    <span class="sb-side sb-right">
-        <span class="sb-battery"></span>
-    </span>
-</div>
 
 <div id="authOverlay" class="active">
     <div class="auth-window">
